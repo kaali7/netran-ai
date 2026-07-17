@@ -13,54 +13,109 @@ A modular, high-fidelity, low-latency local voice assistant designed to conduct 
 
 ## 📥 Installation & Setup Guide
 
-Follow these exact steps to prepare your environment with **Python 3.12.7**.
+This project is already configured to run from the workspace virtual environment at [.venv](.venv). The installation steps below reflect the packages verified inside that environment and are intended for a Windows-based setup.
 
-### 1. Prerequisites (Python 3.12.7)
-Ensure you are using **Python 3.12.7**. You can check your version inside your terminal by running:
+### 1. Prerequisites
+
+#### Python
+Use Python 3.12.7. Confirm your interpreter before continuing:
+
 ```cmd
 python --version
-
 ```
 
-*If you need to install it cleanly on Windows, download the official installer for `Python 3.12.7` from python.org, run it, and make sure to check the box that says **"Add Python.exe to PATH"**.*
+If Python is not installed, download the official Windows installer from python.org and enable the option to add Python to PATH.
 
-### 2. Environment Setup
+#### System requirements for Windows
+Some audio dependencies may require Microsoft build tools or a compiler runtime:
+- Visual Studio Build Tools (C++ build tools) if native wheel compilation is needed
+- A working microphone and speakers/headphones
+- Internet connection for downloading model weights and packages
 
-Navigate to your backend directory, initialize your virtual environment, and activate it:
+### 2. Create and Activate the Virtual Environment
+
+From the backend root, create and activate the project environment:
 
 ```cmd
 cd "C:\kali\product\netran ai\backend"
-python -m venv .venv
+py -3.12 -m venv .venv
 .venv\Scripts\activate
-
+python --version
 ```
 
-### 3. Install Audio Hardware & Model Dependencies
+If the activation command does not work in PowerShell, use:
 
-Run the following command within your activated `.venv` to install all the required processing libraries:
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+### 3. Upgrade Packaging Tools
+
+Before installing dependencies, upgrade pip and related build tools:
 
 ```cmd
-pip install kivy numpy faster-whisper ollama kokoro soundfile torch pyaudio
-
+python -m pip install --upgrade pip setuptools wheel
 ```
 
-> **Windows Note for PyAudio:** If standard `pip install pyaudio` fails due to local C++ compiler constraints, resolve it instantly by running:
-> ```cmd
-> pip install pipwin
-> pipwin install pyaudio
-> 
-> ```
-> 
-> 
+### 4. Install the Verified Project Dependencies
 
-### 4. Pull the Local LLM Weights
+The current virtual environment already contains the core runtime packages for this project, including:
+- numpy
+- pyaudio
+- faster-whisper
+- kivy
+- kokoro
+- ollama
+- soundfile
+- torch
 
-Ensure you have the Ollama service running on your desktop machine, then pull the exact model variant used in the codebase:
+Install or verify them with:
+
+```cmd
+pip install numpy pyaudio faster-whisper kivy kokoro ollama soundfile torch
+```
+
+If you want to reinstall everything from scratch in the current environment, use the same command above after activation.
+
+#### PyAudio on Windows
+If `pip install pyaudio` fails due to missing build support, install it through `pipwin`:
+
+```cmd
+pip install pipwin
+pipwin install pyaudio
+```
+
+### 5. Install and Start Ollama
+
+This backend uses Ollama locally for the reasoning model.
+
+1. Install Ollama from the official website or package manager.
+2. Start the Ollama service and ensure it is running in the background.
+3. Pull the model used by the project:
 
 ```cmd
 ollama pull qwen2.5:1.5b
-
 ```
+
+### 6. Verify the Installation
+
+Run the following command to confirm that the most important packages can be imported successfully:
+
+```cmd
+python -c "import numpy, pyaudio, faster_whisper, kivy, kokoro, ollama, soundfile, torch; print('Core dependencies imported successfully')"
+```
+
+If this finishes without import errors, the environment is ready for the application.
+
+### 7. Run the Application
+
+After the environment is active and Ollama is running, start the backend app:
+
+```cmd
+python main_app.py
+```
+
+> If you are running from a different terminal session, activate the environment first with `.venv\Scripts\activate` before starting the app.
 
 ---
 
