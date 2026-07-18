@@ -7,6 +7,9 @@ print("Loading Kokoro TTS model into memory...")
 kokoro_pipeline = KPipeline(lang_code="a")  # 'a' stands for American English
 
 
+# Global agent speaking state for echo gate
+IS_AGENT_SPEAKING = False
+
 # Break 2: The Core Text-to-Speech Engine
 def speak_text(text_to_say, voice_preset="af_bella"):
     """Converts a string of text into raw audio using Kokoro
@@ -16,6 +19,7 @@ def speak_text(text_to_say, voice_preset="af_bella"):
     :param text_to_say: String of text for Eva to say.
     :param voice_preset: Default voice token (e.g., af_bella, af_sarah, am_adam).
     """
+    global IS_AGENT_SPEAKING
     if not text_to_say.strip():
         return
 
@@ -25,8 +29,10 @@ def speak_text(text_to_say, voice_preset="af_bella"):
     RATE = 24000  # Kokoro models output natively at 24kHz
 
     p = pyaudio.PyAudio()
+    output_stream = None
     
     try:
+        IS_AGENT_SPEAKING = True
         # Open hardware speaker output channel
         output_stream = p.open(
             format=FORMAT,
@@ -57,6 +63,13 @@ def speak_text(text_to_say, voice_preset="af_bella"):
         print(f"\n[Speaker Error: Check audio drivers. Details: {str(e)}]")
         
     finally:
+        IS_AGENT_SPEAKING = False
+        if output_stream is not None:
+            try:
+                output_stream.stop_stream()
+                output_stream.close()
+            except Exception:
+                pass
         p.terminate()
 
 # Break 4: Local Test Execution
