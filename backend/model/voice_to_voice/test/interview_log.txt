@@ -1,9 +1,0 @@
-=== AI INTERVIEW LOG: 2026-07-17 21:16:38 ===
-
-[21:16:38] Eva: Hello! Welcome to your technical interview today. [Clears Throat] Could you please start by describing your core frontend stack?
-[21:16:54] You: I am going to react and make chasing the person. [Paper Rustling]
-[21:17:24] Eva: That sounds interesting. What specific projects or features do you find particularly challenging when using React, if any?
-[21:17:29] You: Okay, I'm going to react a little bit. [Paper Rustling]
-[21:17:40] Eva: It's okay! Are there particular concepts or aspects of frontend development that might be confusing for you right now?
-[21:17:47] You: I am going to put the lid on and it is still in there. [Paper Rustling]
-[21:17:55] Eva: Got it. What do you mean by "putting the lid on" in a metaphorical sense?
