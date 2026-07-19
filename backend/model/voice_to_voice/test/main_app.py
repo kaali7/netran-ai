@@ -108,6 +108,13 @@ KV = """
             background_color: 0.8, 0.3, 0.3, 1
             disabled: True
             on_press: root.stop_interview()
+
+        Button:
+            id: restart_btn
+            text: "Restart Interview"
+            background_normal: ''
+            background_color: 0.3, 0.5, 0.8, 1
+            on_press: root.restart_interview()
 """
 
 
@@ -125,6 +132,7 @@ class InterviewWindow(BoxLayout):
     def _reset_buttons(self):
         self.ids.start_btn.disabled = False
         self.ids.stop_btn.disabled = True
+        self.ids.restart_btn.disabled = False
 
     def update_question_label(self, count):
         Clock.schedule_once(lambda dt: setattr(self.ids.question_label, "text", f"Question: {count} / {self.MAX_QUESTIONS}"))
@@ -157,6 +165,13 @@ class InterviewWindow(BoxLayout):
         Clock.schedule_once(lambda dt: self._reset_buttons())
         self.update_status("Interview Stopped.")
         self.append_ui_text("\n[System]: Log file finalized successfully.")
+
+    def restart_interview(self):
+        self.stop_interview()
+        # Clear transcript display
+        Clock.schedule_once(lambda dt: setattr(self.ids.transcript_display, "text", "--- Live Interview Panel ---\n\n"))
+        # Give the previous thread a tiny moment to exit before starting a new one
+        Clock.schedule_once(lambda dt: self.start_interview(), 0.5)
 
     def update_status(self, text):
         Clock.schedule_once(lambda dt: setattr(self.ids.status_label, "text", text))
