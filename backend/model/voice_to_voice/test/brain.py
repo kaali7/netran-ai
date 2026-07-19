@@ -46,6 +46,16 @@ def generate_eva_response(conversation_history):
     except Exception as e:
         yield f"\n[Brain Error: Make sure Ollama is running and qwen2.5 is pulled. Details: {str(e)}]"
 
+def preload():
+    """Preloads the Ollama LLM engine into memory to ensure instant first response."""
+    print("Pre-heating Ollama LLM engine...", flush=True)
+    try:
+        # A tiny prompt to force Ollama to load the model weights into memory
+        for _ in generate_eva_response([{"role": "user", "content": "."}]):
+            pass
+    except Exception:
+        pass
+
 # Break 3: Local Test Execution 
 if __name__ == "__main__":
     print("Testing Brain Module... (Ensure 'ollama run qwen2.5' is working in the background)")

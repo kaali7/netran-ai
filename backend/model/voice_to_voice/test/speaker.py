@@ -17,6 +17,11 @@ def _get_pipeline():
         _kokoro_pipeline = KPipeline(lang_code="a")  # 'a' = American English
     return _kokoro_pipeline
 
+def preload_models():
+    """Preloads the heavy TTS models into memory."""
+    print("Pre-heating Kokoro TTS engine...", flush=True)
+    _get_pipeline()
+
 # Break 2: The Core Text-to-Speech Engine
 def speak_text(text_to_say, voice_preset="af_bella"):
     """Converts a string of text into raw audio using Kokoro

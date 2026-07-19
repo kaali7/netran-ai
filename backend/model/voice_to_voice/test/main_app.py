@@ -8,9 +8,9 @@ from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
 
 # Import the functional blocks we created in this exact folder
-from brain import generate_eva_response
+from brain import generate_eva_response, preload as preload_brain
 from listener import listen_and_transcribe
-from speaker import speak_text
+from speaker import speak_text, preload_models as preload_speaker
 
 # Clean visual layout utilizing a modern dark visual palette
 KV = """
@@ -40,6 +40,32 @@ KV = """
         size_hint_y: None
         height: '30dp'
         color: 0.8, 0.8, 0.8, 1
+
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint_y: None
+        height: '60dp'
+        canvas.before:
+            Color:
+                rgba: 0.15, 0.15, 0.15, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [5]
+        padding: 5
+        
+        Label:
+            id: vad_state_label
+            text: "Mic: Offline"
+            font_size: '14sp'
+            color: 0.8, 0.8, 0.8, 1
+            size_hint_y: 0.5
+            
+        ProgressBar:
+            id: volume_bar
+            max: 1.0
+            value: 0.0
+            size_hint_y: 0.5
 
     ScrollView:
         size_hint_y: 0.65
@@ -117,8 +143,8 @@ class InterviewWindow(BoxLayout):
                 f"=== AI INTERVIEW LOG: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n\n"
             )
 
-        self.update_status("Eva is initializing speech channels...")
-        self.append_ui_text("\n[System]: Voice pipeline connected.\n")
+        self.update_status("Initializing AI Models... (Please wait)")
+        self.append_ui_text("\n[System]: Pre-heating AI pipelines...\n")
 
         # Start processing inside background thread
         self.interview_thread = threading.Thread(
@@ -141,6 +167,14 @@ class InterviewWindow(BoxLayout):
 
         Clock.schedule_once(_update)
 
+    def update_audio_diagnostics(self, data):
+        def _update(dt):
+            self.ids.vad_state_label.text = data.get("state", "")
+            # Scale RMS up for visibility in the progress bar (RMS is typically small)
+            rms = data.get("rms", 0.0)
+            self.ids.volume_bar.value = min(rms * 10, 1.0)
+        Clock.schedule_once(_update)
+
     def log_and_display_turn(self, speaker, text):
         """Saves turn directly to file system log and logs live onto UI panel screen."""
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -154,6 +188,12 @@ class InterviewWindow(BoxLayout):
     def _run_interview_pipeline(self):
         """Main automated hardware pipeline loop linking components."""
         try:
+            # --- PRELOAD STAGE ---
+            preload_speaker()
+            preload_brain()
+            self.update_status("Eva is initializing speech channels...")
+            self.append_ui_text("[System]: Voice pipeline connected.\n")
+
             # --- TURN 1: EVA INITIATES CONVERSATION ---
             initial_greeting = "Hello! Welcome to your technical interview today. [Clears Throat] Could you please start by describing your core frontend stack?"
             self.log_and_display_turn("Eva", initial_greeting)
@@ -170,7 +210,7 @@ class InterviewWindow(BoxLayout):
             while self.is_running:
                 # 1. LISTENING STAGE
                 self.update_status("Listening to your response...")
-                user_transcript = listen_and_transcribe()
+                user_transcript = listen_and_transcribe(ui_callback=self.update_audio_diagnostics)
 
                 if not user_transcript.strip() or not self.is_running:
                     continue
@@ -211,17 +251,21 @@ class InterviewWindow(BoxLayout):
                     # Advanced regex splitting for streaming sentence chunks
                     sentences = re.split(r'(?<=[.!?\n])\s+', sentence_buffer)
                     if len(sentences) > 1:
+                        new_buffer = []
                         for sentence in sentences[:-1]:
                             sentence = sentence.strip()
-                            if len(sentence) > 15:
-                                # Abbreviation check (e.g. Mr., Dr.)
-                                if not any(sentence.lower().endswith(abbr) for abbr in ["mr.", "dr.", "ms.", "mrs.", "prof.", "e.g.", "i.e.", "vs."]):
-                                    self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
-                                    if not ttfa_logged:
-                                        current_ttfa = Benchmark.end("ttfa")
-                                        ttfa_logged = True
-                                    speak_text(sentence)
-                        sentence_buffer = sentences[-1]
+                            if len(sentence) > 15 and not any(sentence.lower().endswith(abbr) for abbr in ["mr.", "dr.", "ms.", "mrs.", "prof.", "e.g.", "i.e.", "vs."]):
+                                self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
+                                if not ttfa_logged:
+                                    current_ttfa = Benchmark.end("ttfa")
+                                    ttfa_logged = True
+                                speak_text(sentence)
+                            else:
+                                # It's an abbreviation or too short, keep it in the buffer
+                                new_buffer.append(sentence)
+                        
+                        new_buffer.append(sentences[-1])
+                        sentence_buffer = " ".join(new_buffer)
 
                 # Flush any leftover tokens in the buffer
                 if sentence_buffer.strip() and self.is_running:

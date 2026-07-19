@@ -95,3 +95,8 @@ During the standalone integration testing of the STT and TTS models on Windows h
 ### Speaker Module (`speaker.py`)
 1. **Engine Swap (PyAudio -> sounddevice):** PyAudio's default MME/DirectSound drivers on Windows 11 frequently route audio silently to wrong/virtual devices. The playback engine was rewritten to use `sounddevice.play()`, which leverages modern WASAPI drivers to guarantee output to the default desktop speakers.
 2. **Native Float32 Playback:** Kokoro outputs `float32` tensors at 24kHz natively; switching to `sounddevice` allowed us to play these arrays directly without expensive manual `int16` / binary bytes conversion.
+
+### Hotfixes & Stability (`listener.py` v2)
+1. **VAD Indentation Bug:** Fixed a critical indentation error where the recording loop was breaking instantly after the first 32ms frame of detected speech, causing Whisper to reject the audio as too short.
+2. **Volume Override Failsafe:** Added a hard `RMS > 0.03` failsafe trigger. If the Silero VAD neural network fails to recognize speech (probability near 0.00) but the raw physical volume of the microphone is extremely loud, the loop will bypass the VAD failure and instantly trigger the `has_spoken` state, guaranteeing the microphone captures the user's voice.
+3. **Logic Failsafe (`AND` -> `OR`):** Fixed a logical flaw where the loop required both VAD probability `AND` high volume to continue recording. Switched to `OR`, allowing high raw volume to successfully hold the recording open until the user actually stops speaking.
