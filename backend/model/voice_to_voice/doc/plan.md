@@ -76,3 +76,22 @@ Flawless half-duplex communication. The AI will never listen to itself, and the 
 
 ### Expected Outcome:
 Data-driven optimization. You will know exactly which component is slowing down the interaction and can tune chunk sizes and buffers accordingly.
+
+---
+
+## ✅ Completed Implementation Log (Hardware & Model Fixes)
+**Location:** `model/voice_to_voice/test/`
+
+During the standalone integration testing of the STT and TTS models on Windows hardware, several critical reliability fixes were implemented:
+
+### Listener Module (`listener.py`)
+1. **DC Offset & Auto-Gain:** Standard Windows microphones often capture at extremely low gain (RMS ~0.001) with a DC offset (baseline drift). Mathematical RMS thresholds failed here. We implemented:
+   * **DC Offset Removal:** Centers the waveform at 0.0 so the Silero neural network isn't confused by a shifted baseline.
+   * **Dynamic Peak Normalization (Auto-Gain):** Dynamically scales incoming audio to a target 90% peak (capped at 50x multiplier) *without* clipping the audio into square waves.
+2. **VAD Threshold Tuning:** Due to the hardware auto-gain, Silero VAD confidence scores were lower than studio norms (maxing around 0.12). Thresholds were lowered to `0.05` to successfully detect speech.
+3. **Whisper Hallucination Guards:** Added `no_speech_threshold=0.4` and `compression_ratio_threshold=1.5` to Faster-Whisper to stop the model from hallucinating repeated text (e.g., "Hello? Hello?") or initial prompts on near-silent audio.
+4. **Caching:** Reverted to the local cached `small` model to ensure 0-second load times.
+
+### Speaker Module (`speaker.py`)
+1. **Engine Swap (PyAudio -> sounddevice):** PyAudio's default MME/DirectSound drivers on Windows 11 frequently route audio silently to wrong/virtual devices. The playback engine was rewritten to use `sounddevice.play()`, which leverages modern WASAPI drivers to guarantee output to the default desktop speakers.
+2. **Native Float32 Playback:** Kokoro outputs `float32` tensors at 24kHz natively; switching to `sounddevice` allowed us to play these arrays directly without expensive manual `int16` / binary bytes conversion.
