@@ -161,16 +161,16 @@ def listen_and_transcribe(ui_callback=None):
 
     # Generate transcription using Faster-Whisper
     # We specify language='en' and guide it with initial_prompt.
-    # Set beam_size=1 for maximum decoding speed on CPU.
-    # Set vad_filter=False since we already cropped silence using Silero VAD.
+    FRONTEND_PROMPT = "React.js, Next.js, TypeScript, JavaScript, Vite, Tailwind CSS, HTML, CSS, frontend developer, UI layout, coding framework, tech mock interview."
+    
     segments, _ = whisper_model.transcribe(
         audio_array,
-        beam_size=1,
         language="en",
-        vad_filter=False,
-        no_speech_threshold=0.4,
-        compression_ratio_threshold=1.5,
-        condition_on_previous_text=False
+        initial_prompt=FRONTEND_PROMPT,
+        beam_size=5,
+        temperature=0.0,
+        vad_filter=True,
+        vad_parameters=dict(min_silence_duration_ms=500)
     )
     transcript_text = "".join([segment.text for segment in segments]).strip()
 
@@ -309,19 +309,16 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
             print(f"  [VAD] Speech found: {(end-start)/RATE:.1f}s trimmed and ready.", flush=True)
 
         # -- Transcribe with Whisper -------------------------------------
-        # no_speech_threshold=0.4  : reject segments Whisper classifies as silence
-        # compression_ratio_threshold=1.5 : reject repetitive hallucinations
-        #   (e.g. "Hello? Hello? Hello?" has high compression ratio -> rejected)
-        # condition_on_previous_text=False: prevents hallucination carryover
+        FRONTEND_PROMPT = "React.js, Next.js, TypeScript, JavaScript, Vite, Tailwind CSS, HTML, CSS, frontend developer, UI layout, coding framework, tech mock interview."
         Benchmark.start("stt")
         segments, _ = whisper_model.transcribe(
             audio_to_transcribe,
-            beam_size=1,
             language="en",
-            vad_filter=False,
-            no_speech_threshold=0.4,
-            compression_ratio_threshold=1.5,
-            condition_on_previous_text=False,
+            initial_prompt=FRONTEND_PROMPT,
+            beam_size=5,
+            temperature=0.0,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500)
         )
         transcript = "".join(s.text for s in segments).strip()
         stt_ms     = Benchmark.end("stt")
