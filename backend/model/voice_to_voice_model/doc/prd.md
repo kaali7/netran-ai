@@ -86,3 +86,69 @@ The project will be executed in parallel tracks to ensure rapid deployment withi
 * **Localization:** Expanding support for multiple regional and international languages.
 * **Platform Integrations:** Connecting directly to job portals like LinkedIn or Indeed for seamless one-click interview generation.
 * **Recruiter Extension:** Developing a dedicated "Recruiter Dashboard" to manage automated candidate screening pipelines and review AI-generated applicant reports.
+
+---
+
+## 7. Stage 3 Enhancements — Continuous Recording & Session Manifest (Plan B)
+
+### 7.1 Overview & Artifact Flow
+To support downstream post-session candidate evaluations (Stage 4), Stage 3 records an uncompressed continuous microphone audio stream and outputs a millisecond-precision JSON transcript manifest upon interview completion.
+
+```
+                     ┌──────────────────────────────────────────────┐
+                     │            STAGE 3 (Voice Loop)              │
+                     └──────────────────────┬───────────────────────┘
+                                            │
+                     ┌──────────────────────┴──────────────────────┐
+                     ▼                                             ▼
+       [ continuous_mic_input.wav ]                  [ session_manifest.json ]
+       (Full 16kHz PCM mic stream)                   (Live transcript + millisecond 
+                                                      timestamps per turn)
+                     │                                             │
+                     └──────────────────────┬──────────────────────┘
+                                            │ Session Completed
+                                            ▼
+                     ┌──────────────────────────────────────────────┐
+                     │            Shared Artifact Storage           │
+                     │          (backend/sessions/<session_id>)     │
+                     └──────────────────────┬───────────────────────┘
+                                            │ (Future Stage 4)
+                                            ▼
+                                model/reports_model/model/
+```
+
+### 7.2 Session Artifact Specifications
+Upon session completion, two artifacts are written to `backend/sessions/<session_id>/`:
+
+#### 1. `continuous_mic_input.wav`
+* **Format:** Uncompressed WAV (16kHz, 16-bit Mono PCM).
+* **Worker:** `ContinuousMicWriter` background thread consuming audio queue asynchronously without blocking Silero VAD or Faster-Whisper loops.
+* **Isolation:** Captures candidate microphone stream only (zero AI audio bleed).
+
+#### 2. `session_manifest.json`
+* **Format:** JSON structure linking transcripts directly with exact timing offsets.
+* **Schema:**
+```json
+{
+  "session_id": "sess_20260724_185500",
+  "session_start_iso": "2026-07-24T18:55:00Z",
+  "total_turns": 15,
+  "turns": [
+    {
+      "turn_id": 1,
+      "topic": "React State Management",
+      "question_text": "How do you handle state persistence across route transitions in Next.js?",
+      "candidate_transcript": "I usually use Zustand combined with local storage sync...",
+      "audio_start_sec": 14.250,
+      "audio_end_sec": 48.800,
+      "silence_duration_before_answer_sec": 1.400,
+      "stt_latency_ms": 320,
+      "ttft_ms": 410
+    }
+  ]
+}
+```
+
+### 7.3 Operational Safety & Edge-Case Protection
+* **Abrupt Exit Handling:** `ContinuousMicWriter` uses `atexit` handlers and thread cleanup to ensure WAV headers are properly closed and formatted even during forced application exit.
+* **Monotonic Timestamps:** All offset timestamps are calculated using `time.perf_counter()` to guarantee immunity against system clock drift or network time sync shifts.

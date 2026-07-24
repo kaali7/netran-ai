@@ -12,8 +12,9 @@ from kivy.uix.boxlayout import BoxLayout
 
 # Import the functional blocks we created in this exact folder
 from brain import generate_eva_response, preload as preload_brain
-from listener import listen_and_transcribe
+from listener import listen_and_transcribe, ContinuousMicWriter
 from speaker import speak_text, preload_models as preload_speaker
+from session_logger import SessionLogger
 
 # Clean visual layout utilizing a modern dark visual palette
 KV = """
@@ -199,6 +200,13 @@ class InterviewWindow(BoxLayout):
         self.question_count = 0
         self.MAX_QUESTIONS = 15
         
+        # Session artifacts tracking
+        self.session_logger = None
+        self.mic_writer = None
+        self.session_dir = None
+        self.current_question_text = ""
+        self.last_eva_speech_end_sec = 0.0
+
         # State variables for Script Calibration Mode
         self.llm_enabled = True
         self.calibration_scripts = {}
@@ -280,6 +288,17 @@ class InterviewWindow(BoxLayout):
                 f"=== AI INTERVIEW LOG: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n\n"
             )
 
+        # Initialize Session Logger & Continuous Mic Writer
+        session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        self.session_dir = os.path.join(backend_dir, "sessions", session_id)
+        os.makedirs(self.session_dir, exist_ok=True)
+
+        self.session_logger = SessionLogger(session_id=session_id, session_dir=self.session_dir)
+        mic_wav_path = os.path.join(self.session_dir, "continuous_mic_input.wav")
+        self.mic_writer = ContinuousMicWriter(filepath=mic_wav_path)
+        self.mic_writer.start()
+
         self.update_status("Initializing AI Models... (Please wait)")
         self.append_ui_text("\n[System]: Pre-heating AI pipelines...\n")
 
@@ -291,6 +310,12 @@ class InterviewWindow(BoxLayout):
 
     def stop_interview(self):
         self.is_running = False
+        if self.mic_writer:
+            self.mic_writer.stop()
+            self.mic_writer = None
+        if self.session_logger:
+            self.session_logger.finalize()
+            self.session_logger = None
         Clock.schedule_once(lambda dt: self._reset_buttons())
         self.update_status("Interview Stopped.")
         self.append_ui_text("\n[System]: Log file finalized successfully.")
@@ -342,6 +367,7 @@ class InterviewWindow(BoxLayout):
             # --- TURN 1: EVA INITIATES CONVERSATION ---
             if self.llm_enabled:
                 initial_greeting = "Hello! Welcome to your technical interview today. [Clears Throat] Could you please start by describing your core frontend stack?"
+                self.current_question_text = initial_greeting
                 self.log_and_display_turn("Eva", initial_greeting)
                 self.conversation_history.append(
                     {"role": "assistant", "content": initial_greeting}
@@ -350,6 +376,8 @@ class InterviewWindow(BoxLayout):
                 self.update_question_label(self.question_count)
                 self.update_status("Eva is speaking...")
                 speak_text(initial_greeting)
+                if self.session_logger:
+                    self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
             else:
                 if not self.current_track_data:
                     self.update_status("Error: No track selected")
@@ -359,6 +387,7 @@ class InterviewWindow(BoxLayout):
                 
                 # Fetch Question 1
                 q_data = self.current_track_data[0]
+                self.current_question_text = q_data['question']
                 initial_greeting = f"Welcome to the {self.active_track} calibration. Here is your first question: {q_data['question']}"
                 self.log_and_display_turn("Eva", q_data['question'])
                 self.question_count = 0
@@ -366,12 +395,17 @@ class InterviewWindow(BoxLayout):
                 Clock.schedule_once(lambda dt: self._update_script_display())
                 self.update_status("Eva is speaking...")
                 speak_text(initial_greeting)
+                if self.session_logger:
+                    self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
 
             # --- MAIN CYCLE LOOP ---
             while self.is_running:
                 # 1. LISTENING STAGE
                 self.update_status("Listening to your response...")
-                user_transcript = listen_and_transcribe(ui_callback=self.update_audio_diagnostics)
+                turn_start_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
+                user_transcript = listen_and_transcribe(ui_callback=self.update_audio_diagnostics, mic_writer=self.mic_writer)
+                turn_end_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
+                silence_gap_sec = max(0.0, turn_start_sec - self.last_eva_speech_end_sec)
 
                 if not user_transcript.strip() or not self.is_running:
                     continue
@@ -436,6 +470,9 @@ class InterviewWindow(BoxLayout):
                             ttfa_logged = True
                         speak_text(sentence_buffer.strip())
 
+                    if self.session_logger:
+                        self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
+
                     # Append whole historical log context block to state history matrix
                     self.log_and_display_turn("Eva", full_eva_reply)
                     self.conversation_history.append(
@@ -446,6 +483,22 @@ class InterviewWindow(BoxLayout):
                     stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
                     if ttft_logged and ttfa_logged:
                         Benchmark.log_metrics(stt_ms, current_ttft, current_ttfa)
+
+                    # Log manifest turn entry
+                    if self.session_logger:
+                        self.session_logger.log_turn(
+                            turn_id=self.question_count,
+                            topic="Frontend Engineering",
+                            question_text=self.current_question_text,
+                            candidate_transcript=clean_transcript,
+                            audio_start_sec=turn_start_sec,
+                            audio_end_sec=turn_end_sec,
+                            silence_duration_before_answer_sec=silence_gap_sec,
+                            stt_latency_ms=stt_ms,
+                            ttft_ms=current_ttft
+                        )
+                    # Prepare question text for next turn log
+                    self.current_question_text = full_eva_reply
 
                     self.question_count += 1
                     self.update_question_label(self.question_count)
@@ -483,7 +536,37 @@ class InterviewWindow(BoxLayout):
                         self.log_and_display_turn("Eva", next_q)
                         self.update_status("Eva is speaking...")
                         speak_text(next_q)
+                        if self.session_logger:
+                            self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
+
+                        if self.session_logger:
+                            stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
+                            self.session_logger.log_turn(
+                                turn_id=self.question_count,
+                                topic=self.active_track or "Calibration",
+                                question_text=self.current_question_text,
+                                candidate_transcript=clean_transcript,
+                                audio_start_sec=turn_start_sec,
+                                audio_end_sec=turn_end_sec,
+                                silence_duration_before_answer_sec=silence_gap_sec,
+                                stt_latency_ms=stt_ms,
+                                ttft_ms=0.0
+                            )
+                        self.current_question_text = next_q
                     else:
+                        if self.session_logger:
+                            stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
+                            self.session_logger.log_turn(
+                                turn_id=self.question_count,
+                                topic=self.active_track or "Calibration",
+                                question_text=self.current_question_text,
+                                candidate_transcript=clean_transcript,
+                                audio_start_sec=turn_start_sec,
+                                audio_end_sec=turn_end_sec,
+                                silence_duration_before_answer_sec=silence_gap_sec,
+                                stt_latency_ms=stt_ms,
+                                ttft_ms=0.0
+                            )
                         self.update_status("Calibration Complete!")
                         self.append_ui_text("\n[System]: Calibration complete! Final match analytics calculated.")
                         Clock.schedule_once(lambda dt: self._update_script_display())

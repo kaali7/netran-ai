@@ -3,6 +3,8 @@
 ## 📌 Executive Summary
 The Netran AI Voice-to-Voice backend and desktop application have reached full operational stability. The system runs a real-time, low-latency cascaded voice processing pipeline comprising **Neural Voice Activity Detection (Silero VAD)**, **Speech-to-Text (Faster-Whisper)**, **Streaming LLM Reasoning (Ollama Qwen2.5:1.5B)**, and **Text-to-Speech (Kokoro-82M)**, integrated into a dark-themed **Kivy Desktop GUI**.
 
+Additionally, Stage 3 continuous microphone recording and millisecond-precision session manifest logging (Plan B) are fully integrated to store session artifacts in `backend/sessions/<session_id>/` for downstream evaluation engines.
+
 ---
 
 ## 🏗️ Core Architecture & Component Breakdown
@@ -10,21 +12,28 @@ The Netran AI Voice-to-Voice backend and desktop application have reached full o
 ```
  ┌────────────────┐     512 samples @ 16kHz float32      ┌─────────────────────────┐
  │   Microphone   │ ───────────────────────────────────> │  Silero VAD + Auto-Gain │
- └────────────────┘                                      └───────────┬─────────────┘
-                                                                     │ Speech Ended
-                                                                     ▼
+ └───────┬────────┘                                      └───────────┬─────────────┘
+         │ Continuous Frames                                         │ Speech Ended
+         ▼                                                           ▼
  ┌────────────────┐     Native 24kHz float32 Audio       ┌─────────────────────────┐
- │  sounddevice   │ <─────────────────────────────────── │ Faster-Whisper ("small")│
- └───────▲────────┘                                      └───────────┬─────────────┘
-         │ Chunks                                                    │ Transcript
-         │                                                           ▼
- ┌───────┴────────┐     Regex Sentence Stream (>15 chars) ┌─────────────────────────┐
+ │ Continuous Mic │ <─────────────────────────────────── │ Faster-Whisper ("small")│
+ │ Writer (.wav)  │                                      └───────────┬─────────────┘
+ └────────────────┘                                                  │ Transcript
+                                                                     ▼
+ ┌────────────────┐     Regex Sentence Stream (>15 chars) ┌─────────────────────────┐
  │ Kokoro-82M TTS │ <─────────────────────────────────── │ Ollama (Qwen2.5:1.5B)  │
- └────────────────┘                                      └─────────────────────────┘
+ └────────────────┘                                      └───────────┬─────────────┘
+                                                                     │
+                                                                     ▼
+                                                         ┌─────────────────────────┐
+                                                         │  SessionLogger Manifest │
+                                                         │ (session_manifest.json) │
+                                                         └─────────────────────────┘
 ```
 
-### 1. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/listener.py))
+### 1. Speech-to-Text & Continuous Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
 * **Audio Capture Engine**: Built using `sounddevice` running at 16kHz single-channel `float32`.
+* **Continuous Mic Writer (`ContinuousMicWriter`)**: Background worker thread that streams raw 16kHz float32 PCM mic frames into a `queue.Queue` and writes an uncompressed 16-bit Mono WAV file (`continuous_mic_input.wav`). Runs asynchronously to prevent VAD or STT inference delays, with `atexit` protection against abrupt application exits.
 * **DC Offset Removal & Dynamic Auto-Gain**: Centers raw PCM audio around `0.0` and applies dynamic peak scaling (up to 50x gain boost targeting 90% peak) to handle low-gain Windows microphones.
 * **Silero VAD v3 Inference**: Evaluates speech probabilities frame-by-frame on 32ms (512-sample) windows.
 * **Hybrid VAD + RMS Failsafe**:
@@ -34,29 +43,35 @@ The Netran AI Voice-to-Voice backend and desktop application have reached full o
 * **Faster-Whisper STT**: Uses cached `small` model in `int8` CPU mode with domain prompt guidance (`FRONTEND_PROMPT`) to accurately transcribe tech terminology without hallucinations.
 * **Echo Gate Protection**: Checks `speaker.IS_AGENT_SPEAKING` via lazy module import to drop microphone frames during TTS playback and eliminate audio feedback loops.
 
-### 2. LLM Engine & Response Generation ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/brain.py))
+### 2. LLM Engine & Response Generation ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/brain.py))
 * **Model**: Local Ollama execution of `qwen2.5:1.5b`.
 * **Persona & Guardrails**: System prompt (`Eva`) enforces concise 1–2 sentence technical interviewer responses, prevents commentary on background noise, and handles a structured 15-question sequence.
 * **Token Streaming**: Yields text tokens in real time via `ollama.chat(stream=True)`.
 * **Pre-heating**: `preload()` function warms model weights prior to session start.
 
-### 3. Text-to-Speech Playback ([speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/speaker.py))
+### 3. Text-to-Speech Playback ([speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/speaker.py))
 * **Kokoro-82M Engine**: Local neural TTS initialized using `KPipeline(lang_code="a")` with the `af_bella` voice preset.
 * **Native Direct Audio Output**: Renders float32 tensors at 24kHz sample rate directly to `sounddevice.play()`, bypassing legacy PyAudio MME driver routing issues.
 * **State Management**: Controls global `IS_AGENT_SPEAKING` flag for echo suppression.
 
-### 4. Overlapping Pipeline & Latency Optimization ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/main_app.py))
+### 4. Session Manifest & Timestamp Logging ([session_logger.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/session_logger.py))
+* **Monotonic Session Timer**: Uses `time.perf_counter()` to eliminate system clock drift.
+* **Per-Turn Manifest Data**: Records millisecond timestamps (`audio_start_sec`, `audio_end_sec`), initial hesitation duration (`silence_duration_before_answer_sec`), STT latency (`stt_latency_ms`), TTFT latency (`ttft_ms`), question text, and candidate transcript.
+* **Manifest Finalization**: Atomically writes `session_manifest.json` inside `backend/sessions/<session_id>/` upon session stop or completion.
+
+### 5. Overlapping Pipeline & Latency Optimization ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/main_app.py))
 * **Sentence-Level Streaming Buffer**: Uses regex boundary detection (`[.!?\n]`) to split streaming LLM tokens into sentence chunks.
 * **Abbreviation & Length Safeguards**: Requires a minimum chunk length of >15 characters and skips standard abbreviations (e.g., `Mr.`, `Dr.`, `e.g.`, `vs.`), ensuring natural speech cadence.
 * **Overlapping Execution**: TTS synthesizes and speaks the first sentence while the LLM is actively computing subsequent sentences, significantly reducing Time-to-First-Audio (TTFA).
 
-### 5. Desktop Application & Dual Modes ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/main_app.py))
+### 6. Desktop Application & Dual Modes ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/main_app.py))
 * **Kivy Modern Dark GUI**: Includes real-time VAD diagnostics, volume meter bar, live conversation transcript panel, and control buttons (Start, Stop & Save, Restart).
+* **Automatic Session Artifact Management**: On `Start Interview`, initializes session folder (`backend/sessions/sess_YYYYMMDD_HHMMSS/`), starts `ContinuousMicWriter` and `SessionLogger`. On `Stop Interview`, safely closes WAV headers and flushes manifest JSON.
 * **Dual Operation Modes**:
   1. **Dynamic Live LLM Mode**: Standard 15-question AI technical interview powered by Qwen2.5.
   2. **Script Calibration Mode**: Practice mode utilizing pre-scripted technical tracks from `interview_scripts.json` (React, Next.js, TypeScript, Build Tools, CSS/Tailwind) with fuzzy sequence-matching (`difflib.SequenceMatcher`) for reading-accuracy scoring.
 
-### 6. Metrics & Benchmarking ([benchmark.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice/model/benchmark.py))
+### 7. Metrics & Benchmarking ([benchmark.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/benchmark.py))
 * Measures high-resolution timing via `time.perf_counter()`.
 * Automatically appends performance telemetry (`stt_ms`, `ttft_ms`, `ttfa_ms`) to `benchmark_log.csv`.
 

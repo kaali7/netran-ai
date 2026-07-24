@@ -1,3 +1,7 @@
+import wave
+import queue
+import threading
+import atexit
 import numpy as np
 import sounddevice as sd
 import onnxruntime as ort
@@ -22,10 +26,11 @@ print("Loading Faster-Whisper model (small)...", flush=True)
 whisper_model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
 print("Models loaded successfully!", flush=True)
 
-def listen_and_transcribe(ui_callback=None):
+def listen_and_transcribe(ui_callback=None, mic_writer=None):
     """
     Opens the microphone, uses Silero VAD to detect speech start and end,
-    respects the echo gate, and transcribes the speech using Faster-Whisper.
+    respects the echo gate, transcribes the speech using Faster-Whisper,
+    and optionally streams raw frames to continuous mic writer.
     """
     # Audio hardware recording constraints
     CHANNELS = 1
@@ -75,6 +80,9 @@ def listen_and_transcribe(ui_callback=None):
                 # Discard frame and reset talking state to avoid triggering mid-speech
                 silence_frames_counter = 0
                 continue
+
+            if mic_writer:
+                mic_writer.write_frame(original_frame)
 
             # We already have float32 from sounddevice
             audio_frame = original_frame.copy()
@@ -336,3 +344,74 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
 
 if __name__ == "__main__":
     run_timed_test(rounds=3, record_seconds=8)
+
+
+class ContinuousMicWriter:
+    """
+    Background worker thread that continuously writes incoming 16kHz float32 PCM mic frames
+    to a 16kHz 16-bit Mono WAV file asynchronously using a queue.
+    """
+    def __init__(self, filepath: str, sample_rate: int = 16000):
+        self.filepath = filepath
+        self.sample_rate = sample_rate
+        self.queue = queue.Queue()
+        self.is_running = False
+        self.thread = None
+        self._wav_file = None
+
+    def start(self):
+        """Starts the background recording writer thread."""
+        if self.is_running:
+            return
+        os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+        self.is_running = True
+        self.thread = threading.Thread(target=self._writer_loop, daemon=True)
+        self.thread.start()
+        atexit.register(self.stop)
+        print(f"[ContinuousMicWriter] Recording started -> {self.filepath}", flush=True)
+
+    def write_frame(self, frame: np.ndarray):
+        """Enqueues raw float32 frame for non-blocking disk writing."""
+        if self.is_running:
+            self.queue.put(frame.copy())
+
+    def _writer_loop(self):
+        """Worker thread loop consuming frames from the queue."""
+        try:
+            self._wav_file = wave.open(self.filepath, 'wb')
+            self._wav_file.setnchannels(1)
+            self._wav_file.setsampwidth(2)  # 16-bit PCM = 2 bytes
+            self._wav_file.setframerate(self.sample_rate)
+
+            while self.is_running or not self.queue.empty():
+                try:
+                    frame = self.queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+
+                if frame is None:  # Sentinel object to terminate
+                    break
+
+                # Convert float32 [-1.0, 1.0] to int16 [-32768, 32767]
+                pcm16 = (np.clip(frame, -1.0, 1.0) * 32767).astype(np.int16)
+                self._wav_file.writeframes(pcm16.tobytes())
+                self.queue.task_done()
+        except Exception as e:
+            print(f"[ContinuousMicWriter Error] {e}", flush=True)
+        finally:
+            if self._wav_file:
+                try:
+                    self._wav_file.close()
+                except Exception:
+                    pass
+                self._wav_file = None
+
+    def stop(self):
+        """Stops the writer thread and cleanly closes the WAV file header."""
+        if not self.is_running:
+            return
+        self.is_running = False
+        self.queue.put(None)  # Send sentinel
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=2.0)
+        print(f"[ContinuousMicWriter] Recording saved and closed -> {self.filepath}", flush=True)

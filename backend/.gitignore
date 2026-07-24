@@ -24,6 +24,9 @@ cache.db
 *.log
 benchmark_log.csv
 .kivy/
+sessions/
+model/sessions/
+*.wav
 
 # IDE & Editor Settings
 .vscode/

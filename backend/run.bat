@@ -57,7 +57,7 @@ goto menu
 :run_app
 echo.
 echo Starting Kivy Voice Interview Window...
-cd model\voice_to_voice\test
+cd model\voice_to_voice_model\model
 ..\..\..\.venv\Scripts\python.exe main_app.py
 cd ..\..\..
 pause
@@ -66,7 +66,7 @@ goto menu
 :test_listener
 echo.
 echo Running Speech-to-Text VAD / Transcription standalone test...
-cd model\voice_to_voice\test
+cd model\voice_to_voice_model\model
 ..\..\..\.venv\Scripts\python.exe listener.py
 cd ..\..\..
 pause
@@ -75,7 +75,7 @@ goto menu
 :test_speaker
 echo.
 echo Running Kokoro TTS standalone test...
-cd model\voice_to_voice\test
+cd model\voice_to_voice_model\model
 ..\..\..\.venv\Scripts\python.exe speaker.py
 cd ..\..\..
 pause
@@ -84,7 +84,7 @@ goto menu
 :test_brain
 echo.
 echo Running LLM/Ollama standalone test...
-cd model\voice_to_voice\test
+cd model\voice_to_voice_model\model
 ..\..\..\.venv\Scripts\python.exe brain.py
 cd ..\..\..
 pause
@@ -93,7 +93,7 @@ goto menu
 :run_vad
 echo.
 echo Downloading/Verifying Silero VAD ONNX model...
-cd model\voice_to_voice\test
+cd model\voice_to_voice_model\model
 ..\..\..\.venv\Scripts\python.exe download_vad.py
 cd ..\..\..
 pause
