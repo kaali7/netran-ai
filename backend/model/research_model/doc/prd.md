@@ -41,8 +41,8 @@ Standard AI-generated mock interviews often suffer from:
 
 ### 3.2 Trusted Domain Web Search
 
-* **Exa API Integration:** The system will execute web searches strictly filtered to high-trust engineering domains (e.g., `leetcode.com`, `glassdoor.com`, `github.com`).
-* **Fallback Resilience:** If the search engine fails to retrieve clean data or returns a silent failure (e.g., URL scraping blocks), the system must automatically pivot to a fallback instruction, relying on the LLM's internal baseline knowledge rather than failing the application loop.
+* **Tavily API Integration:** The system will execute web searches strictly filtered to high-trust engineering domains (e.g., `leetcode.com`, `glassdoor.com`, `github.com`). Tavily's AI-optimized search is used for clean, structured web content extraction without scraping barriers.
+* **Fallback Resilience:** If the search engine fails to retrieve clean data or returns a silent failure (e.g., API rate limit or empty result set), the system must automatically pivot to a fallback instruction, relying on the LLM's internal baseline knowledge rather than failing the application loop.
 
 ### 3.3 Strict Structured Output (JSON) Generation
 
@@ -58,8 +58,8 @@ Standard AI-generated mock interviews often suffer from:
 
 * **Language & Framework:** Python with **FastAPI** to handle high-performance, asynchronous REST API routing and orchestrate the external API calls efficiently.
 * **Data Validation:** **Pydantic** models will be utilized to define, enforce, and validate the strict JSON schema structures expected from the LLM, seamlessly integrating with FastAPI's native architecture.
-* **Search Infrastructure:** `exa-py` (Exa Search API Python SDK) for real-time web data extraction and domain whitelisting.
-* **Reasoning Engine:** `google-generativeai` (Gemini 1.5 Pro Python SDK) for synthesizing the web context into a structured rubric.
+* **Search Infrastructure:** `tavily-python` (Tavily Search API Python SDK) for real-time web data extraction and domain whitelisting. API key stored as `TAVILY_API_KEY` in `.env`.
+* **Reasoning Engine:** `google-genai` SDK (`from google import genai`, model: `gemini-3.6-flash`) for synthesizing the web context into a structured rubric. API key stored as `GEMINI_API_KEY` in `.env`.
 
 ### 4.2 Data Layer & Schema Constraints
 
