@@ -17,24 +17,28 @@ echo ===================================================
 echo.
 echo  1. Run JD Research and Market Intel Model (Research Engine)
 echo  2. Run Full Kivy Interview Client (Voice-to-Voice)
-echo  3. Test Speech-to-Text Listener (listener.py)
-echo  4. Test Text-to-Speech Speaker (speaker.py)
-echo  5. Test Conversation LLM Brain (brain.py)
-echo  6. Download/Verify Silero VAD (download_vad.py)
-echo  7. Install Research Model Requirements
-echo  8. Exit
+echo  3. Run Stage 4 Report Engine Test UI (Kivy UI)
+echo  4. Run Stage 4 Report Engine CLI Test (Headless)
+echo  5. Test Speech-to-Text Listener (listener.py)
+echo  6. Test Text-to-Speech Speaker (speaker.py)
+echo  7. Test Conversation LLM Brain (brain.py)
+echo  8. Download/Verify Silero VAD (download_vad.py)
+echo  9. Install Research Model Requirements
+echo 10. Exit
 echo.
 echo ===================================================
-set /p choice="Enter your choice (1-8): "
+set /p choice="Enter your choice (1-10): "
 
 if "%choice%"=="1" goto run_research_model
 if "%choice%"=="2" goto run_app
-if "%choice%"=="3" goto test_listener
-if "%choice%"=="4" goto test_speaker
-if "%choice%"=="5" goto test_brain
-if "%choice%"=="6" goto run_vad
-if "%choice%"=="7" goto install_reqs
-if "%choice%"=="8" goto end
+if "%choice%"=="3" goto run_report_ui
+if "%choice%"=="4" goto run_report_cli
+if "%choice%"=="5" goto test_listener
+if "%choice%"=="6" goto test_speaker
+if "%choice%"=="7" goto test_brain
+if "%choice%"=="8" goto run_vad
+if "%choice%"=="9" goto install_reqs
+if "%choice%"=="10" goto end
 goto menu
 
 :run_research_model
@@ -46,6 +50,19 @@ cd ..\..
 pause
 goto menu
 
+:run_report_ui
+echo.
+echo Starting Stage 4 Multimodal Report Engine Kivy UI...
+.venv\Scripts\python.exe -m model.reports_model.model.test_ui
+pause
+goto menu
+
+:run_report_cli
+echo.
+echo Starting Stage 4 Multimodal Report Engine Headless Pipeline...
+.venv\Scripts\python.exe -m model.reports_model.model.test_pipeline
+pause
+goto menu
 
 :install_reqs
 echo.
@@ -102,5 +119,3 @@ goto menu
 :end
 echo Exiting test suite.
 exit /b 0
-
-

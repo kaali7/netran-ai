@@ -37,10 +37,12 @@ This document tracks the multi-stage AI pipeline components implemented inside t
                                             ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                STAGE 4: REPORT ENGINE                                  │
-│                      backend/model/reports_model/model/  [REMAINING]                   │
+│                      backend/model/reports_model/model/  [COVERED]                     │
 │  - Non-Destructive Audio Slicer per Turn (audio_slicer.py)                             │
-│  - Acoustic Feature Extractor: WPM, Hesitation, Tremor, Fillers (acoustic_analyzer.py) │
-│  - Gemini Dual-Evaluation Candidate Report Generator (evaluator.py)                    │
+│  - Gemini Multimodal 3-Branch Evaluator (gemini_evaluator.py)                          │
+│  - Pydantic Schema Payload Validation (report_schema.py)                               │
+│  - Dual Artifact Generator: report.json & evaluation_summary.md (report_builder.py)    │
+│  - Kivy Desktop Test UI & CLI Runner (test_ui.py / test_pipeline.py)                   │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +55,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | JD parsing, market web search, Gemini rubric generator, SQLite caching, Kivy UI |
 | **Stage 2** | `question_model` | ⏳ **Remaining** | `backend/model/question_model/model/` | Contextual question generation tree, skill matrix mapping |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, Faster-Whisper, Qwen2.5 LLM, Kokoro TTS, Continuous WAV recording, Session Manifest JSON |
-| **Stage 4** | `reports_model` | ⏳ **Remaining** | `backend/model/reports_model/model/` | Audio slicing, acoustic & hesitation analysis, Gemini Candidate Report synthesis |
+| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing, 3-branch Gemini multimodal evaluation, report.json & evaluation_summary.md synthesis, Kivy UI |
 | **Workflow** | `workflow` | ⏳ **Remaining** | `backend/model/workflow/` | End-to-end multi-stage pipeline orchestrator |
 
 ---
@@ -85,7 +87,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 ---
 
 ### Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
-* **Status**: ✅ **COVERED & OPERATIONAL** (Enhanced with Plan B Stage 3 recording & manifest logging)
+* **Status**: ✅ **COVERED & OPERATIONAL** (Enhanced with Stage 3 recording & manifest logging)
 * **Location**: `backend/model/voice_to_voice_model/model/`
 * **Implemented Code**:
   - `main_app.py`: Kivy Desktop UI, streaming sentence buffer, live conversation panel, dual modes (LLM vs. Script Calibration), automatic session folder creation (`backend/sessions/sess_<timestamp>/`).
@@ -101,13 +103,19 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 ---
 
 ### Stage 4: Reports Model (`reports_model`)
-* **Status**: ⏳ **REMAINING / PLANNED** (Plan B Stage 4)
+* **Status**: ✅ **COVERED & OPERATIONAL**
 * **Location**: `backend/model/reports_model/model/`
-* **Planned Code**:
-  - `audio_slicer.py`: Slices `continuous_mic_input.wav` using sample offsets from `session_manifest.json` into per-question WAV files (`Q1_candidate.wav`, `Q2_candidate.wav`).
-  - `acoustic_analyzer.py`: Computes quantitative acoustic metrics (initial hesitation delay, WPM speech velocity, energy tremor/variance, filler word density).
-  - `evaluator.py`: Synthesizes Stage 1 Rubric, live transcript, and per-turn acoustic metrics via Gemini 2.5/3.6 Flash using Pydantic JSON schema output (`CandidateReportPayload`).
-  - `report_runner.py`: Post-session evaluation orchestrator outputting `candidate_report.json`.
+* **Implemented Code**:
+  - `report_schema.py`: Pydantic v2 schemas (`CandidateReportPayload`, `TurnAnalysis`, `PillarScore`, `AudioBranchOutput`, `TechnicalBranchOutput`).
+  - `audio_slicer.py`: Non-destructive WAV slicing utility using Python wave module to extract turn audio clips based on `session_manifest.json` timing telemetry.
+  - `gemini_evaluator.py`: 3-stage Gemini multimodal evaluation engine using `gemini-3.6-flash` via Google GenAI Interactions API (Audio Branch, Technical Branch, Combine Synthesis Branch).
+  - `report_builder.py`: Pipeline orchestrator that runs slicing, evaluation branches, and generates dual output artifacts (`report.json` and `evaluation_summary.md`).
+  - `test_pipeline.py`: Headless CLI test harness for automated pipeline verification.
+  - `test_ui.py`: Kivy desktop GUI application with live telemetry log and synthesized report view card.
+* **Output Artifacts**:
+  - `backend/sessions/<session_id>/report.json`
+  - `backend/sessions/<session_id>/evaluation_summary.md`
+  - `backend/sessions/<session_id>/turn_XX.wav`
 
 ---
 
