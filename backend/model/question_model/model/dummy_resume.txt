@@ -1,0 +1,19 @@
+John Doe
+    Software Engineer
+
+    Experience:
+    - Backend Developer at TechCorp (2020 - Present)
+      Built scalable microservices using Python, FastAPI, and PostgreSQL.
+      Deployed infrastructure using Docker and Kubernetes.
+      Implemented OAuth2 authentication and Redis caching, improving API latency by 40%.
+    
+    - Junior Web Developer at WebSolutions (2018 - 2020)
+      Developed interactive frontend components using React and Redux.
+      Styled applications using Tailwind CSS.
+      Maintained legacy PHP/Laravel applications.
+    
+    Education:
+    - B.S. in Computer Science, University of Technology (2014 - 2018)
+
+    Skills:
+    Python, JavaScript, React, FastAPI, Docker, Kubernetes, PostgreSQL, Redis, AWS.

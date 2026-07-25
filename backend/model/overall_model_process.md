@@ -18,9 +18,9 @@ This document tracks the multi-stage AI pipeline components implemented inside t
                                             ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                               STAGE 2: QUESTION ENGINE                                 │
-│                     backend/model/question_model/model/  [REMAINING]                   │
-│  - Context-Aware Question Tree Generation                                              │
-│  - Resume + JD Keyword Matching & Difficulty Tiering                                   │
+│                     backend/model/question_model/model/  [COVERED]                     │
+│  - Context-Aware Question Tree Generation (interview_questions.json)                   │
+│  - Resume + JD Skill Cross-Matching & Dynamic System Prompt Builder                    │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘
                                             │ Structured Question Matrix
                                             ▼
@@ -53,7 +53,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 | Stage | Module Name | Status | Location | Key Deliverables |
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | JD parsing, market web search, Gemini rubric generator, SQLite caching, Kivy UI |
-| **Stage 2** | `question_model` | ⏳ **Remaining** | `backend/model/question_model/model/` | Contextual question generation tree, skill matrix mapping |
+| **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | PDF/DOCX/TXT resume parsing, skill gap matrix, Gemini 15-question tree & system prompt generator |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, Faster-Whisper, Qwen2.5 LLM, Kokoro TTS, Continuous WAV recording, Session Manifest JSON |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing, 3-branch Gemini multimodal evaluation, report.json & evaluation_summary.md synthesis, Kivy UI |
 | **Workflow** | `workflow` | ⏳ **Remaining** | `backend/model/workflow/` | End-to-end multi-stage pipeline orchestrator |
@@ -77,12 +77,17 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 ---
 
 ### Stage 2: Question Model (`question_model`)
-* **Status**: ⏳ **REMAINING / PLANNED**
+* **Status**: ✅ **COVERED & OPERATIONAL**
 * **Location**: `backend/model/question_model/model/`
-* **Planned Code**:
-  - Question generation engine combining Stage 1 Rubric + Candidate Resume + Target JD.
-  - Question difficulty tiering (Beginner, Intermediate, Advanced).
-  - Question script builder outputting structured interview question sets for Stage 3.
+* **Implemented Code**:
+  - `resume_parser.py`: PDF, DOCX, and TXT document text extraction and resume parsing (`pypdf`, `python-docx`).
+  - `schemas.py`: Pydantic v2 schemas (`Stage2Output`, `QuestionItem`) for structured question tree and system prompt.
+  - `prompt_builder.py`: System prompt constraint compiler enforcing latency limits (1-2 sentences) and probing strategy for Stage 3 `brain.py`.
+  - `question_generator.py`: Core reasoning engine utilizing `google-genai` SDK (`gemini-3.6-flash`) with structured schema enforcement (`response_schema`).
+  - `test_pipeline.py`: Automated end-to-end testing harness with dynamic mock resume generator.
+* **Output Artifacts**:
+  - `backend/sessions/<session_id>/interview_questions.json`
+  - `backend/sessions/<session_id>/system_prompt.txt`
 
 ---
 

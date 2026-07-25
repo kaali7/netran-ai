@@ -15,30 +15,32 @@ echo ===================================================
 echo     NETRAN AI - MODEL AND SYSTEM TEST SUITE
 echo ===================================================
 echo.
-echo  1. Run JD Research and Market Intel Model (Research Engine)
-echo  2. Run Full Kivy Interview Client (Voice-to-Voice)
-echo  3. Run Stage 4 Report Engine Test UI (Kivy UI)
-echo  4. Run Stage 4 Report Engine CLI Test (Headless)
-echo  5. Test Speech-to-Text Listener (listener.py)
-echo  6. Test Text-to-Speech Speaker (speaker.py)
-echo  7. Test Conversation LLM Brain (brain.py)
-echo  8. Download/Verify Silero VAD (download_vad.py)
-echo  9. Install Research Model Requirements
-echo 10. Exit
+echo  1. Run Stage 1 JD Research and Market Intel Model (Research Engine)
+echo  2. Run Stage 2 Question Engine Test (Headless)
+echo  3. Run Stage 3 Full Kivy Interview Client (Voice-to-Voice)
+echo  4. Run Stage 4 Report Engine Test UI (Kivy UI)
+echo  5. Run Stage 4 Report Engine CLI Test (Headless)
+echo  6. Test Speech-to-Text Listener (listener.py)
+echo  7. Test Text-to-Speech Speaker (speaker.py)
+echo  8. Test Conversation LLM Brain (brain.py)
+echo  9. Download/Verify Silero VAD (download_vad.py)
+echo 10. Install Research Model Requirements
+echo 11. Exit
 echo.
 echo ===================================================
-set /p choice="Enter your choice (1-10): "
+set /p choice="Enter your choice (1-11): "
 
 if "%choice%"=="1" goto run_research_model
-if "%choice%"=="2" goto run_app
-if "%choice%"=="3" goto run_report_ui
-if "%choice%"=="4" goto run_report_cli
-if "%choice%"=="5" goto test_listener
-if "%choice%"=="6" goto test_speaker
-if "%choice%"=="7" goto test_brain
-if "%choice%"=="8" goto run_vad
-if "%choice%"=="9" goto install_reqs
-if "%choice%"=="10" goto end
+if "%choice%"=="2" goto run_question_model_cli
+if "%choice%"=="3" goto run_app
+if "%choice%"=="4" goto run_report_ui
+if "%choice%"=="5" goto run_report_cli
+if "%choice%"=="6" goto test_listener
+if "%choice%"=="7" goto test_speaker
+if "%choice%"=="8" goto test_brain
+if "%choice%"=="9" goto run_vad
+if "%choice%"=="10" goto install_reqs
+if "%choice%"=="11" goto end
 goto menu
 
 :run_research_model
@@ -47,6 +49,13 @@ echo Starting JD Research and Market Intelligence Engine (Kivy UI)...
 cd model\research_model
 ..\..\.venv\Scripts\python.exe -m model.app
 cd ..\..
+pause
+goto menu
+
+:run_question_model_cli
+echo.
+echo Starting Stage 2 Question Engine Headless Pipeline...
+.venv\Scripts\python.exe -m model.question_model.model.test_pipeline
 pause
 goto menu
 
