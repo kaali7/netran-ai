@@ -26,7 +26,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 TEST_INPUT_DIR = BASE_DIR / "test" / "input"
 TEST_OUTPUT_DIR = BASE_DIR / "test" / "output"
 

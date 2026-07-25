@@ -52,8 +52,8 @@ Window.size = (1024, 768)
 Window.clearcolor = (0.05, 0.06, 0.09, 1)  # Deep Obsidian #0D0F17
 
 # Test Paths
-TEST_INPUT_DIR = current_dir / "test" / "input"
-TEST_OUTPUT_DIR = current_dir / "test" / "output"
+TEST_INPUT_DIR = parent_dir / "test" / "input"
+TEST_OUTPUT_DIR = parent_dir / "test" / "output"
 
 # Color Tokens
 COLOR_BG = (0.05, 0.06, 0.09, 1)        # #0D0F17 Deep Obsidian

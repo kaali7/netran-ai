@@ -24,6 +24,9 @@ backend/
     │   ├── doc/
     │   │   ├── current.md     # Stage 1 technical implementation status
     │   │   └── prd.md         # Stage 1 Product Requirements Document
+    │   ├── test/              # Stage 1 test harness input/output directories
+    │   │   ├── input/         # Pre-saved dummy JD sample files (*.txt)
+    │   │   └── output/        # Generated session outputs ( sess_<timestamp>/ )
     │   └── model/
     │       ├── __init__.py    # Package initializer
     │       ├── app.py         # Kivy Desktop GUI test client with web intel visualizer
@@ -35,10 +38,7 @@ backend/
     │       ├── rubric_generator.py # Gemini-powered assessment rubric synthesizer
     │       ├── schemas.py     # Pydantic schemas (ParsedJD, InterviewTopic, InterviewRubric, Stage1Output)
     │       ├── search_engine.py # Tavily Search API client with expanded domain whitelist
-    │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 1
-    │       └── test/          # Stage 1 test harness input/output directories
-    │           ├── input/     # Pre-saved dummy JD sample files (*.txt)
-    │           └── output/    # Generated session outputs ( sess_<timestamp>/ )
+    │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 1
     │
     ├── question_model/        # STAGE 2: Contextual Question & Behavioral Prompt Engine
     │   ├── doc/
