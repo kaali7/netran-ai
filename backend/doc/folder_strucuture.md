@@ -48,6 +48,7 @@ backend/
     │   │   ├── input/         # Pre-saved dummy input JSON files (sample_job_detail.json & sample_resume.json)
     │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> interview_questions.json & interviewer_behavior.json )
     │   └── model/
+    │       ├── app.py         # Stage 2 Kivy Desktop GUI Client
     │       ├── config.py      # Stage 2 configuration loader
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
     │       ├── question_generator.py # Gemini 15-question tree & system prompt generator

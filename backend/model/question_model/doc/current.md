@@ -74,9 +74,13 @@ By analyzing the Candidate's Resume (PDF/DOCX/TXT) alongside the target Job Desc
   - `interviewer_behavior.json`
 
 Run via `run.bat` menu:
-- Select **Option 3: Run Stage 2 Question Engine (Headless CLI)**
+- Select **Option 3: Run Stage 2 Question Engine** (Choose 1 for Kivy GUI Desktop App, 2 for CLI Test Harness)
 
 Or run directly via Python CLI:
 ```bash
+# Launch Stage 2 Kivy Desktop GUI App
+python -m model.question_model.model.app
+
+# Run Headless CLI Test Harness
 python -m model.question_model.model.test_pipeline
 ```

@@ -91,8 +91,15 @@ goto menu
 
 :run_question_model_cli
 echo.
-echo [LAUNCHING] Stage 2: Question Tree ^& Prompt Engine (Headless CLI)...
-.venv\Scripts\python.exe -m model.question_model.model.test_pipeline
+echo [LAUNCHING] Stage 2: Contextual Question ^& Behavioral Prompt Engine...
+echo  1. Kivy Desktop GUI Client (app.py)
+echo  2. Headless CLI Test Harness (test_pipeline.py)
+set /p qchoice="Select execution mode (1-2, default 1): "
+if "%qchoice%"=="2" (
+    .venv\Scripts\python.exe -m model.question_model.model.test_pipeline
+) else (
+    .venv\Scripts\python.exe -m model.question_model.model.app
+)
 pause
 goto menu
 
