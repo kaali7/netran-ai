@@ -375,9 +375,9 @@ class InputScreen(Screen):
         self.status_label.text = "⏳ Initializing AI reasoning & web search pipeline..."
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        session_dir = str(TEST_OUTPUT_DIR / f"sess_{timestamp}")
+        session_file = str(TEST_OUTPUT_DIR / f"sess_{timestamp}.json")
 
-        threading.Thread(target=self._run_async, args=(jd_text, session_dir), daemon=True).start()
+        threading.Thread(target=self._run_async, args=(jd_text, session_file), daemon=True).start()
 
     def _run_async(self, jd_text, session_dir):
         def update_status(msg):

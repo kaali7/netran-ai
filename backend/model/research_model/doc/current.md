@@ -68,7 +68,7 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 * **Interactive Results View**: Role Overview card, Technical Pillars chip list, and categorized interview topics with difficulty badges (🟢 Junior, 🟡 Mid, 🔴 Senior).
 
 ### 10. Standalone CLI Test Harness ([test_pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/test_pipeline.py))
-* Headless CLI test harness allowing selection of pre-saved dummy inputs or custom pasting, saving outputs directly into `test/output/sess_<timestamp>/`.
+* Headless CLI test harness allowing selection of pre-saved dummy inputs or custom pasting, saving outputs directly as `test/output/sess_<timestamp>.json`.
 
 ---
 

@@ -26,7 +26,7 @@ backend/
     │   │   └── prd.md         # Stage 1 Product Requirements Document
     │   ├── test/              # Stage 1 test harness input/output directories
     │   │   ├── input/         # Pre-saved dummy JD sample JSON files (*.json)
-    │   │   └── output/        # Generated session outputs ( sess_<timestamp>/ )
+    │   │   └── output/        # Generated session outputs ( sess_<timestamp>.json )
     │   └── model/
     │       ├── __init__.py    # Package initializer
     │       ├── app.py         # Kivy Desktop GUI test client with web intel visualizer

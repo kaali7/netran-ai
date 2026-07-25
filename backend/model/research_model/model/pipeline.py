@@ -97,14 +97,22 @@ def run_pipeline(
     notify("Pipeline complete!")
     return output_obj
 
-def _save_artifacts(output_dir: str, output_obj: Stage1Output):
-    """Saves complete Stage1Output into a single consolidated stage1_output.json artifact."""
+def _save_artifacts(output_target: str, output_obj: Stage1Output):
+    """Saves Stage1Output into a single JSON file named with session name or target path."""
     try:
-        os.makedirs(output_dir, exist_ok=True)
-        artifact_path = os.path.join(output_dir, "stage1_output.json")
+        if output_target.lower().endswith(".json"):
+            artifact_path = output_target
+        elif os.path.isdir(output_target):
+            artifact_path = os.path.join(output_target, "stage1_output.json")
+        else:
+            artifact_path = f"{output_target}.json"
+
+        parent_dir = os.path.dirname(os.path.abspath(artifact_path))
+        os.makedirs(parent_dir, exist_ok=True)
+
         with open(artifact_path, "w", encoding="utf-8") as f:
             f.write(output_obj.model_dump_json(indent=2))
-        logger.info(f"Stage 1 consolidated artifact saved cleanly to {artifact_path}")
+        logger.info(f"Stage 1 JSON artifact saved cleanly to {artifact_path}")
     except Exception as e:
-        logger.error(f"Failed to write output artifact to {output_dir}: {e}")
+        logger.error(f"Failed to write output artifact to {output_target}: {e}")
 

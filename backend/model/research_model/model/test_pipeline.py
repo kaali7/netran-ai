@@ -122,7 +122,7 @@ def run_test():
             print(f"[SAVED] Saved pasted input JSON to {save_path}")
 
     session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    session_output_dir = TEST_OUTPUT_DIR / session_id
+    session_output_file = TEST_OUTPUT_DIR / f"{session_id}.json"
     
     print(f"\n[EXECUTING] Running Stage 1 Research Pipeline for session: {session_id}...")
     
@@ -130,7 +130,7 @@ def run_test():
         output: Stage1Output = run_pipeline(
             jd_text=jd_text,
             status_callback=lambda msg: print(f"  -> {msg}"),
-            output_dir=str(session_output_dir)
+            output_dir=str(session_output_file)
         )
         
         print("\n===================================================================")
