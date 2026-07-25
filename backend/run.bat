@@ -1,10 +1,10 @@
 @echo off
-title Netran AI - Model and System Test Suite
+title Netran AI - Backend & Model Operations Suite
 
 :: Check if virtual environment exists
 if not exist ".venv\Scripts\python.exe" (
     echo [ERROR] Virtual environment not found at backend/.venv/
-    echo Please make sure you have created the .venv.
+    echo Please create the virtual environment before launching.
     pause
     exit /b 1
 )
@@ -12,130 +12,205 @@ if not exist ".venv\Scripts\python.exe" (
 :menu
 cls
 echo ===================================================================
-echo             NETRAN AI - MODEL AND SYSTEM TEST SUITE
+echo             NETRAN AI - BACKEND MODEL OPERATIONAL SUITE
 echo ===================================================================
 echo.
-echo  1. RUN COMPLETE UNIFIED NETRAN AI WORKFLOW (Stage 1 to 4 Kivy UI)
-echo  2. Run Stage 1 JD Research and Market Intel Model (Kivy UI)
-echo  3. Run Stage 2 Question Engine Test (Headless CLI)
-echo  4. Run Stage 3 Standalone Voice-to-Voice Client (Kivy UI)
-echo  5. Run Stage 4 Report Engine Test UI (Kivy UI)
-echo  6. Run Stage 4 Report Engine CLI Test (Headless CLI)
-echo  7. Test Speech-to-Text Listener (listener.py)
-echo  8. Test Text-to-Speech Speaker (speaker.py)
-echo  9. Test Conversation LLM Brain (brain.py)
-echo 10. Download/Verify Silero VAD Model (download_vad.py)
-echo 11. Install Workflow Requirements
-echo 12. Exit
+echo  --- COMBINED PIPELINE ---
+echo   1. Launch Unified 5-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
+echo  --- INDIVIDUAL STAGE MODELS ---
+echo   2. Run Stage 1: JD Research & Market Intelligence Engine (Kivy Desktop)
+echo   3. Run Stage 2: Contextual Question Tree & Prompt Engine (Headless CLI)
+echo   4. Run Stage 3: Voice-to-Voice Interview Loop (Kivy Desktop)
+echo   5. Run Stage 4: Post-Session Report Generator UI (Kivy Desktop)
+echo   6. Run Stage 4: Post-Session Report Generator CLI (Headless CLI)
+echo.
+echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
+echo   7. Test Speech-to-Text & Silero VAD (listener.py)
+echo   8. Test Text-to-Speech Kokoro-82M (speaker.py)
+echo   9. Test Ollama Qwen2.5 Streaming Brain (brain.py)
+echo.
+echo  --- SETUP & AUDIT TOOLS ---
+echo  10. Install / Update Backend Dependencies (requirements.txt)
+echo  11. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  12. Run Code Quality & Architecture Audit Scanner (scan_code_quality.py)
+echo.
+echo  --- MAINTENANCE & DATA CLEANING ---
+echo  13. Clean Stage Test Output Directories (model/*/model/test_output/)
+echo  14. Clean Generated Session Artifacts (model/sessions/ & sessions/)
+echo  15. Clean SQLite Research Cache Database (cache.db)
+echo  16. Clean Python Bytecode Trash & Temporary Logs (__pycache__, *.pyc, *.log)
+echo  17. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo.
+echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (1-12): "
+set /p choice="Enter your choice (0-17): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
 if "%choice%"=="3" goto run_question_model_cli
-if "%choice%"=="4" goto run_app
+if "%choice%"=="4" goto run_voice_model
 if "%choice%"=="5" goto run_report_ui
 if "%choice%"=="6" goto run_report_cli
 if "%choice%"=="7" goto test_listener
 if "%choice%"=="8" goto test_speaker
 if "%choice%"=="9" goto test_brain
-if "%choice%"=="10" goto run_vad
-if "%choice%"=="11" goto install_reqs
-if "%choice%"=="12" goto end
+if "%choice%"=="10" goto install_reqs
+if "%choice%"=="11" goto run_vad
+if "%choice%"=="12" goto run_audit_scanner
+if "%choice%"=="13" goto clean_test_outputs
+if "%choice%"=="14" goto clean_sessions
+if "%choice%"=="15" goto clean_cache_db
+if "%choice%"=="16" goto clean_bytecode_trash
+if "%choice%"=="17" goto clean_full_deep
+if "%choice%"=="0" goto end
 goto menu
+
+:: ── COMBINED PIPELINE ────────────────────────────────────────────────
 
 :run_unified_workflow
 echo.
-echo Starting Complete Unified 4-Stage Netran AI Interview Workflow (Kivy UI)...
-cd model\workflow\model
-..\..\..\.venv\Scripts\python.exe app.py
-cd ..\..\..
+echo [LAUNCHING] Complete Unified 4-Stage Netran AI Interview Workflow...
+.venv\Scripts\python.exe -m model.workflow.model.app
 pause
 goto menu
 
+:: ── INDIVIDUAL STAGES ────────────────────────────────────────────────
+
 :run_research_model
 echo.
-echo Starting JD Research and Market Intelligence Engine (Kivy UI)...
-cd model\research_model
-..\..\.venv\Scripts\python.exe -m model.app
-cd ..\..
+echo [LAUNCHING] Stage 1: JD Research & Market Intelligence Engine (Kivy Desktop)...
+.venv\Scripts\python.exe -m model.research_model.model.app
 pause
 goto menu
 
 :run_question_model_cli
 echo.
-echo Starting Stage 2 Question Engine Headless Pipeline...
+echo [LAUNCHING] Stage 2: Question Tree & Prompt Engine (Headless CLI)...
 .venv\Scripts\python.exe -m model.question_model.model.test_pipeline
 pause
 goto menu
 
-:run_app
+:run_voice_model
 echo.
-echo Starting Standalone Kivy Voice Interview Window...
-cd model\voice_to_voice_model\model
-..\..\..\.venv\Scripts\python.exe main_app.py
-cd ..\..\..
+echo [LAUNCHING] Stage 3: Standalone Voice-to-Voice Interview Client (Kivy Desktop)...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.main_app
 pause
 goto menu
 
 :run_report_ui
 echo.
-echo Starting Stage 4 Multimodal Report Engine Kivy UI...
+echo [LAUNCHING] Stage 4: Multimodal Report Engine Test Desktop (Kivy Desktop)...
 .venv\Scripts\python.exe -m model.reports_model.model.test_ui
 pause
 goto menu
 
 :run_report_cli
 echo.
-echo Starting Stage 4 Multimodal Report Engine Headless Pipeline...
+echo [LAUNCHING] Stage 4: Multimodal Report Engine Headless Pipeline (CLI)...
 .venv\Scripts\python.exe -m model.reports_model.model.test_pipeline
 pause
 goto menu
 
+:: ── COMPONENT DIAGNOSTICS ───────────────────────────────────────────
+
 :test_listener
 echo.
-echo Running Speech-to-Text VAD / Transcription standalone test...
-cd model\voice_to_voice_model\model
-..\..\..\.venv\Scripts\python.exe listener.py
-cd ..\..\..
+echo [TESTING] Speech-to-Text & Silero VAD Capture...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.listener
 pause
 goto menu
 
 :test_speaker
 echo.
-echo Running Kokoro TTS standalone test...
-cd model\voice_to_voice_model\model
-..\..\..\.venv\Scripts\python.exe speaker.py
-cd ..\..\..
+echo [TESTING] Kokoro-82M Text-to-Speech Playback...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.speaker
 pause
 goto menu
 
 :test_brain
 echo.
-echo Running LLM/Ollama standalone test...
-cd model\voice_to_voice_model\model
-..\..\..\.venv\Scripts\python.exe brain.py
-cd ..\..\..
+echo [TESTING] Ollama Qwen2.5 Conversation Brain...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.brain
+pause
+goto menu
+
+:: ── SETUP & AUDIT TOOLS ─────────────────────────────────────────────
+
+:install_reqs
+echo.
+echo [SETUP] Installing / Updating Backend Dependencies from requirements.txt...
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 pause
 goto menu
 
 :run_vad
 echo.
-echo Downloading/Verifying Silero VAD ONNX model...
-cd model\voice_to_voice_model\model
-..\..\..\.venv\Scripts\python.exe download_vad.py
-cd ..\..\..
+echo [SETUP] Downloading / Verifying Silero VAD ONNX model weights...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.download_vad
 pause
 goto menu
 
-:install_reqs
+:run_audit_scanner
 echo.
-echo Installing workflow requirements...
-.venv\Scripts\python.exe -m pip install -r model\workflow\model\requirements.txt
+echo [AUDIT] Running Code Quality & Architecture Audit Scanner...
+.venv\Scripts\python.exe scan_code_quality.py
+pause
+goto menu
+
+:: ── MAINTENANCE & DATA CLEANING ─────────────────────────────────────
+
+:clean_test_outputs
+echo.
+echo [CLEANING] Deleting single-stage test output directories...
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Stage test_output directories removed.
+pause
+goto menu
+
+:clean_sessions
+echo.
+echo [CLEANING] Deleting generated session directories (model/sessions & sessions)...
+if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Session directories purged.
+pause
+goto menu
+
+:clean_cache_db
+echo.
+echo [CLEANING] Deleting SQLite research cache database (cache.db)...
+if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
+echo Clean complete: SQLite cache.db deleted.
+pause
+goto menu
+
+:clean_bytecode_trash
+echo.
+echo [CLEANING] Removing Python bytecode trash, __pycache__, logs, and benchmark files...
+powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Python bytecode and temporary logs removed.
+pause
+goto menu
+
+:clean_full_deep
+echo.
+echo ===================================================================
+echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
+echo ===================================================================
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
+powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+echo.
+echo DEEP CLEAN COMPLETE: System returned to pristine condition!
 pause
 goto menu
 
 :end
-echo Exiting test suite.
+echo.
+echo Exiting Netran AI Operational Suite. Goodbye!
 exit /b 0
