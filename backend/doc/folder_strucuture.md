@@ -44,14 +44,16 @@ backend/
     │   ├── doc/
     │   │   ├── current.md     # Stage 2 technical implementation status
     │   │   └── prd.md         # Stage 2 Product Requirements Document
+    │   ├── test/              # Stage 2 test harness input/output directories
+    │   │   ├── input/         # Pre-saved dummy input JSON files (*.json)
+    │   │   └── output/        # Generated session outputs ( sess_<timestamp>.json )
     │   └── model/
     │       ├── config.py      # Stage 2 configuration loader
-    │       ├── dummy_resume.txt # Standalone test resume file
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
     │       ├── question_generator.py # Gemini 15-question tree & system prompt generator
     │       ├── resume_parser.py # PDF (pypdf), DOCX (python-docx), and TXT resume extractor
     │       ├── schemas.py     # Pydantic schemas (QuestionItem, Stage2Output)
-    │       └── test_pipeline.py # Standalone CLI test harness for Stage 2
+    │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
     ├── voice_to_voice_model/  # STAGE 3: Live Voice-to-Voice Streaming Loop
     │   ├── doc/

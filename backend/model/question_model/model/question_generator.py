@@ -107,17 +107,20 @@ Return exactly the JSON object matching the requested schema.
 
         # 4. Save artifacts if output_dir is provided
         if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
+            if output_dir.lower().endswith(".json"):
+                artifact_path = output_dir
+            elif os.path.isdir(output_dir):
+                artifact_path = os.path.join(output_dir, "stage2_output.json")
+            else:
+                artifact_path = f"{output_dir}.json"
+
+            parent_dir = os.path.dirname(os.path.abspath(artifact_path))
+            os.makedirs(parent_dir, exist_ok=True)
             
-            questions_path = os.path.join(output_dir, "interview_questions.json")
-            with open(questions_path, "w", encoding="utf-8") as f:
-                json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
+            with open(artifact_path, "w", encoding="utf-8") as f:
+                f.write(stage2_output.model_dump_json(indent=2))
                 
-            prompt_path = os.path.join(output_dir, "system_prompt.txt")
-            with open(prompt_path, "w", encoding="utf-8") as f:
-                f.write(stage2_output.interviewer_system_prompt)
-                
-            logger.info(f"Artifacts saved to {output_dir}")
+            logger.info(f"Stage 2 single JSON artifact saved cleanly to {artifact_path}")
 
         return stage2_output
 

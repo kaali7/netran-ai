@@ -53,23 +53,23 @@ By analyzing the Candidate's Resume (PDF/DOCX/TXT) alongside the target Job Desc
 
 ### Artifact Specifications
 
-1. **`interview_questions.json`**
-   - 15 questions categorized into:
-     - **Tier 1 (Warmup / Foundations):** Questions 1–2
-     - **Tier 2 (Core Arch / Production):** Questions 3–12
-     - **Tier 3 (Advanced / System Design):** Questions 13–15
-   - Includes `topic`, `difficulty`, `question_text`, `expected_keywords`, and `resume_reference`.
-
-2. **`system_prompt.txt`**
-   - Formatted system prompt injected into Stage 3 `brain.py` (`Eva` persona).
-   - Directs the voice LLM to maintain ultra-low latency (<1200ms TTFA) by restricting outputs to 1–2 sentences.
+- **Single Consolidated Output File: `test/output/sess_<timestamp>.json`**
+  - Encapsulates `session_id`, `interviewer_system_prompt` (Eva persona runtime system prompt), and `question_tree` (15 structured technical questions).
+  - 15 questions categorized into:
+    - **Tier 1 (Warmup / Foundations):** Questions 1–2
+    - **Tier 2 (Core Arch / Production):** Questions 3–12
+    - **Tier 3 (Advanced / System Design):** Questions 13–15
+  - Each question includes `topic`, `difficulty`, `question_text`, `expected_keywords`, and `resume_reference`.
 
 ---
 
 ## 4. Execution & Testing
 
+- **Preset JSON Input Samples:** `model/question_model/test/input/` (`sample_stage2_backend.json`, `sample_stage2_frontend.json`, `sample_stage2_fullstack.json`).
+- **Single JSON Session Outputs:** `model/question_model/test/output/sess_<timestamp>.json`.
+
 Run via `run.bat` menu:
-- Select **Option 2: Run Stage 2 Question Engine Test (Headless)**
+- Select **Option 3: Run Stage 2 Question Engine (Headless CLI)**
 
 Or run directly via Python CLI:
 ```bash
