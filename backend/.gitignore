@@ -32,6 +32,7 @@ model/*/model/test/output/
 model/*/test/output/
 model/*/test_output/
 *.wav
+_temp_resume.txt
 
 # IDE & Editor Settings
 .vscode/
