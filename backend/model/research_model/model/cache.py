@@ -11,7 +11,13 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional
-from model.schemas import InterviewRubric
+try:
+    from .schemas import InterviewRubric
+except ImportError:
+    try:
+        from model.research_model.model.schemas import InterviewRubric
+    except ImportError:
+        from schemas import InterviewRubric
 
 logger = logging.getLogger(__name__)
 

@@ -19,27 +19,26 @@ echo  --- COMBINED PIPELINE ---
 echo   1. Launch Unified 5-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
 echo  --- INDIVIDUAL STAGE MODELS ---
-echo   2. Run Stage 1: JD Research & Market Intelligence Engine (Kivy Desktop)
-echo   3. Run Stage 2: Contextual Question Tree & Prompt Engine (Headless CLI)
+echo   2. Run Stage 1: JD Research ^& Market Intelligence Engine (Kivy Desktop)
+echo   3. Run Stage 2: Contextual Question Tree ^& Prompt Engine (Headless CLI)
 echo   4. Run Stage 3: Voice-to-Voice Interview Loop (Kivy Desktop)
 echo   5. Run Stage 4: Post-Session Report Generator UI (Kivy Desktop)
 echo   6. Run Stage 4: Post-Session Report Generator CLI (Headless CLI)
 echo.
 echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
-echo   7. Test Speech-to-Text & Silero VAD (listener.py)
+echo   7. Test Speech-to-Text ^& Silero VAD (listener.py)
 echo   8. Test Text-to-Speech Kokoro-82M (speaker.py)
 echo   9. Test Ollama Qwen2.5 Streaming Brain (brain.py)
 echo.
-echo  --- SETUP & AUDIT TOOLS ---
+echo  --- SETUP TOOLS ---
 echo  10. Install / Update Backend Dependencies (requirements.txt)
 echo  11. Download / Verify Silero VAD Model Weights (download_vad.py)
-echo  12. Run Code Quality & Architecture Audit Scanner (scan_code_quality.py)
 echo.
-echo  --- MAINTENANCE & DATA CLEANING ---
+echo  --- MAINTENANCE ^& DATA CLEANING ---
 echo  13. Clean Stage Test Output Directories (model/*/model/test_output/)
-echo  14. Clean Generated Session Artifacts (model/sessions/ & sessions/)
+echo  14. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
 echo  15. Clean SQLite Research Cache Database (cache.db)
-echo  16. Clean Python Bytecode Trash & Temporary Logs (__pycache__, *.pyc, *.log)
+echo  16. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
 echo  17. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
 echo.
 echo   0. Exit
@@ -57,7 +56,6 @@ if "%choice%"=="8" goto test_speaker
 if "%choice%"=="9" goto test_brain
 if "%choice%"=="10" goto install_reqs
 if "%choice%"=="11" goto run_vad
-if "%choice%"=="12" goto run_audit_scanner
 if "%choice%"=="13" goto clean_test_outputs
 if "%choice%"=="14" goto clean_sessions
 if "%choice%"=="15" goto clean_cache_db
@@ -79,14 +77,21 @@ goto menu
 
 :run_research_model
 echo.
-echo [LAUNCHING] Stage 1: JD Research & Market Intelligence Engine (Kivy Desktop)...
-.venv\Scripts\python.exe -m model.research_model.model.app
+echo [LAUNCHING] Stage 1: JD Research ^& Market Intelligence Engine...
+echo  1. Kivy Desktop GUI Client (app.py)
+echo  2. Headless CLI Test Harness (test_pipeline.py)
+set /p rchoice="Select execution mode (1-2, default 1): "
+if "%rchoice%"=="2" (
+    .venv\Scripts\python.exe -m model.research_model.model.test_pipeline
+) else (
+    .venv\Scripts\python.exe -m model.research_model.model.app
+)
 pause
 goto menu
 
 :run_question_model_cli
 echo.
-echo [LAUNCHING] Stage 2: Question Tree & Prompt Engine (Headless CLI)...
+echo [LAUNCHING] Stage 2: Question Tree ^& Prompt Engine (Headless CLI)...
 .venv\Scripts\python.exe -m model.question_model.model.test_pipeline
 pause
 goto menu
@@ -116,7 +121,7 @@ goto menu
 
 :test_listener
 echo.
-echo [TESTING] Speech-to-Text & Silero VAD Capture...
+echo [TESTING] Speech-to-Text ^& Silero VAD Capture...
 .venv\Scripts\python.exe -m model.voice_to_voice_model.model.listener
 pause
 goto menu
@@ -135,7 +140,7 @@ echo [TESTING] Ollama Qwen2.5 Conversation Brain...
 pause
 goto menu
 
-:: ── SETUP & AUDIT TOOLS ─────────────────────────────────────────────
+:: ── SETUP TOOLS ─────────────────────────────────────────────────────
 
 :install_reqs
 echo.
@@ -146,15 +151,8 @@ goto menu
 
 :run_vad
 echo.
-echo [SETUP] Downloading / Verifying Silero VAD ONNX model weights...
+echo [SETUP] Downloading / Verify Silero VAD ONNX model weights...
 .venv\Scripts\python.exe -m model.voice_to_voice_model.model.download_vad
-pause
-goto menu
-
-:run_audit_scanner
-echo.
-echo [AUDIT] Running Code Quality & Architecture Audit Scanner...
-.venv\Scripts\python.exe scan_code_quality.py
 pause
 goto menu
 
@@ -170,7 +168,7 @@ goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting generated session directories (model/sessions & sessions)...
+echo [CLEANING] Deleting generated session directories (model/sessions ^& sessions)...
 if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Session directories purged.

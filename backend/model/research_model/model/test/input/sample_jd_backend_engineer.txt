@@ -1,0 +1,14 @@
+Company: InnovateAI Solutions
+Role: Senior Backend Systems Engineer (Python & Microservices)
+
+Responsibilities:
+- Architect and scale high-concurrency microservices processing millions of daily API transactions.
+- Design relational database schemas and optimize complex SQL queries using PostgreSQL and Redis caching layers.
+- Build robust RESTful and gRPC APIs using Python (FastAPI/Django).
+- Maintain CI/CD pipelines, Docker containers, and Kubernetes deployments on AWS.
+
+Requirements:
+- 5+ years of software engineering experience with Python and microservices architecture.
+- Extensive experience with PostgreSQL query optimization, connection pooling, and indexing strategies.
+- Deep expertise in asynchronous programming (asyncio, Celery, RabbitMQ/Kafka).
+- Proven track record of system design, load balancing, and high-availability operations.

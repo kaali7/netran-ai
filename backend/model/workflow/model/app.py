@@ -12,10 +12,19 @@ import json
 import shutil
 from datetime import datetime
 
-# Initialize config & sys.path injections before importing stage models
-import config
-from sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
-from orchestrator import run_full_pipeline
+try:
+    from . import config
+    from .sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
+    from .orchestrator import run_full_pipeline
+except ImportError:
+    try:
+        from model.workflow.model import config
+        from model.workflow.model.sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
+        from model.workflow.model.orchestrator import run_full_pipeline
+    except ImportError:
+        import config
+        from sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
+        from orchestrator import run_full_pipeline
 
 from kivy.app import App
 from kivy.clock import Clock

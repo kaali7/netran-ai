@@ -7,7 +7,13 @@ Description: Integrates Tavily Search API to query live internet intelligence fr
 
 import logging
 from typing import List, Dict
-from model.config import TAVILY_API_KEY, TRUSTED_DOMAINS
+try:
+    from .config import TAVILY_API_KEY, TRUSTED_DOMAINS
+except ImportError:
+    try:
+        from model.research_model.model.config import TAVILY_API_KEY, TRUSTED_DOMAINS
+    except ImportError:
+        from config import TAVILY_API_KEY, TRUSTED_DOMAINS
 
 logger = logging.getLogger(__name__)
 

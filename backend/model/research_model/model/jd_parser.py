@@ -7,8 +7,16 @@ Description: Evaluates raw Job Description (JD) text via Gemini 3.6 Flash to ext
 
 import json
 import logging
-from model.schemas import ParsedJD
-from model.gemini_client import call_gemini_api
+try:
+    from .schemas import ParsedJD
+    from .gemini_client import call_gemini_api
+except ImportError:
+    try:
+        from model.research_model.model.schemas import ParsedJD
+        from model.research_model.model.gemini_client import call_gemini_api
+    except ImportError:
+        from schemas import ParsedJD
+        from gemini_client import call_gemini_api
 
 logger = logging.getLogger(__name__)
 

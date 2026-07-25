@@ -41,7 +41,7 @@ Standard AI-generated mock interviews often suffer from:
 
 ### 3.2 Trusted Domain Web Search
 
-* **Tavily API Integration:** The system will execute web searches strictly filtered to high-trust engineering domains (e.g., `leetcode.com`, `glassdoor.com`, `github.com`). Tavily's AI-optimized search is used for clean, structured web content extraction without scraping barriers.
+* **Tavily API Integration:** The system will execute web searches strictly filtered to high-trust engineering and career domains (`linkedin.com`, `leetcode.com`, `glassdoor.com`, `github.com`, `stackoverflow.com`, `geeksforgeeks.org`, `reddit.com`, `medium.com`, `dev.to`). Tavily's AI-optimized search is used for clean, structured web content extraction without scraping barriers.
 * **Fallback Resilience:** If the search engine fails to retrieve clean data or returns a silent failure (e.g., API rate limit or empty result set), the system must automatically pivot to a fallback instruction, relying on the LLM's internal baseline knowledge rather than failing the application loop.
 
 ### 3.3 Strict Structured Output (JSON) Generation

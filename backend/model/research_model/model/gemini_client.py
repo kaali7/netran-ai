@@ -11,7 +11,13 @@ Falls back to a direct REST call if the SDK import fails (e.g. not yet installed
 
 import requests
 import logging
-from model.config import GEMINI_API_KEY, GEMINI_MODEL
+try:
+    from .config import GEMINI_API_KEY, GEMINI_MODEL
+except ImportError:
+    try:
+        from model.research_model.model.config import GEMINI_API_KEY, GEMINI_MODEL
+    except ImportError:
+        from config import GEMINI_API_KEY, GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
 

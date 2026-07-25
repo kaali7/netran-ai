@@ -4,7 +4,7 @@ Module: schemas.py
 Description: Pydantic v2 schemas (`ParsedJD`, `InterviewTopic`, `InterviewRubric`) enforcing JSON outputs.
 """
 
-from typing import List, Literal
+from typing import List, Literal, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 class ParsedJD(BaseModel):
@@ -22,3 +22,9 @@ class InterviewRubric(BaseModel):
     roleOverview: str = Field(description="Summary of the role expectations and target candidate profile")
     keyTechnicalPillars: List[str] = Field(description="3-5 critical technical pillars required for this role")
     expectedInterviewTopics: List[InterviewTopic] = Field(description="Structured list of interview topics and questions")
+
+class Stage1Output(BaseModel):
+    rubric: InterviewRubric = Field(description="Generated interview rubric object")
+    parsed_jd: ParsedJD = Field(description="Extracted JD metadata and search queries")
+    search_context: List[Dict[str, str]] = Field(default_factory=list, description="Retrieved web search snippets and sources")
+    cached: bool = Field(default=False, description="True if loaded from SQLite cache")

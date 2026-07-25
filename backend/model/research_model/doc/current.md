@@ -27,21 +27,22 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 ### 1. Configuration & Environment Loader ([config.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/config.py))
 * **Environment Management**: Utilizes `python-dotenv` to load environment configurations from `backend/model/.env`.
 * **API Credentials**: Manages `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.6-flash`), and `TAVILY_API_KEY`.
-* **Trusted Domains Whitelist**: Enforces search filtering to high-trust engineering sources: `leetcode.com`, `glassdoor.com`, `github.com`, `geeksforgeeks.org`, and `reddit.com`.
+* **Trusted Domains Whitelist**: Enforces search filtering to high-trust engineering and career platforms: `linkedin.com`, `leetcode.com`, `glassdoor.com`, `github.com`, `stackoverflow.com`, `geeksforgeeks.org`, `reddit.com`, `medium.com`, and `dev.to`.
 
 ### 2. Schema Enforcement & Validation ([schemas.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/schemas.py))
 * **`ParsedJD`**: Represents extracted role title, target company, core tech stack list, and targeted search queries.
 * **`InterviewTopic`**: Represents a specific assessment category, string-based difficulty enum (`Junior`, `Mid`, `Senior`), and example interview questions.
 * **`InterviewRubric`**: The root JSON schema contract containing `roleOverview`, `keyTechnicalPillars` (list), and `expectedInterviewTopics` (list of `InterviewTopic`).
+* **`Stage1Output`**: Encapsulates `rubric`, `parsed_jd`, `search_context` (web search snippets), and `cached` status for UI/CLI callers.
 
 ### 3. JD Parsing Engine ([jd_parser.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/jd_parser.py))
 * Evaluates raw unformatted JD text via Gemini to extract structured metadata.
-* Formulates 2-3 specific, domain-targeted search query strings (e.g., `"Senior Frontend Engineer Google interview questions glassdoor leetcode"`).
+* Formulates 2-3 specific, domain-targeted search query strings (e.g., `"Senior Frontend Engineer Google interview questions glassdoor linkedin leetcode"`).
 
 ### 4. Tavily Web Search Engine ([search_engine.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/search_engine.py))
-* Integrates `tavily-python` SDK (`TavilyClient`) to fetch live search snippets.
+* Integrates `tavily-python` SDK (`TavilyClient`) to fetch live search snippets across `TRUSTED_DOMAINS`.
 * **Domain Whitelisting**: Passes `include_domains=TRUSTED_DOMAINS` to retrieve clean interview questions and rubrics without web scraping blockers.
-* **Fallback Resilience**: On search failure, empty result set, or missing Tavily API key, returns an empty list, allowing the downstream pipeline to proceed using LLM baseline knowledge without failing.
+* **Fallback Resilience**: On search failure, empty result set, or missing Tavily API key, returns an empty list, allowing downstream pipeline synthesis using LLM baseline knowledge.
 
 ### 5. Gemini Client Engine ([gemini_client.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/gemini_client.py))
 * **Interactions API Integration**: Uses official `google-genai` SDK (`from google import genai`) with `client.interactions.create(model="gemini-3.6-flash", input=prompt, store=False)`.
@@ -57,17 +58,17 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 * **Latency & Cost Reduction**: Instantaneously retrieves cached JSON for duplicate JD submissions, skipping redundant LLM calls and web search API usage.
 
 ### 8. Pipeline Orchestrator ([pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/pipeline.py))
-* Connects all stages: `Cache Check -> JD Parse -> Market Search -> Rubric Generation -> Cache Store -> Return`.
-* Provides real-time status reporting via callback functions (`status_callback`) for UI progress feedback.
+* Connects all stages: `Cache Check -> JD Parse -> Market Search -> Rubric Generation -> Cache Store -> Artifact Save -> Return Stage1Output`.
+* Supports optional `output_dir` parameter to automatically serialize and persist `interview_rubric.json`, `parsed_jd.json`, and `search_context.json`.
 
 ### 9. Kivy Desktop GUI Application ([app.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/app.py))
-* **Modern Dark Theme Aesthetics**: Tailored palette with Deep Obsidian (`#0D0F17`), Surface Cards (`#171A26`), Electric Indigo (`#6366F1`), and Violet Neon (`#8B5CF6`).
-* **Glassmorphic Cards (`GlassCard`)**: Custom layout widget with rounded corners and subtle border outlines.
-* **Thread Safety**: Runs pipeline execution inside a background daemon thread (`threading.Thread`), dispatching UI updates safely via `kivy.clock.Clock`.
-* **Interactive Results View**:
-  - Role Overview card and Technical Pillars chip list.
-  - Categorized interview topics with difficulty badges (🟢 Junior, 🟡 Mid, 🔴 Senior).
-  - One-click **"📄 Copy JSON"** action button for exporting to system clipboard.
+* **Preset Dummy Selector**: Provides buttons to load pre-saved dummy JDs (`sample_jd_google_frontend.txt`, `sample_jd_backend_engineer.txt`, `sample_jd_fullstack.txt`) from `test/input/`.
+* **Custom JD Saving**: Allows saving pasted custom JDs directly into `test/input/`.
+* **Live Web Intelligence Visualizer**: Displays domain-badged source cards (`[LinkedIn]`, `[LeetCode]`, `[Glassdoor]`, `[GitHub]`, `[StackOverflow]`, `[Reddit]`, `[GeeksforGeeks]`, `[Medium]`) rendering web search titles, URLs, and context snippets.
+* **Interactive Results View**: Role Overview card, Technical Pillars chip list, and categorized interview topics with difficulty badges (🟢 Junior, 🟡 Mid, 🔴 Senior).
+
+### 10. Standalone CLI Test Harness ([test_pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/test_pipeline.py))
+* Headless CLI test harness allowing selection of pre-saved dummy inputs or custom pasting, saving outputs directly into `test/output/sess_<timestamp>/`.
 
 ---
 

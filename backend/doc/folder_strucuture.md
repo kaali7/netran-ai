@@ -26,15 +26,19 @@ backend/
     │   │   └── prd.md         # Stage 1 Product Requirements Document
     │   └── model/
     │       ├── __init__.py    # Package initializer
-    │       ├── app.py         # Kivy Desktop GUI test client for Stage 1
+    │       ├── app.py         # Kivy Desktop GUI test client with web intel visualizer
     │       ├── cache.py       # SQLite hash-based caching engine (cache.db)
-    │       ├── config.py      # Stage 1 configuration & environment loader
+    │       ├── config.py      # Stage 1 configuration & environment loader (TRUSTED_DOMAINS)
     │       ├── gemini_client.py # Gemini 3.6 Flash Interactions API client & REST fallback
     │       ├── jd_parser.py   # Job Description parser & search query generator
-    │       ├── pipeline.py    # Stage 1 end-to-end orchestrator
+    │       ├── pipeline.py    # Stage 1 end-to-end orchestrator & artifact saver
     │       ├── rubric_generator.py # Gemini-powered assessment rubric synthesizer
-    │       ├── schemas.py     # Pydantic schemas (ParsedJD, InterviewTopic, InterviewRubric)
-    │       └── search_engine.py # Tavily Search API client with engineering domain whitelisting
+    │       ├── schemas.py     # Pydantic schemas (ParsedJD, InterviewTopic, InterviewRubric, Stage1Output)
+    │       ├── search_engine.py # Tavily Search API client with expanded domain whitelist
+    │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 1
+    │       └── test/          # Stage 1 test harness input/output directories
+    │           ├── input/     # Pre-saved dummy JD sample files (*.txt)
+    │           └── output/    # Generated session outputs ( sess_<timestamp>/ )
     │
     ├── question_model/        # STAGE 2: Contextual Question & Behavioral Prompt Engine
     │   ├── doc/

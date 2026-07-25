@@ -1,0 +1,13 @@
+Company: NextGen AI Platform
+Role: Full Stack AI Engineer (Next.js & Python LLM Infrastructure)
+
+Responsibilities:
+- Develop full-stack generative AI web applications integrating Next.js 14, React, Tailwind CSS, and Python backend services.
+- Build streaming LLM inference pipelines, RAG context retrieval engines, and vector database indices (Pinecone/Qdrant).
+- Design responsive, dark-mode user interfaces with micro-animations and real-time WebSocket state management.
+- Deploy scalable serverless API routes on Vercel and AWS Lambda.
+
+Requirements:
+- 3+ years of full-stack development experience with TypeScript, Next.js, React, and Python.
+- Practical experience with OpenAI / Gemini APIs, LangChain, LlamaIndex, and Vector DBs.
+- Proficiency in modern CSS, glassmorphic layout design systems, and frontend state optimization.

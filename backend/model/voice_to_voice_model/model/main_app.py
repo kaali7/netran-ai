@@ -17,10 +17,22 @@ from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
 
 # Import the functional blocks we created in this exact folder
-from brain import generate_eva_response, preload as preload_brain
-from listener import listen_and_transcribe, ContinuousMicWriter
-from speaker import speak_text, preload_models as preload_speaker
-from session_logger import SessionLogger
+try:
+    from .brain import generate_eva_response, preload as preload_brain
+    from .listener import listen_and_transcribe, ContinuousMicWriter
+    from .speaker import speak_text, preload_models as preload_speaker
+    from .session_logger import SessionLogger
+except ImportError:
+    try:
+        from model.voice_to_voice_model.model.brain import generate_eva_response, preload as preload_brain
+        from model.voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
+        from model.voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
+        from model.voice_to_voice_model.model.session_logger import SessionLogger
+    except ImportError:
+        from brain import generate_eva_response, preload as preload_brain
+        from listener import listen_and_transcribe, ContinuousMicWriter
+        from speaker import speak_text, preload_models as preload_speaker
+        from session_logger import SessionLogger
 
 # Clean visual layout utilizing a modern dark visual palette
 KV = """

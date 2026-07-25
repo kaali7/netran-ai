@@ -28,6 +28,7 @@ sessions/
 model/sessions/
 test_output/
 model/*/model/test_output/
+model/*/model/test/output/
 *.wav
 
 # IDE & Editor Settings

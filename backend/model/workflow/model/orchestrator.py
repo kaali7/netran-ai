@@ -11,11 +11,34 @@ import logging
 from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 
-from config import SESSIONS_BASE_DIR
-import model.pipeline as research_pipeline
-import question_model.model.question_generator as question_generator
-import reports_model.model.report_builder as report_builder
-from voice_engine import WorkflowVoiceEngine
+try:
+    from .config import SESSIONS_BASE_DIR
+    from .voice_engine import WorkflowVoiceEngine
+except ImportError:
+    try:
+        from model.workflow.model.config import SESSIONS_BASE_DIR
+        from model.workflow.model.voice_engine import WorkflowVoiceEngine
+    except ImportError:
+        from config import SESSIONS_BASE_DIR
+        from voice_engine import WorkflowVoiceEngine
+
+try:
+    import model.research_model.model.pipeline as research_pipeline
+except ImportError:
+    try:
+        import research_model.model.pipeline as research_pipeline
+    except ImportError:
+        import pipeline as research_pipeline
+
+try:
+    import model.question_model.model.question_generator as question_generator
+except ImportError:
+    import question_model.model.question_generator as question_generator
+
+try:
+    import model.reports_model.model.report_builder as report_builder
+except ImportError:
+    import reports_model.model.report_builder as report_builder
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +75,12 @@ def run_full_pipeline(
     
     # --- STAGE 1: RESEARCH MODEL ---
     notify("Stage 1: Research", "Initializing Market Intelligence & JD Analysis...", 5)
-    rubric = research_pipeline.run_pipeline(
+    stage1_res = research_pipeline.run_pipeline(
         jd_text=jd_text,
-        status_callback=lambda msg: notify("Stage 1: Research", msg, 15)
+        status_callback=lambda msg: notify("Stage 1: Research", msg, 15),
+        output_dir=session_dir
     )
+    rubric = stage1_res.rubric if hasattr(stage1_res, 'rubric') else stage1_res
     results["rubric"] = rubric
     notify("Stage 1: Research", "Evaluation Rubric generated successfully!", 25, {"rubric": rubric.model_dump()})
     

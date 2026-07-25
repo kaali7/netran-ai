@@ -16,7 +16,13 @@ import onnxruntime as ort
 import os
 import importlib
 from faster_whisper import WhisperModel
-from benchmark import Benchmark
+try:
+    from .benchmark import Benchmark
+except ImportError:
+    try:
+        from model.voice_to_voice_model.model.benchmark import Benchmark
+    except ImportError:
+        from benchmark import Benchmark
 
 # Domain prompt vocabulary for guiding Faster-Whisper technical transcription
 WHISPER_INITIAL_PROMPT = (

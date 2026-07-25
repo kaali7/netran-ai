@@ -8,8 +8,16 @@ Description: Synthesizes raw JD text, extracted role metadata, and live market w
 import json
 import logging
 from typing import List, Dict
-from model.schemas import ParsedJD, InterviewRubric
-from model.gemini_client import call_gemini_api
+try:
+    from .schemas import ParsedJD, InterviewRubric
+    from .gemini_client import call_gemini_api
+except ImportError:
+    try:
+        from model.research_model.model.schemas import ParsedJD, InterviewRubric
+        from model.research_model.model.gemini_client import call_gemini_api
+    except ImportError:
+        from schemas import ParsedJD, InterviewRubric
+        from gemini_client import call_gemini_api
 
 logger = logging.getLogger(__name__)
 
