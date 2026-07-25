@@ -1,6 +1,0 @@
-{
-  "candidate_name": "Jane Smith",
-  "target_role": "Senior Frontend Engineer",
-  "experience_years": 5,
-  "resume_text": "Jane Smith\nSenior Frontend Engineer | San Francisco, CA\n\nExecutive Summary:\nFrontend Engineer with 5+ years of experience architecting large-scale React web applications, modern TypeScript design systems, and high-performance Web APIs.\n\nTechnical Skills:\n- Frontend: React 18, TypeScript, JavaScript (ES6+), Next.js, Redux Toolkit, Zustand\n- Styling & UI: Tailwind CSS, CSS Modules, Styled Components, Framer Motion\n- Tooling & Testing: Vite, Webpack, Jest, React Testing Library, Cypress, Vitest\n- APIs & Protocols: GraphQL, RESTful APIs, WebSockets, OAuth2\n\nWork Experience:\nSenior Frontend Developer | WebScale Inc (2022 - Present)\n- Led frontend migration of monolithic dashboard to React 18 + Vite micro-frontends, improving Core Web Vitals score by 35 points.\n- Created shared component library using Tailwind CSS and TypeScript adopted across 8 product squads.\n- Implemented virtualized list rendering and Web Worker caching for data-intensive real-time analytics tables."
-}

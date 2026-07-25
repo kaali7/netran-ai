@@ -1,0 +1,6 @@
+{
+  "candidate_name": "Alex Rivera",
+  "target_role": "Full Stack AI Engineer",
+  "experience_years": 4,
+  "resume_text": "Alex Rivera\nFull Stack AI Engineer | Austin, TX\n\nExecutive Summary:\nFull Stack Engineer with 4 years of experience building generative AI applications, Next.js full-stack interfaces, and Python RAG pipeline services.\n\nTechnical Skills:\n- Languages & Frameworks: TypeScript, Python, Next.js 14, React, FastAPI, Node.js\n- AI & Data: Gemini API, OpenAI API, LangChain, Pinecone Vector DB, Qdrant, RAG\n- Styling & UI: Tailwind CSS, Vanilla CSS, Framer Motion, HTML5\n- Cloud & Infra: Vercel, AWS Lambda, Serverless Framework, Docker, GitHub Actions\n\nWork Experience:\nFull Stack Engineer | GenAI Studios (2022 - Present)\n- Developed Next.js 14 App Router dashboard with Server Actions and streaming text UI for LLM interactions.\n- Built FastAPI RAG ingestion service with Pinecone vector search, processing 10k documents daily.\n- Optimized serverless deployment cold start times from 3.2s to 450ms on AWS Lambda."
+}

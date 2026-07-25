@@ -86,20 +86,34 @@ Return exactly the JSON object matching the requested schema.
     logger.info("Calling Gemini for Stage 2 Question Generation...")
     
     try:
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=Stage2Output,
-                temperature=0.2,
-            )
-        )
-        
-        output_text = response.text
-        if not output_text:
-            raise ValueError("Empty response from Gemini")
+        response = None
+        last_err = None
+        for attempt in range(1, 4):
+            try:
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=full_prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=Stage2Output,
+                        temperature=0.2,
+                    )
+                )
+                if response and response.text:
+                    break
+            except Exception as e:
+                last_err = e
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    logger.warning(f"Gemini API rate limit hit (429). Retrying attempt {attempt}/3 in 5s...")
+                    import time
+                    time.sleep(5)
+                else:
+                    raise e
+
+        if not response or not response.text:
+            raise last_err or ValueError("Empty response from Gemini")
             
+        output_text = response.text
         stage2_output = Stage2Output.model_validate_json(output_text)
         
         # Override session_id with the provided one

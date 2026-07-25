@@ -2,7 +2,7 @@
 Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
 Module: test_pipeline.py
 Description: Standalone Headless CLI test harness for Stage 2 question tree and prompt generation.
-             Supports preset dummy JSON selection, interactive custom input, and single JSON output saving.
+             Pairs sample_job_detail.json and sample_resume.json inputs into complete test presets.
 """
 
 import os
@@ -42,21 +42,47 @@ def ensure_dirs():
     TEST_INPUT_DIR.mkdir(parents=True, exist_ok=True)
     TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-def list_sample_inputs():
+def list_sample_presets():
     ensure_dirs()
-    files = list(TEST_INPUT_DIR.glob("*.json")) + list(TEST_INPUT_DIR.glob("*.txt"))
-    return sorted(files, key=lambda f: f.name)
+    presets = []
+    
+    # 1. Subdirectory presets (sample_backend, sample_frontend, sample_fullstack)
+    for pdir in sorted(TEST_INPUT_DIR.glob("sample_*")):
+        if pdir.is_dir():
+            jd_file = pdir / "sample_job_detail.json"
+            res_file = pdir / "sample_resume.json"
+            if jd_file.exists() and res_file.exists():
+                presets.append({
+                    "name": f"Preset ({pdir.name}): Job Detail + Resume",
+                    "jd_path": jd_file,
+                    "resume_path": res_file
+                })
 
-def read_input_json(fpath: Path) -> dict:
-    with open(fpath, "r", encoding="utf-8") as f:
-        content = f.read().strip()
-    try:
-        data = json.loads(content)
-        if isinstance(data, dict):
-            return data
-    except Exception:
-        pass
-    return {"jd_text": content, "resume_text": "", "target_seniority": "Senior"}
+    # 2. Root input directory preset (sample_job_detail.json + sample_resume.json)
+    root_jd = TEST_INPUT_DIR / "sample_job_detail.json"
+    root_res = TEST_INPUT_DIR / "sample_resume.json"
+    if root_jd.exists() and root_res.exists():
+        presets.append({
+            "name": "Preset (root): sample_job_detail.json + sample_resume.json",
+            "jd_path": root_jd,
+            "resume_path": root_res
+        })
+        
+    return presets
+
+def load_preset_bundle(preset: dict) -> dict:
+    with open(preset["jd_path"], "r", encoding="utf-8") as f:
+        jd_data = json.load(f)
+    with open(preset["resume_path"], "r", encoding="utf-8") as f:
+        resume_data = json.load(f)
+        
+    return {
+        "company": jd_data.get("company", "Target Company"),
+        "role": jd_data.get("role", "Target Role"),
+        "target_seniority": jd_data.get("target_seniority", "Senior"),
+        "jd_text": jd_data.get("jd_text", ""),
+        "resume_text": resume_data.get("resume_text", "")
+    }
 
 if sys.platform == "win32":
     try:
@@ -69,10 +95,10 @@ def run_test():
     print("      NETRAN AI -- STAGE 2: QUESTION ENGINE TEST HARNESS (CLI)     ")
     print("===================================================================\n")
     
-    sample_files = list_sample_inputs()
+    presets = list_sample_presets()
     
     print("Select Input Mode:")
-    print("  1. Load Pre-Saved Dummy Sample File (JSON)")
+    print("  1. Load Pre-Saved Test Dummy Inputs (sample_job_detail.json + sample_resume.json)")
     print("  2. Paste Custom JD & Resume Interactively\n")
     
     choice = input("Enter choice (1-2, default 1): ").strip() or "1"
@@ -80,22 +106,22 @@ def run_test():
     input_data = {}
     source_name = ""
     
-    if choice == "1" and sample_files:
-        print("\nAvailable Pre-Saved Dummy Input Files:")
-        for idx, fpath in enumerate(sample_files, start=1):
-            print(f"  {idx}. {fpath.name}")
+    if choice == "1" and presets:
+        print("\nAvailable Pre-Saved Test Dummy Inputs:")
+        for idx, p in enumerate(presets, start=1):
+            print(f"  {idx}. {p['name']}")
         
-        file_choice = input(f"\nSelect dummy file (1-{len(sample_files)}, default 1): ").strip() or "1"
+        file_choice = input(f"\nSelect dummy preset (1-{len(presets)}, default 1): ").strip() or "1"
         try:
-            selected_file = sample_files[int(file_choice) - 1]
-            input_data = read_input_json(selected_file)
-            source_name = selected_file.name
-            print(f"\n[LOADED] Loaded '{selected_file.name}'")
+            selected_preset = presets[int(file_choice) - 1]
+            input_data = load_preset_bundle(selected_preset)
+            source_name = selected_preset['name']
+            print(f"\n[LOADED] Loaded '{selected_preset['name']}'")
         except Exception:
-            selected_file = sample_files[0]
-            input_data = read_input_json(selected_file)
-            source_name = selected_file.name
-            print(f"\n[LOADED] Defaulted to '{selected_file.name}'")
+            selected_preset = presets[0]
+            input_data = load_preset_bundle(selected_preset)
+            source_name = selected_preset['name']
+            print(f"\n[LOADED] Defaulted to '{selected_preset['name']}'")
             
     else:
         print("\nPaste Job Description text below (Press Ctrl+Z then Enter on Windows to finish):")
@@ -133,14 +159,30 @@ def run_test():
             print("\n[ERROR] Missing JD or Resume text. Exiting.")
             return
             
-        save_choice = input("\nSave pasted input into test/input/ as JSON for future reuse? (y/N): ").strip().lower()
+        save_choice = input("\nSave pasted inputs into test/input/ as sample_job_detail.json & sample_resume.json? (y/N): ").strip().lower()
         if save_choice == "y":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            saved_filename = f"custom_stage2_{timestamp}.json"
-            save_path = TEST_INPUT_DIR / saved_filename
-            with open(save_path, "w", encoding="utf-8") as f:
-                json.dump(input_data, f, indent=2)
-            print(f"[SAVED] Saved pasted input JSON to {save_path}")
+            preset_dir = TEST_INPUT_DIR / f"sample_custom_{timestamp}"
+            preset_dir.mkdir(parents=True, exist_ok=True)
+            
+            jd_payload = {
+                "company": "Custom Company",
+                "role": "Custom Role",
+                "target_seniority": seniority,
+                "jd_text": jd_text
+            }
+            res_payload = {
+                "candidate_name": "Custom Candidate",
+                "target_role": "Custom Role",
+                "resume_text": resume_text
+            }
+            
+            with open(preset_dir / "sample_job_detail.json", "w", encoding="utf-8") as f:
+                json.dump(jd_payload, f, indent=2)
+            with open(preset_dir / "sample_resume.json", "w", encoding="utf-8") as f:
+                json.dump(res_payload, f, indent=2)
+                
+            print(f"[SAVED] Saved pasted input JSON files to {preset_dir}")
 
     # Temporary resume file for parser input
     temp_resume_path = TEST_INPUT_DIR / "_temp_resume.txt"
@@ -183,7 +225,10 @@ def run_test():
             q1 = output.question_tree[0]
             print(f"Topic: {q1.topic} [{q1.difficulty}]")
             print(f"Q: {q1.question_text}")
-            print(f"Keywords: {', '.join(q1.expected_keywords)}\n")
+            print(f"Keywords: {', '.join(q1.expected_keywords)}")
+            if q1.resume_reference:
+                print(f"Resume Ref: {q1.resume_reference}")
+            print()
             
     except Exception as e:
         print(f"\n❌ Stage 2 Pipeline Test Failed: {e}")
