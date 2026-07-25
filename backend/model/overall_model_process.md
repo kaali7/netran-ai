@@ -56,7 +56,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | PDF/DOCX/TXT resume parsing, skill gap matrix, Gemini 15-question tree & system prompt generator |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, Faster-Whisper, Qwen2.5 LLM, Kokoro TTS, Continuous WAV recording, Session Manifest JSON |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing, 3-branch Gemini multimodal evaluation, report.json & evaluation_summary.md synthesis, Kivy UI |
-| **Workflow** | `workflow` | ⏳ **Remaining** | `backend/model/workflow/` | End-to-end multi-stage pipeline orchestrator |
+| **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Unified end-to-end 5-screen Kivy UI orchestrator linking Stage 1 → Stage 2 → Stage 3 → Stage 4 |
 
 ---
 
@@ -125,7 +125,20 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 ---
 
 ### Workflow Orchestrator (`workflow`)
-* **Status**: ⏳ **REMAINING / PLANNED**
-* **Location**: `backend/model/workflow/`
-* **Planned Code**:
-  - Unified pipeline coordinator linking Stage 1 → Stage 2 → Stage 3 → Stage 4 into a single seamless interview session lifecycle.
+* **Status**: ✅ **COVERED & OPERATIONAL**
+* **Location**: `backend/model/workflow/model/`
+* **Implemented Code**:
+  - `app.py`: Kivy Desktop UI application with 5-phase ScreenManager (`SetupScreen` → `ResearchScreen` → `QuestionScreen` → `InterviewScreen` → `ReportScreen`).
+  - `orchestrator.py`: Master pipeline coordinator executing Stage 1 → Stage 2 → Stage 3 → Stage 4 in background threads with live UI progress callbacks.
+  - `voice_engine.py`: Stage 3 voice loop adapter that injects Stage 2 dynamic prompt (`system_prompt.txt`) into Ollama Qwen2.5 persona and auto-stops after 15 questions.
+  - `config.py`: Unified `.env` configuration and module path injector.
+  - `sample_data.py`: Built-in demo testing harness with sample resume (`sample_resume.txt`) and JD (`sample_jd.txt`).
+  - `run.bat`: Windows launcher script.
+* **Output Artifacts**:
+  - `backend/model/sessions/<session_id>/interview_questions.json`
+  - `backend/model/sessions/<session_id>/system_prompt.txt`
+  - `backend/model/sessions/<session_id>/continuous_mic_input.wav`
+  - `backend/model/sessions/<session_id>/session_manifest.json`
+  - `backend/model/sessions/<session_id>/report.json`
+  - `backend/model/sessions/<session_id>/evaluation_summary.md`
+

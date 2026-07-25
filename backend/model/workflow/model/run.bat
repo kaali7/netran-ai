@@ -1,0 +1,6 @@
+@echo off
+title Netran AI - Unified Workflow Orchestrator
+cd /d %~dp0
+set PYTHONPATH=..\..\..\..\backend
+python app.py
+pause

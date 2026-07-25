@@ -1,0 +1,28 @@
+Arjun Sharma
+Senior Backend Engineer
+Email: arjun.sharma@example.com | Phone: +91-9876543210 | Location: Bengaluru, India
+
+PROFESSIONAL SUMMARY
+Results-driven Senior Backend Engineer with 4+ years of hands-on experience designing, developing, and scaling high-throughput microservices using Python, FastAPI, and PostgreSQL. Proven track record in optimizing database queries, implementing Redis caching layers, and containerizing workloads with Docker and Kubernetes on AWS.
+
+WORK EXPERIENCE
+Senior Backend Engineer | TechCorp Solutions (2022 - Present)
+- Architected and deployed scalable RESTful APIs and microservices using Python, FastAPI, and PostgreSQL handling 50k+ RPM.
+- Implemented multi-tier Redis caching strategies, reducing API response latency by 45% for critical endpoints.
+- Managed Kubernetes (EKS) clusters, CI/CD pipelines with GitHub Actions, and AWS infrastructure (EC2, S3, RDS).
+- Spearheaded the migration of legacy monolithic endpoints to asynchronous FastAPI microservices.
+
+Software Engineer | WebSolutions Inc. (2020 - 2022)
+- Built backend business logic and database schemas for web applications using Python, Django, and PostgreSQL.
+- Authored automated unit and integration tests using Pytest, achieving 88% overall code coverage.
+- Integrated third-party payment gateways (Stripe, Razorpay) and OAuth2 authentication workflows.
+
+EDUCATION
+B.Tech in Computer Science & Engineering
+National Institute of Technology (2016 - 2020)
+
+TECHNICAL SKILLS
+- Languages & Frameworks: Python, FastAPI, Django, Flask, SQL, Bash
+- Databases & Caching: PostgreSQL, MySQL, Redis
+- DevOps & Cloud: Docker, Kubernetes, AWS (EC2, S3, EKS, RDS), CI/CD, Git
+- System Design: RESTful APIs, Microservices, AsyncIO, Distributed Systems, Event-Driven Architecture
