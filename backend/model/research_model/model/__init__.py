@@ -1,1 +1,3 @@
-# JD Research Model Package
+"""
+Netran AI — Stage 1: JD Research Model Package
+"""

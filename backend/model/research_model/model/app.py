@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: app.py
+Description: Standalone Kivy Desktop GUI application for testing Stage 1 JD research and rubric generation.
+"""
+
 import os
 import sys
 import threading

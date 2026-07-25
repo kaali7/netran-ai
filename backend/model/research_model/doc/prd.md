@@ -56,15 +56,15 @@ Standard AI-generated mock interviews often suffer from:
 
 ### 4.1 Backend Pipeline Stack
 
-* **Language & Framework:** Python with **FastAPI** to handle high-performance, asynchronous REST API routing and orchestrate the external API calls efficiently.
-* **Data Validation:** **Pydantic** models will be utilized to define, enforce, and validate the strict JSON schema structures expected from the LLM, seamlessly integrating with FastAPI's native architecture.
+* **Language & Framework:** Python with **Pipeline Orchestration (`pipeline.py`)** and **Kivy Desktop GUI** for standalone testing.
+* **Data Validation:** **Pydantic** models to define, enforce, and validate strict JSON schema structures (`schemas.py`).
 * **Search Infrastructure:** `tavily-python` (Tavily Search API Python SDK) for real-time web data extraction and domain whitelisting. API key stored as `TAVILY_API_KEY` in `.env`.
-* **Reasoning Engine:** `google-genai` SDK (`from google import genai`, model: `gemini-3.6-flash`) for synthesizing the web context into a structured rubric. API key stored as `GEMINI_API_KEY` in `.env`.
+* **Reasoning Engine:** `google-genai` SDK (`from google import genai`, model: `gemini-3.6-flash`) for synthesizing web context into a structured rubric. API key stored as `GEMINI_API_KEY` in `.env`.
 
 ### 4.2 Data Layer & Schema Constraints
 
 * **Output Specification:** The resulting JSON must strictly contain `roleOverview`, `keyTechnicalPillars`, and `expectedInterviewTopics` (an array containing specific categories, string-based difficulty levels, and example questions).
-* **Data Caching (PostgreSQL):** To reduce API costs and latency, generated interview rubrics will be hashed against the input JD and stored in the database. Repeat JD submissions will retrieve the cached structured JSON instead of re-triggering the web search.
+* **Data Caching (SQLite):** To reduce API costs and latency, generated interview rubrics are hashed (SHA-256) against the input JD and stored in a local SQLite database (`cache.db`). Repeat JD submissions retrieve the cached structured JSON instantaneously instead of re-triggering web search.
 
 ---
 

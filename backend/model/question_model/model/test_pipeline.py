@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: test_pipeline.py
+Description: Standalone CLI test harness for verifying Stage 2 question tree and prompt generation.
+"""
+
 import os
 import sys
 import logging
@@ -60,7 +66,7 @@ def run_test():
     """
     
     session_id = f"sess_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    output_dir = os.path.abspath(os.path.join(current_dir, "../../../sessions", session_id))
+    output_dir = os.path.abspath(os.path.join(current_dir, "test_output", session_id))
     
     logger.info(f"Starting Stage 2 Pipeline Test for session: {session_id}")
     

@@ -1,3 +1,11 @@
+"""
+Netran AI — Workflow Orchestrator
+Module: voice_engine.py
+Description: Stage 3 voice loop adapter that injects Stage 2's dynamic prompt (`system_prompt.txt`)
+             into Ollama Qwen2.5 persona, iterates through the 15-question tree (`interview_questions.json`),
+             and manages continuous mic audio recording.
+"""
+
 import os
 import json
 import time

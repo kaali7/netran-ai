@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: session_logger.py
+Description: Session telemetry tracking module using high-resolution monotonic clocks (`time.perf_counter()`)
+             to generate the atomic `session_manifest.json` artifact for downstream Stage 4 audio slicing.
+"""
+
 import os
 import json
 import time

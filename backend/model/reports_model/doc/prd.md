@@ -112,9 +112,9 @@ Traditional interview evaluation engines suffer from critical blind spots:
 
 ### 4.1 Backend Pipeline Stack
 
-* **Language & Audio Processing:** Python 3.11 with `pydub` / `wave` for fast, lightweight audio waveform trimming.
+* **Language & Audio Processing:** Python 3.11 with standard `wave` library for fast, lightweight audio waveform trimming (`audio_slicer.py`).
 * **Schema Validation & Enforcement:** **Pydantic v2** models (`report_schema.py`) enforcing integer boundaries ($1{-}10$ turn ratings, $0{-}100$ pillar scores) and string-based enums.
-* **Multimodal Engine:** Official `google-genai` Python SDK (`from google import genai`) configured with `gemini-2.5-flash` and `response_mime_type="application/json"`.
+* **Multimodal Engine:** Official `google-genai` Python SDK (`from google import genai`) configured with `gemini-3.6-flash` and structured schema parsing.
 * **API Key Management:** System reads `GEMINI_API_KEY` securely from `.env`.
 
 ### 4.2 Data Layer & Schema Constraints

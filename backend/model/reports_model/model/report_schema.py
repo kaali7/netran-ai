@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: report_schema.py
+Description: Pydantic v2 data models enforcing output structures for candidate report payloads.
+"""
+
 from typing import List, Optional
 from pydantic import BaseModel, Field
 

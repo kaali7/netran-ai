@@ -26,6 +26,8 @@ benchmark_log.csv
 .kivy/
 sessions/
 model/sessions/
+test_output/
+model/*/model/test_output/
 *.wav
 
 # IDE & Editor Settings

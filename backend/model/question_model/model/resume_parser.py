@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: resume_parser.py
+Description: Multimodal document extractor supporting PDF (`pypdf`), DOCX (`python-docx`),
+             and TXT files to extract clean candidate resume text.
+"""
+
 import os
 import docx
 from pypdf import PdfReader

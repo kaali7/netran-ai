@@ -1,6 +1,13 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: prompt_builder.py
+Description: Generates baseline constraint instructions for Gemini to synthesize Stage 3's
+             latency-optimized, 1-2 sentence behavioral system prompt for the 'Eva' persona.
+"""
+
 def get_system_prompt_instructions(target_seniority: str) -> str:
     """
-    Returns the base instructions for Gemini to construct the Stage 3 behavioral system prompt.
+    Returns base instruction guardrails for Gemini to construct Stage 3's behavioral system prompt.
     """
     return f"""
 You must generate a highly customized 'Interviewer Behavioral System Prompt' for the 'Eva' persona.

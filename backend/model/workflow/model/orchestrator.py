@@ -1,3 +1,10 @@
+"""
+Netran AI — Workflow Orchestrator
+Module: orchestrator.py
+Description: Master end-to-end pipeline coordinator linking Stage 1 (Research) -> Stage 2 (Question Engine)
+             -> Stage 3 (Voice Interview) -> Stage 4 (Reports Engine) in background threads with live UI progress callbacks.
+"""
+
 import os
 import time
 import logging

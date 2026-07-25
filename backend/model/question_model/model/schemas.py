@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: schemas.py
+Description: Pydantic v2 schemas (`QuestionItem`, `Stage2Output`) enforcing output constraints.
+"""
+
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional
 

@@ -1,3 +1,10 @@
+"""
+Netran AI — Workflow Orchestrator
+Module: sample_data.py
+Description: Demo testing data provider exposing sample resume (Arjun Sharma)
+             and sample job description (DataFlow Inc.) text files.
+"""
+
 import os
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

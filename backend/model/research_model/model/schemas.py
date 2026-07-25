@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: schemas.py
+Description: Pydantic v2 schemas (`ParsedJD`, `InterviewTopic`, `InterviewRubric`) enforcing JSON outputs.
+"""
+
 from typing import List, Literal
 from pydantic import BaseModel, Field
 

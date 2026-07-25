@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: main_app.py
+Description: Standalone Kivy Desktop GUI client for testing live voice interviews and Script Calibration Mode.
+"""
+
 import threading
 import time
 import re
@@ -195,7 +201,9 @@ class InterviewWindow(BoxLayout):
         super().__init__(**kwargs)
         self.is_running = False
         self.interview_thread = None
-        self.log_filename = "interview_log.txt"
+        test_out_dir = os.path.join(os.path.dirname(__file__), "test_output")
+        os.makedirs(test_out_dir, exist_ok=True)
+        self.log_filename = os.path.join(test_out_dir, "interview_log.txt")
         self.conversation_history = []
         self.question_count = 0
         self.MAX_QUESTIONS = 15
@@ -282,17 +290,17 @@ class InterviewWindow(BoxLayout):
         self.question_count = 0
         self.update_question_label(0)
 
+        # Initialize Session Logger & Continuous Mic Writer inside test_output
+        session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        test_out_dir = os.path.join(os.path.dirname(__file__), "test_output")
+        self.session_dir = os.path.join(test_out_dir, session_id)
+        os.makedirs(self.session_dir, exist_ok=True)
+
         # Write clean session start to log file
         with open(self.log_filename, "w", encoding="utf-8") as f:
             f.write(
                 f"=== AI INTERVIEW LOG: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n\n"
             )
-
-        # Initialize Session Logger & Continuous Mic Writer
-        session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        self.session_dir = os.path.join(backend_dir, "sessions", session_id)
-        os.makedirs(self.session_dir, exist_ok=True)
 
         self.session_logger = SessionLogger(session_id=session_id, session_dir=self.session_dir)
         mic_wav_path = os.path.join(self.session_dir, "continuous_mic_input.wav")

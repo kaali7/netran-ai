@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: config.py
+Description: Configuration loader for Stage 2. Reads GEMINI_API_KEY and GEMINI_MODEL.
+"""
+
 import os
 import logging
 from dotenv import load_dotenv

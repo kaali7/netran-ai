@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: test_ui.py
+Description: Interactive Kivy desktop application for testing Stage 4 multimodal report generation.
+"""
+
 import os
 import sys
 import threading
@@ -27,7 +33,18 @@ from model.reports_model.model.report_schema import CandidateReportPayload
 class ReportEngineApp(App):
     def build(self):
         self.title = "Netran AI — Stage 4 Multimodal Evaluation Engine"
-        self.session_dir = backend_dir / "model" / "sessions" / "sess_20260724_194457"
+        
+        # Locate target session directory dynamically
+        sessions_dir = backend_dir / "model" / "sessions"
+        target_dir = sessions_dir / "sess_20260724_194457"
+        
+        if not target_dir.exists() and sessions_dir.exists():
+            existing_sessions = [d for d in sessions_dir.iterdir() if d.is_dir()]
+            if existing_sessions:
+                existing_sessions.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                target_dir = existing_sessions[0]
+                
+        self.session_dir = target_dir
 
         # Main Root Layout
         root = BoxLayout(orientation="vertical", padding=15, spacing=12)

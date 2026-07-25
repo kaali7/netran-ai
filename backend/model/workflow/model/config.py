@@ -1,3 +1,10 @@
+"""
+Netran AI — Workflow Orchestrator
+Module: config.py
+Description: Master configuration loader for unified workflow. Loads environment variables
+             from backend root `.env` and sets up non-colliding sys.path entries across all 4 stages.
+"""
+
 import os
 import sys
 from pathlib import Path

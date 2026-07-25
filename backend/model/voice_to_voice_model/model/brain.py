@@ -1,6 +1,13 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: brain.py
+Description: Streaming LLM engine powered by local Ollama execution of Qwen2.5:1.5b.
+             Yields token chunks in real-time under the 'Eva' technical interviewer persona.
+"""
+
 import ollama
 
-# Break 1: Define Eva's Personality Context
+# Define Eva's Personality Context (overridden dynamically in workflow mode)
 SYSTEM_PROMPT = {
     "role": "system",
     "content": (

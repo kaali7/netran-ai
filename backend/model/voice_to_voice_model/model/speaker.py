@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: speaker.py
+Description: Local neural Text-to-Speech (TTS) playback engine using Kokoro-82M (af_bella voice)
+             and sounddevice native 24kHz float32 audio streaming with echo-gate state tracking.
+"""
+
 import numpy as np
 import pyaudio
 from kokoro import KPipeline

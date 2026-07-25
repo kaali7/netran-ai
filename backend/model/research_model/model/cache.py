@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: cache.py
+Description: SQLite-based hashing subsystem (`cache.db`) for caching generated interview rubrics
+             by SHA-256 hash of JD text, eliminating redundant LLM API calls and search queries.
+"""
+
 import sqlite3
 import hashlib
 import json

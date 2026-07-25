@@ -92,7 +92,7 @@ AI voice interviews frequently fail due to:
                                  ▼
   ┌──────────────────────────────────────────────────────────────┐
   │ 2. Question Generator & Prompt Builder (question_generator.py)│
-  │    • Engine: google-genai SDK (gemini-2.5-flash)              │
+  │    • Engine: google-genai SDK (gemini-3.6-flash)              │
   │    • Enforces Pydantic Schema Output                         │
   └──────────────────────────────┬───────────────────────────────┘
                                  │
@@ -116,10 +116,10 @@ AI voice interviews frequently fail due to:
 
 ### 4.1 Backend Pipeline Stack
 
-* **Language & Document Processing:** Python 3.11 with `pypdf` / `pdfplumber` / `python-docx` for structured resume parsing.
+* **Language & Document Processing:** Python 3.11 with `pypdf` and `python-docx` for structured resume parsing (`resume_parser.py`).
 * **Data Validation & Enums:** **Pydantic v2** (`schemas.py`) enforcing schema constraints on question lists, difficulty tiers, and prompt parameters.
-* **Reasoning Engine:** `google-genai` SDK (`from google import genai`, model: `gemini-2.5-flash`) with structured JSON schema outputs (`response_mime_type="application/json"`).
-* **Stage 3 Interface:** Writes generated artifacts directly into the session folder (`backend/sessions/<session_id>/`) for immediate loading by `brain.py`.
+* **Reasoning Engine:** `google-genai` SDK (`from google import genai`, model: `gemini-3.6-flash`) with structured JSON schema outputs (`response_mime_type="application/json"`).
+* **Stage 3 Interface:** Writes generated artifacts directly into the session folder for immediate loading by `brain.py`.
 
 ### 4.2 Data Layer & Schema Constraints
 

@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: pipeline.py
+Description: Master Stage 1 pipeline execution module linking SQLite caching, JD parsing,
+             Tavily market intelligence searching, and Gemini rubric synthesis.
+"""
+
 import logging
 from typing import Callable, Optional
 from model.schemas import InterviewRubric

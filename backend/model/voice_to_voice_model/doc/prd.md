@@ -48,22 +48,22 @@ Candidates frequently struggle with real-world interview performance due to:
 
 ## 4. Technical Specifications & Architecture
 
-### 4.1 Frontend Stack & UI/UX Guidelines
-* **Frameworks:** React.js, Next.js, and TypeScript.
-* **Styling:** Tailwind CSS. 
-* **Design System:** The dashboard will feature a highly responsive, fast, and minimalist visual aesthetic. To align with a "serious tech" professional interface, the UI will implement a strict 60-30-10 color hierarchy utilizing black as the dominant background, white for core structural elements and typography, and deep purple for primary action buttons and data accents.
+### 4.1 UI Architecture & Testing Framework
+* **Testing GUI:** Kivy Desktop Application (`main_app.py`) for standalone voice-to-voice testing.
+* **Design System:** Dark obsidian aesthetic (`#0D0F17` background, `#171A26` cards, `#6366F1` indigo accents) featuring live volume VU meter, speech probability indicators, and conversation transcript cards.
+* **Note:** Web frontend (React.js/Next.js) is developed in a separate application repository. Backend model testing uses Kivy.
 
-### 4.2 Backend & Data Layer
-* **API Routing:** Python with FastAPI for handling rapid asynchronous requests between the user interface and AI models.
-* **Database:** PostgreSQL for storing user profiles, historical text transcripts, and generated performance metrics.
+### 4.2 Local AI & Machine Learning Pipeline
+* **Voice Activity Detection (VAD):** Silero VAD v3 ONNX model + dynamic auto-gain and RMS volume failsafes.
+* **Speech-to-Text (STT):** Faster-Whisper (`small` int8 model) running locally on CPU.
+* **Reasoning Engine (LLM):** Ollama `qwen2.5:1.5b` running locally with streaming token responses.
+* **Text-to-Speech (TTS):** Kokoro-82M neural TTS (`af_bella` voice) outputting directly to sounddevice speaker streams.
+* **Session Logger:** `SessionLogger` managing millisecond-precision timing telemetry and atomic JSON manifest generation.
 
-### 4.3 AI & Machine Learning Infrastructure
-* **Reasoning Engines:** Groq and Gemini APIs.
-* **Audio Processing:** Integrated real-time STT and TTS services for voice synthesis and transcription.
-
-### 4.4 Hardware Requirements
-* **Development:** Multi-core processor (Intel i5/Ryzen 5+) with 8GB–16GB RAM.
-* **End-User:** Any standard device with a modern web browser, microphone, and stable internet connection.
+### 4.3 Hardware & System Requirements
+* **Processor:** Multi-core x86_64 CPU (Intel i5/i7, Ryzen 5/7+).
+* **RAM:** 8GB–16GB RAM.
+* **Audio Hardware:** Working microphone and speaker/headphone hardware.
 
 ---
 

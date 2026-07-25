@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: report_builder.py
+Description: Main pipeline orchestrator for Stage 4. Executes WAV slicing, 3-branch evaluation,
+             and exports dual output artifacts (`report.json` and `evaluation_summary.md`).
+"""
+
 import json
 from datetime import datetime
 from pathlib import Path

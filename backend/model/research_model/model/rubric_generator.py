@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: rubric_generator.py
+Description: Synthesizes raw JD text, extracted role metadata, and live market web context into
+             a structured InterviewRubric Pydantic object via Gemini 3.6 Flash.
+"""
+
 import json
 import logging
 from typing import List, Dict

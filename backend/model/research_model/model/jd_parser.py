@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: jd_parser.py
+Description: Evaluates raw Job Description (JD) text via Gemini 3.6 Flash to extract
+             structured metadata (role, company, tech stack) and targeted web search queries.
+"""
+
 import json
 import logging
 from model.schemas import ParsedJD
@@ -6,7 +13,15 @@ from model.gemini_client import call_gemini_api
 logger = logging.getLogger(__name__)
 
 def parse_jd(jd_text: str) -> ParsedJD:
-    """Parses raw JD text using Gemini REST API to extract structured metadata and search queries."""
+    """
+    Parses raw JD text using Gemini to extract structured metadata and 2-3 search queries.
+    
+    Args:
+        jd_text: Unformatted raw text of the job description.
+        
+    Returns:
+        ParsedJD Pydantic object containing role, company, tech stack, and search queries.
+    """
     prompt = f"""
 Analyze the following Job Description (JD) text and extract:
 1. Role title

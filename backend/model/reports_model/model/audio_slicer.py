@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: audio_slicer.py
+Description: Non-destructive WAV slicing utility using standard Python `wave` module to extract per-turn
+             audio clips (`turn_01.wav`, `turn_02.wav`, etc.) based on `session_manifest.json` millisecond timestamps.
+"""
+
 import json
 import wave
 from pathlib import Path

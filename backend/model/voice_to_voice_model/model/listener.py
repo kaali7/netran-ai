@@ -1,3 +1,11 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: listener.py
+Description: Audio capture engine utilizing sounddevice, Silero VAD ONNX inference,
+             dynamic peak auto-gain normalization, Faster-Whisper int8 STT,
+             and asynchronous continuous PCM mic WAV streaming.
+"""
+
 import wave
 import queue
 import threading
@@ -8,7 +16,14 @@ import onnxruntime as ort
 import os
 import importlib
 from faster_whisper import WhisperModel
-from benchmark import Benchmark  # Fix Bug #2: top-level import prevents NameError on early exit
+from benchmark import Benchmark
+
+# Domain prompt vocabulary for guiding Faster-Whisper technical transcription
+WHISPER_INITIAL_PROMPT = (
+    "Python, JavaScript, React.js, Next.js, TypeScript, FastAPI, PostgreSQL, Redis, Docker, "
+    "Kubernetes, System Design, REST APIs, Microservices, Data Structures, Algorithms, "
+    "tech mock interview developer candidate response."
+)
 
 # Global setup
 VAD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")
@@ -174,7 +189,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
     segments, _ = whisper_model.transcribe(
         audio_array,
         language="en",
-        initial_prompt=FRONTEND_PROMPT,
+        initial_prompt=WHISPER_INITIAL_PROMPT,
         beam_size=5,
         temperature=0.0,
         vad_filter=True,
@@ -322,7 +337,7 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
         segments, _ = whisper_model.transcribe(
             audio_to_transcribe,
             language="en",
-            initial_prompt=FRONTEND_PROMPT,
+            initial_prompt=WHISPER_INITIAL_PROMPT,
             beam_size=5,
             temperature=0.0,
             vad_filter=True,

@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 3: Live Voice-to-Voice Loop
+Module: benchmark.py
+Description: High-resolution timing metrics utility tracking STT latency, TTFT, and TTFA telemetry into benchmark_log.csv.
+"""
+
 import time
 import csv
 import os

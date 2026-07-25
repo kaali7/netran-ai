@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: test_pipeline.py
+Description: Standalone CLI headless test runner for verifying Stage 4 audio slicing and multimodal report synthesis.
+"""
+
 import sys
 import json
 from pathlib import Path

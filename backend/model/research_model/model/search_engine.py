@@ -1,3 +1,10 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: search_engine.py
+Description: Integrates Tavily Search API to query live internet intelligence from trusted engineering
+             domains (LeetCode, Glassdoor, GitHub, GeeksforGeeks, Reddit) with graceful fallback resilience.
+"""
+
 import logging
 from typing import List, Dict
 from model.config import TAVILY_API_KEY, TRUSTED_DOMAINS

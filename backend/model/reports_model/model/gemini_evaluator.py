@@ -1,3 +1,11 @@
+"""
+Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
+Module: gemini_evaluator.py
+Description: 3-branch Gemini Multimodal Evaluation Engine using `google-genai` SDK (`gemini-3.6-flash`).
+             Evaluates Audio Branch (tone, hesitation, verified transcript), Technical Branch (accuracy, missing concepts),
+             and Combine Synthesis Branch (final executive hiring report).
+"""
+
 import os
 import json
 from pathlib import Path

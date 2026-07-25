@@ -1,3 +1,0 @@
-=== AI INTERVIEW LOG: 2026-07-17 21:00:19 ===
-
-[21:00:20] Eva: Hello! Welcome to your interview. Could you describe your frontend stack?

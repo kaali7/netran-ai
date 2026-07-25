@@ -1,3 +1,9 @@
+"""
+Netran AI — Stage 1: JD Research & Market Intelligence Engine
+Module: config.py
+Description: Configuration loader for Stage 1. Reads GEMINI_API_KEY, TAVILY_API_KEY, and TRUSTED_DOMAINS.
+"""
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv

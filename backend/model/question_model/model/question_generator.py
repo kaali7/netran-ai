@@ -1,3 +1,11 @@
+"""
+Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
+Module: question_generator.py
+Description: Core reasoning engine using Gemini 3.6 Flash and Pydantic schemas to generate
+             the 15-question tiered interview tree (`interview_questions.json`) and the custom
+             latency-constrained system prompt (`system_prompt.txt`).
+"""
+
 import json
 import logging
 import os
