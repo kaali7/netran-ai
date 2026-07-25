@@ -107,20 +107,30 @@ Return exactly the JSON object matching the requested schema.
 
         # 4. Save artifacts if output_dir is provided
         if output_dir:
-            if output_dir.lower().endswith(".json"):
-                artifact_path = output_dir
-            elif os.path.isdir(output_dir):
-                artifact_path = os.path.join(output_dir, "stage2_output.json")
-            else:
-                artifact_path = f"{output_dir}.json"
-
-            parent_dir = os.path.dirname(os.path.abspath(artifact_path))
-            os.makedirs(parent_dir, exist_ok=True)
+            os.makedirs(output_dir, exist_ok=True)
             
-            with open(artifact_path, "w", encoding="utf-8") as f:
-                f.write(stage2_output.model_dump_json(indent=2))
+            # File 1: Generated 15-question interview tree
+            questions_path = os.path.join(output_dir, "interview_questions.json")
+            with open(questions_path, "w", encoding="utf-8") as f:
+                json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
                 
-            logger.info(f"Stage 2 single JSON artifact saved cleanly to {artifact_path}")
+            # File 2: LLM interviewer behavior & runtime system prompt
+            behavior_path = os.path.join(output_dir, "interviewer_behavior.json")
+            behavior_payload = {
+                "session_id": session_id,
+                "persona": "Eva",
+                "target_seniority": target_seniority,
+                "interviewer_system_prompt": stage2_output.interviewer_system_prompt,
+                "behavior_rules": [
+                  "Maximum 1-2 sentences per response for low-latency streaming voice execution",
+                  "Maintain direct, professional, conversational roleplay persona",
+                  "Probe architectural trade-offs, edge cases, and failure modes"
+                ]
+            }
+            with open(behavior_path, "w", encoding="utf-8") as f:
+                json.dump(behavior_payload, f, indent=2)
+                
+            logger.info(f"Stage 2 output artifacts (interview_questions.json & interviewer_behavior.json) saved to {output_dir}")
 
         return stage2_output
 

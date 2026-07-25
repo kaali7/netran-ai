@@ -53,20 +53,25 @@ By analyzing the Candidate's Resume (PDF/DOCX/TXT) alongside the target Job Desc
 
 ### Artifact Specifications
 
-- **Single Consolidated Output File: `test/output/sess_<timestamp>.json`**
-  - Encapsulates `session_id`, `interviewer_system_prompt` (Eva persona runtime system prompt), and `question_tree` (15 structured technical questions).
-  - 15 questions categorized into:
+- **Output Session Directory: `test/output/sess_<timestamp>/`**
+  - **`interview_questions.json`**: JSON array of 15 structured technical questions categorized into:
     - **Tier 1 (Warmup / Foundations):** Questions 1–2
     - **Tier 2 (Core Arch / Production):** Questions 3–12
     - **Tier 3 (Advanced / System Design):** Questions 13–15
-  - Each question includes `topic`, `difficulty`, `question_text`, `expected_keywords`, and `resume_reference`.
+    - Includes `id`, `topic`, `difficulty`, `question_text`, `expected_keywords`, and `resume_reference`.
+  - **`interviewer_behavior.json`**: JSON object encapsulating:
+    - `session_id`, `persona` ("Eva"), `target_seniority`, `interviewer_system_prompt`, and `behavior_rules` (1-2 sentence response limits for streaming voice execution).
 
 ---
 
 ## 4. Execution & Testing
 
-- **Preset JSON Input Samples:** `model/question_model/test/input/` (`sample_stage2_backend.json`, `sample_stage2_frontend.json`, `sample_stage2_fullstack.json`).
-- **Single JSON Session Outputs:** `model/question_model/test/output/sess_<timestamp>.json`.
+- **Preset JSON Input Samples (`model/question_model/test/input/`):**
+  - `sample_job_detail.json` & `sample_resume.json`
+  - Subdirectories: `sample_backend/`, `sample_frontend/`
+- **Output Session Folder Artifacts (`model/question_model/test/output/sess_<timestamp>/`):**
+  - `interview_questions.json`
+  - `interviewer_behavior.json`
 
 Run via `run.bat` menu:
 - Select **Option 3: Run Stage 2 Question Engine (Headless CLI)**

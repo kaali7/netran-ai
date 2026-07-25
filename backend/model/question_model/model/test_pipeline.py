@@ -148,7 +148,7 @@ def run_test():
         f.write(input_data.get("resume_text", ""))
 
     session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    session_output_file = TEST_OUTPUT_DIR / f"{session_id}.json"
+    session_output_dir = TEST_OUTPUT_DIR / session_id
     
     print(f"\n[EXECUTING] Running Stage 2 Question Generation for session: {session_id}...")
     
@@ -158,7 +158,7 @@ def run_test():
             jd_text=input_data.get("jd_text", ""),
             resume_path=str(temp_resume_path),
             target_seniority=input_data.get("target_seniority", "Senior"),
-            output_dir=str(session_output_file)
+            output_dir=str(session_output_dir)
         )
         
         # Clean up temporary resume file
@@ -174,7 +174,9 @@ def run_test():
         print(f"Session ID: {output.session_id}")
         print(f"Generated Question Tree: {len(output.question_tree)} Tiered Questions")
         print(f"System Prompt Length: {len(output.interviewer_system_prompt)} characters")
-        print(f"Saved Output JSON: {session_output_file}\n")
+        print(f"Output Session Directory: {session_output_dir}")
+        print(f"  ├── interview_questions.json")
+        print(f"  └── interviewer_behavior.json\n")
         
         print("--- FIRST QUESTION PREVIEW ---")
         if output.question_tree:

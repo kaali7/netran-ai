@@ -45,8 +45,8 @@ backend/
     │   │   ├── current.md     # Stage 2 technical implementation status
     │   │   └── prd.md         # Stage 2 Product Requirements Document
     │   ├── test/              # Stage 2 test harness input/output directories
-    │   │   ├── input/         # Pre-saved dummy input JSON files (*.json)
-    │   │   └── output/        # Generated session outputs ( sess_<timestamp>.json )
+    │   │   ├── input/         # Pre-saved dummy input JSON files (sample_job_detail.json & sample_resume.json)
+    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> interview_questions.json & interviewer_behavior.json )
     │   └── model/
     │       ├── config.py      # Stage 2 configuration loader
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
