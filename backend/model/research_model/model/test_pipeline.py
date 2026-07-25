@@ -36,7 +36,20 @@ def ensure_dirs():
 
 def list_sample_inputs():
     ensure_dirs()
-    return sorted(list(TEST_INPUT_DIR.glob("*.txt")))
+    files = list(TEST_INPUT_DIR.glob("*.json")) + list(TEST_INPUT_DIR.glob("*.txt"))
+    return sorted(files, key=lambda f: f.name)
+
+def read_input_file(fpath: Path) -> str:
+    with open(fpath, "r", encoding="utf-8") as f:
+        content = f.read().strip()
+    if fpath.suffix.lower() == ".json":
+        try:
+            data = json.loads(content)
+            if isinstance(data, dict):
+                return data.get("jd_text", content)
+        except Exception:
+            pass
+    return content
 
 if sys.platform == "win32":
     try:
@@ -52,7 +65,7 @@ def run_test():
     sample_files = list_sample_inputs()
     
     print("Select Input Mode:")
-    print("  1. Load Pre-Saved Dummy Sample File")
+    print("  1. Load Pre-Saved Dummy Sample File (JSON)")
     print("  2. Paste Custom Job Description Text Interactively\n")
     
     choice = input("Enter choice (1-2, default 1): ").strip() or "1"
@@ -68,14 +81,12 @@ def run_test():
         file_choice = input(f"\nSelect dummy file (1-{len(sample_files)}, default 1): ").strip() or "1"
         try:
             selected_file = sample_files[int(file_choice) - 1]
-            with open(selected_file, "r", encoding="utf-8") as f:
-                jd_text = f.read().strip()
+            jd_text = read_input_file(selected_file)
             source_name = selected_file.name
             print(f"\n[LOADED] Loaded '{selected_file.name}' ({len(jd_text)} chars)")
         except Exception:
             selected_file = sample_files[0]
-            with open(selected_file, "r", encoding="utf-8") as f:
-                jd_text = f.read().strip()
+            jd_text = read_input_file(selected_file)
             source_name = selected_file.name
             print(f"\n[LOADED] Defaulted to '{selected_file.name}' ({len(jd_text)} chars)")
             
@@ -95,14 +106,20 @@ def run_test():
             print("\n[ERROR] No text provided. Exiting.")
             return
             
-        save_choice = input("\nSave pasted input into test/input/ for future reuse? (y/N): ").strip().lower()
+        save_choice = input("\nSave pasted input into test/input/ as JSON for future reuse? (y/N): ").strip().lower()
         if save_choice == "y":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            saved_filename = f"pasted_jd_{timestamp}.txt"
+            saved_filename = f"custom_jd_{timestamp}.json"
             save_path = TEST_INPUT_DIR / saved_filename
+            payload = {
+                "company": "Target Company",
+                "role": "Custom Role",
+                "target_seniority": "Senior",
+                "jd_text": jd_text
+            }
             with open(save_path, "w", encoding="utf-8") as f:
-                f.write(jd_text)
-            print(f"[SAVED] Saved pasted input to {save_path}")
+                json.dump(payload, f, indent=2)
+            print(f"[SAVED] Saved pasted input JSON to {save_path}")
 
     session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     session_output_dir = TEST_OUTPUT_DIR / session_id

@@ -1,0 +1,18 @@
+{
+  "company": "InnovateAI Solutions",
+  "role": "Senior Backend Systems Engineer (Python & Microservices)",
+  "target_seniority": "Senior",
+  "tech_stack": [
+    "Python",
+    "FastAPI",
+    "Django",
+    "PostgreSQL",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Kafka/RabbitMQ",
+    "gRPC/REST APIs"
+  ],
+  "jd_text": "Company: InnovateAI Solutions\nRole: Senior Backend Systems Engineer (Python & Microservices)\n\nResponsibilities:\n- Architect and scale high-concurrency microservices processing millions of daily API transactions.\n- Design relational database schemas and optimize complex SQL queries using PostgreSQL and Redis caching layers.\n- Build robust RESTful and gRPC APIs using Python (FastAPI/Django).\n- Maintain CI/CD pipelines, Docker containers, and Kubernetes deployments on AWS.\n\nRequirements:\n- 5+ years of software engineering experience with Python and microservices architecture.\n- Extensive experience with PostgreSQL query optimization, connection pooling, and indexing strategies.\n- Deep expertise in asynchronous programming (asyncio, Celery, RabbitMQ/Kafka).\n- Proven track record of system design, load balancing, and high-availability operations."
+}

@@ -25,7 +25,7 @@ backend/
     │   │   ├── current.md     # Stage 1 technical implementation status
     │   │   └── prd.md         # Stage 1 Product Requirements Document
     │   ├── test/              # Stage 1 test harness input/output directories
-    │   │   ├── input/         # Pre-saved dummy JD sample files (*.txt)
+    │   │   ├── input/         # Pre-saved dummy JD sample JSON files (*.json)
     │   │   └── output/        # Generated session outputs ( sess_<timestamp>/ )
     │   └── model/
     │       ├── __init__.py    # Package initializer

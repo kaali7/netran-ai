@@ -185,7 +185,7 @@ class InputScreen(Screen):
             font_size='12sp',
             bold=True
         )
-        sample1_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_google_frontend.txt"))
+        sample1_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_google_frontend.json"))
 
         sample2_btn = Button(
             text="⚡ Backend Systems",
@@ -196,7 +196,7 @@ class InputScreen(Screen):
             font_size='12sp',
             bold=True
         )
-        sample2_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_backend_engineer.txt"))
+        sample2_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_backend_engineer.json"))
 
         sample3_btn = Button(
             text="🤖 Full Stack AI",
@@ -207,7 +207,7 @@ class InputScreen(Screen):
             font_size='12sp',
             bold=True
         )
-        sample3_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_fullstack.txt"))
+        sample3_btn.bind(on_press=lambda inst: self.load_preset("sample_jd_fullstack.json"))
 
         preset_bar.add_widget(sample1_btn)
         preset_bar.add_widget(sample2_btn)
@@ -267,8 +267,8 @@ class InputScreen(Screen):
         btn_bar = BoxLayout(orientation='horizontal', size_hint_y=None, height=46, spacing=12)
 
         save_preset_btn = Button(
-            text="💾 Save Pasted JD to test/input/",
-            size_hint_x=0.35,
+            text="💾 Save Pasted JD (JSON) to test/input/",
+            size_hint_x=0.38,
             background_normal='',
             background_color=(0.16, 0.18, 0.28, 1),
             color=(0.8, 0.9, 1, 1),
@@ -278,7 +278,7 @@ class InputScreen(Screen):
 
         self.analyze_btn = PrimaryButton(
             text="🚀 Analyze JD & Search Live Market Intel",
-            size_hint_x=0.65
+            size_hint_x=0.62
         )
         self.analyze_btn.bind(on_press=self.start_analysis)
 
@@ -317,10 +317,22 @@ class InputScreen(Screen):
 
     def load_preset(self, filename: str):
         filepath = TEST_INPUT_DIR / filename
+        if not filepath.exists():
+            alt = filename.replace('.txt', '.json') if filename.endswith('.txt') else filename.replace('.json', '.txt')
+            filepath = TEST_INPUT_DIR / alt
+
         if filepath.exists():
             with open(filepath, "r", encoding="utf-8") as f:
-                self.jd_input.text = f.read().strip()
-            self.status_label.text = f"● Loaded preset dummy: '{filename}'"
+                content = f.read().strip()
+            if filepath.suffix.lower() == ".json":
+                try:
+                    data = json.loads(content)
+                    if isinstance(data, dict):
+                        content = data.get("jd_text", content)
+                except Exception:
+                    pass
+            self.jd_input.text = content
+            self.status_label.text = f"● Loaded preset JSON: '{filepath.name}'"
             self.status_label.color = COLOR_SUCCESS
         else:
             self.status_label.text = f"⚠️ Preset file '{filename}' not found."
@@ -335,13 +347,20 @@ class InputScreen(Screen):
         
         TEST_INPUT_DIR.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"custom_jd_{timestamp}.txt"
+        filename = f"custom_jd_{timestamp}.json"
         save_path = TEST_INPUT_DIR / filename
         
-        with open(save_path, "w", encoding="utf-8") as f:
-            f.write(text)
+        payload = {
+            "company": "Target Company",
+            "role": "Custom Role",
+            "target_seniority": "Senior",
+            "jd_text": text
+        }
         
-        self.status_label.text = f"✅ Saved custom JD to test/input/{filename}"
+        with open(save_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+        
+        self.status_label.text = f"✅ Saved custom JD JSON to test/input/{filename}"
         self.status_label.color = COLOR_SUCCESS
 
     def start_analysis(self, instance):

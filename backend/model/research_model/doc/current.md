@@ -62,8 +62,8 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 * Supports optional `output_dir` parameter to automatically serialize and persist `interview_rubric.json`, `parsed_jd.json`, and `search_context.json`.
 
 ### 9. Kivy Desktop GUI Application ([app.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/app.py))
-* **Preset Dummy Selector**: Provides buttons to load pre-saved dummy JDs (`sample_jd_google_frontend.txt`, `sample_jd_backend_engineer.txt`, `sample_jd_fullstack.txt`) from `test/input/`.
-* **Custom JD Saving**: Allows saving pasted custom JDs directly into `test/input/`.
+* **Preset Dummy Selector**: Provides buttons to load pre-saved dummy JSON JDs (`sample_jd_google_frontend.json`, `sample_jd_backend_engineer.json`, `sample_jd_fullstack.json`) from `test/input/`.
+* **Custom JD Saving**: Allows saving pasted custom JDs as structured `.json` files directly into `test/input/`.
 * **Live Web Intelligence Visualizer**: Displays domain-badged source cards (`[LinkedIn]`, `[LeetCode]`, `[Glassdoor]`, `[GitHub]`, `[StackOverflow]`, `[Reddit]`, `[GeeksforGeeks]`, `[Medium]`) rendering web search titles, URLs, and context snippets.
 * **Interactive Results View**: Role Overview card, Technical Pillars chip list, and categorized interview topics with difficulty badges (🟢 Junior, 🟡 Mid, 🔴 Senior).
 
