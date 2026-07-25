@@ -98,16 +98,13 @@ def run_pipeline(
     return output_obj
 
 def _save_artifacts(output_dir: str, output_obj: Stage1Output):
-    """Saves Stage1Output artifacts into designated output directory."""
+    """Saves complete Stage1Output into a single consolidated stage1_output.json artifact."""
     try:
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "interview_rubric.json"), "w", encoding="utf-8") as f:
-            f.write(output_obj.rubric.model_dump_json(indent=2))
-        with open(os.path.join(output_dir, "parsed_jd.json"), "w", encoding="utf-8") as f:
-            f.write(output_obj.parsed_jd.model_dump_json(indent=2))
-        with open(os.path.join(output_dir, "search_context.json"), "w", encoding="utf-8") as f:
-            json.dump(output_obj.search_context, f, indent=2)
-        logger.info(f"Stage 1 artifacts saved cleanly to {output_dir}")
+        artifact_path = os.path.join(output_dir, "stage1_output.json")
+        with open(artifact_path, "w", encoding="utf-8") as f:
+            f.write(output_obj.model_dump_json(indent=2))
+        logger.info(f"Stage 1 consolidated artifact saved cleanly to {artifact_path}")
     except Exception as e:
-        logger.error(f"Failed to write output artifacts to {output_dir}: {e}")
+        logger.error(f"Failed to write output artifact to {output_dir}: {e}")
 

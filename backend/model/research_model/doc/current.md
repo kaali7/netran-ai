@@ -59,7 +59,7 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 
 ### 8. Pipeline Orchestrator ([pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/pipeline.py))
 * Connects all stages: `Cache Check -> JD Parse -> Market Search -> Rubric Generation -> Cache Store -> Artifact Save -> Return Stage1Output`.
-* Supports optional `output_dir` parameter to automatically serialize and persist `interview_rubric.json`, `parsed_jd.json`, and `search_context.json`.
+* Supports optional `output_dir` parameter to automatically serialize and persist complete Stage 1 results into a single consolidated `stage1_output.json` file.
 
 ### 9. Kivy Desktop GUI Application ([app.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/app.py))
 * **Preset Dummy Selector**: Provides buttons to load pre-saved dummy JSON JDs (`sample_jd_google_frontend.json`, `sample_jd_backend_engineer.json`, `sample_jd_fullstack.json`) from `test/input/`.
