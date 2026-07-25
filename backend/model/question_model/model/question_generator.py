@@ -103,54 +103,80 @@ Return exactly the JSON object matching the requested schema.
                     break
             except Exception as e:
                 last_err = e
-                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                    logger.warning(f"Gemini API rate limit hit (429). Retrying attempt {attempt}/3 in 5s...")
+                err_msg = str(e)
+                logger.warning(f"Gemini API attempt {attempt}/3 error: {err_msg[:120]}")
+                if attempt < 3:
                     import time
-                    time.sleep(5)
-                else:
-                    raise e
+                    time.sleep(3 * attempt)
 
         if not response or not response.text:
-            raise last_err or ValueError("Empty response from Gemini")
-            
-        output_text = response.text
-        stage2_output = Stage2Output.model_validate_json(output_text)
-        
-        # Override session_id with the provided one
-        stage2_output.session_id = session_id
+            logger.warning(f"Gemini API quota exhausted or connection unavailable ({last_err}). Utilizing fallback question generator.")
+            stage2_output = generate_fallback_stage2_output(session_id, target_seniority)
+        else:
+            stage2_output = Stage2Output.model_validate_json(response.text)
+            stage2_output.session_id = session_id
 
-        # 4. Save artifacts if output_dir is provided
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # File 1: Generated 15-question interview tree
-            questions_path = os.path.join(output_dir, "interview_questions.json")
-            with open(questions_path, "w", encoding="utf-8") as f:
-                json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
-                
-            # File 2: LLM interviewer behavior & runtime system prompt
-            behavior_path = os.path.join(output_dir, "interviewer_behavior.json")
-            behavior_payload = {
-                "session_id": session_id,
-                "persona": "Eva",
-                "target_seniority": target_seniority,
-                "interviewer_system_prompt": stage2_output.interviewer_system_prompt,
-                "behavior_rules": [
-                  "Maximum 1-2 sentences per response for low-latency streaming voice execution",
-                  "Maintain direct, professional, conversational roleplay persona",
-                  "Probe architectural trade-offs, edge cases, and failure modes"
-                ]
-            }
-            with open(behavior_path, "w", encoding="utf-8") as f:
-                json.dump(behavior_payload, f, indent=2)
-                
-            logger.info(f"Stage 2 output artifacts (interview_questions.json & interviewer_behavior.json) saved to {output_dir}")
-
-        return stage2_output
-
-    except ValidationError as ve:
-        logger.error(f"Pydantic Validation Error on Gemini Output: {ve}")
-        raise
     except Exception as e:
-        logger.error(f"Error during Gemini generation: {e}")
-        raise
+        logger.warning(f"Gemini generation exception ({e}). Utilizing fallback question generator.")
+        stage2_output = generate_fallback_stage2_output(session_id, target_seniority)
+
+    # 4. Save artifacts if output_dir is provided
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # File 1: Generated 15-question interview tree
+        questions_path = os.path.join(output_dir, "interview_questions.json")
+        with open(questions_path, "w", encoding="utf-8") as f:
+            json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
+            
+        # File 2: LLM interviewer behavior & runtime system prompt
+        behavior_path = os.path.join(output_dir, "interviewer_behavior.json")
+        behavior_payload = {
+            "session_id": session_id,
+            "persona": "Eva",
+            "target_seniority": target_seniority,
+            "interviewer_system_prompt": stage2_output.interviewer_system_prompt,
+            "behavior_rules": [
+              "Maximum 1-2 sentences per response for low-latency streaming voice execution",
+              "Maintain direct, professional, conversational roleplay persona",
+              "Probe architectural trade-offs, edge cases, and failure modes"
+            ]
+        }
+        with open(behavior_path, "w", encoding="utf-8") as f:
+            json.dump(behavior_payload, f, indent=2)
+            
+        logger.info(f"Stage 2 output artifacts (interview_questions.json & interviewer_behavior.json) saved to {output_dir}")
+
+    return stage2_output
+
+
+def generate_fallback_stage2_output(session_id: str, target_seniority: str = "Senior") -> Stage2Output:
+    """Generates structured fallback Stage2Output when LLM API quota is exhausted or offline."""
+    from .schemas import QuestionItem
+    fallback_prompt = (
+        f"You are Eva, a lead technical interviewer conducting a live technical interview for a {target_seniority} role. "
+        "Keep all responses strictly to 1-2 concise, conversational sentences for low latency voice execution. "
+        "Probe architectural trade-offs, edge cases, and technical implementation details."
+    )
+    fallback_questions = [
+        QuestionItem(id=1, topic="Asynchronous Execution", difficulty="Junior", question_text="Explain the Python asyncio event loop and cooperative multitasking.", expected_keywords=["event loop", "async", "await"], resume_reference=None),
+        QuestionItem(id=2, topic="Database Indexing", difficulty="Junior", question_text="How do B-Tree indexes operate in PostgreSQL?", expected_keywords=["B-Tree", "indexing", "lookup"], resume_reference=None),
+        QuestionItem(id=3, topic="REST vs gRPC", difficulty="Mid", question_text="What are the trade-offs between gRPC and RESTful HTTP APIs?", expected_keywords=["Protobuf", "gRPC", "HTTP/2"], resume_reference=None),
+        QuestionItem(id=4, topic="Caching Strategies", difficulty="Mid", question_text="How do you handle cache invalidation and thundering herd in Redis?", expected_keywords=["Redis", "cache-aside", "TTL"], resume_reference=None),
+        QuestionItem(id=5, topic="Message Queues", difficulty="Mid", question_text="Compare Apache Kafka and RabbitMQ for distributed messaging.", expected_keywords=["Kafka", "partitions", "RabbitMQ"], resume_reference=None),
+        QuestionItem(id=6, topic="Microservices Design", difficulty="Mid", question_text="How do you enforce idempotency in background microservice tasks?", expected_keywords=["idempotency", "UUID", "state"], resume_reference=None),
+        QuestionItem(id=7, topic="Database Connection Pooling", difficulty="Mid", question_text="How does PgBouncer prevent database connection starvation?", expected_keywords=["PgBouncer", "connection pool", "PostgreSQL"], resume_reference=None),
+        QuestionItem(id=8, topic="Docker Containerization", difficulty="Mid", question_text="How do multi-stage Docker builds reduce image size?", expected_keywords=["multi-stage", "Docker", "caching"], resume_reference=None),
+        QuestionItem(id=9, topic="Kubernetes Scaling", difficulty="Mid", question_text="Explain how Horizontal Pod Autoscaler (HPA) triggers pod scaling.", expected_keywords=["HPA", "metrics", "Kubernetes"], resume_reference=None),
+        QuestionItem(id=10, topic="System Security", difficulty="Mid", question_text="How do you secure inter-service communication with mTLS?", expected_keywords=["mTLS", "certificates", "TLS"], resume_reference=None),
+        QuestionItem(id=11, topic="CI/CD Pipelines", difficulty="Mid", question_text="How do rolling deployments ensure zero downtime?", expected_keywords=["rolling update", "blue-green", "deployment"], resume_reference=None),
+        QuestionItem(id=12, topic="State Management", difficulty="Mid", question_text="How do you maintain state consistency across distributed databases?", expected_keywords=["Saga pattern", "transactions", "eventual consistency"], resume_reference=None),
+        QuestionItem(id=13, topic="System Architecture", difficulty="Senior", question_text="Design a scalable backend processing 50,000 requests per second.", expected_keywords=["load balancing", "sharding", "rate limiting"], resume_reference=None),
+        QuestionItem(id=14, topic="Distributed Locks", difficulty="Senior", question_text="How does Redlock guarantee distributed locking across Redis nodes?", expected_keywords=["Redlock", "DLM", "quorum"], resume_reference=None),
+        QuestionItem(id=15, topic="Observability & Tracing", difficulty="Senior", question_text="How does OpenTelemetry propagate trace context across microservices?", expected_keywords=["OpenTelemetry", "trace ID", "spans"], resume_reference=None),
+    ]
+    return Stage2Output(
+        session_id=session_id,
+        interviewer_system_prompt=fallback_prompt,
+        question_tree=fallback_questions
+    )
