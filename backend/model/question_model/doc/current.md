@@ -39,7 +39,7 @@ By analyzing the Candidate's Resume (PDF/DOCX/TXT) alongside the target Job Desc
                                    │
 ┌─────────────────┐                ▼                ┌────────────────┐
 │ Candidate Resume│ ───►  question_generator.py ───►│ Gemini 3.6     │
-│ (PDF/DOCX/TXT)  │       (google-genai SDK)        │ Flash Engine   │
+│ (PDF/DOCX/TXT/JSON) ───►  question_generator.py ───►│ Gemini 3.6     │
 └─────────────────┘                                 └───────┬────────┘
                                                             │
                                                             ▼
