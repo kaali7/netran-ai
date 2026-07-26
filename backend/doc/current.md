@@ -1,7 +1,7 @@
 # Netran AI Backend — Current System Architecture & Implementation Status
 
 **Status:** ✅ **COVERED & OPERATIONAL** (All 4 Stages + Unified Workflow Orchestrator Complete)  
-**Last Updated:** July 25, 2026  
+**Last Updated:** July 26, 2026  
 **Root Path:** `backend/`  
 
 ---
@@ -24,7 +24,7 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | Gemini 3.6 Flash, Tavily Search API, SQLite caching (`cache.db`), Kivy UI |
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`app.py`), `interview_questions.json`, `interviewer_behavior.json` |
-| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:1.5b, Kokoro-82M TTS, `continuous_mic_input.wav`, `session_manifest.json` |
+| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:1.5b, Kokoro-82M TTS. Per-frame DC offset + auto-gain (up to 50x) applied before `ContinuousMicWriter` write AND Whisper STT. Snappy 320ms silence endpointing. `⚡ Done Speaking` button. `test/input/` & `test/output/sess_<timestamp>/` I/O contract. |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, `report.json`, `evaluation_summary.md` |
 | **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`app.py`), demo data testing harness |
 
