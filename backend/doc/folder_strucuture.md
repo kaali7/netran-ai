@@ -93,7 +93,8 @@ backend/
     │
     └── workflow/              # UNIFIED WORKFLOW ORCHESTRATOR (Stage 1→4)
         ├── doc/
-        │   └── current.md     # Unified workflow technical documentation
+        │   ├── current.md     # Unified workflow technical documentation
+        │   └── overall_model_process.md # High-level multi-stage architecture specification
         ├── test/              # Workflow test harness input/process/output directories
         │   ├── input/         # Preset input data (sample_session/ -> sample_job_detail.json & sample_resume.json)
         │   ├── process/       # Middle processing & cache data (sess_<timestamp>/ -> Stage 1, 2, 3 intermediate artifacts & cache.db)
