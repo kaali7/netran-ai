@@ -50,6 +50,7 @@ Additionally, Stage 3 continuous microphone recording and millisecond-precision 
 
 ### 2. LLM Engine & Response Generation ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/brain.py))
 * **Model**: Local Ollama execution of `qwen2.5:1.5b`.
+* **Centralized System Prompts ([prompts.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/prompts.py))**: Central registry hosting `SYSTEM_PROMPT` (Eva interviewer persona instructions) and `WHISPER_INITIAL_PROMPT` (domain STT vocabulary prompt).
 * **Persona & Guardrails**: System prompt (`Eva`) enforces concise 1–2 sentence technical interviewer responses, prevents commentary on background noise, and handles a structured 15-question sequence.
 * **Token Streaming**: Yields text tokens in real time via `ollama.chat(stream=True)`.
 * **Pre-heating**: `preload()` function warms model weights prior to session start.

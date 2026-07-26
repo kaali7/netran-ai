@@ -16,22 +16,18 @@ from typing import Callable, Optional, List, Dict, Any
 try:
     from .config import OLLAMA_MODEL
 except ImportError:
-    try:
-        from model.workflow.model.config import OLLAMA_MODEL
-    except ImportError:
-        from config import OLLAMA_MODEL
+    from model.workflow.model.config import OLLAMA_MODEL
 
-# Imports from voice_to_voice_model
 try:
     from model.voice_to_voice_model.model import brain
     from model.voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
     from model.voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
     from model.voice_to_voice_model.model.session_logger import SessionLogger
 except ImportError:
-    import brain
-    from listener import listen_and_transcribe, ContinuousMicWriter
-    from speaker import speak_text, preload_models as preload_speaker
-    from session_logger import SessionLogger
+    from voice_to_voice_model.model import brain
+    from voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
+    from voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
+    from voice_to_voice_model.model.session_logger import SessionLogger
 
 logger = logging.getLogger(__name__)
 

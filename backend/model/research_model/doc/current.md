@@ -29,6 +29,9 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 * **API Credentials**: Manages `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.6-flash`), and `TAVILY_API_KEY`.
 * **Trusted Domains Whitelist**: Enforces search filtering to high-trust engineering and career platforms: `linkedin.com`, `leetcode.com`, `glassdoor.com`, `github.com`, `stackoverflow.com`, `geeksforgeeks.org`, `reddit.com`, `medium.com`, and `dev.to`.
 
+### 2. Centralized System Prompts ([prompts.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/prompts.py))
+* **Central Prompt Registry**: Single file containing all Stage 1 system prompt templates (`JD_PARSER_PROMPT_TEMPLATE` and `RUBRIC_GENERATOR_PROMPT_TEMPLATE`). Allows instant system prompt modification for Stage 1.
+
 ### 2. Schema Enforcement & Validation ([schemas.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/schemas.py))
 * **`ParsedJD`**: Represents extracted role title, target company, core tech stack list, and targeted search queries.
 * **`InterviewTopic`**: Represents a specific assessment category, string-based difficulty enum (`Junior`, `Mid`, `Senior`), and example interview questions.

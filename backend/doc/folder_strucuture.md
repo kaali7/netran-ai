@@ -35,6 +35,7 @@ backend/
     │       ├── gemini_client.py # Gemini 3.6 Flash Interactions API client & REST fallback
     │       ├── jd_parser.py   # Job Description parser & search query generator
     │       ├── pipeline.py    # Stage 1 end-to-end orchestrator & artifact saver
+    │       ├── prompts.py     # Centralized Stage 1 system prompt templates (JD_PARSER_PROMPT_TEMPLATE, RUBRIC_GENERATOR_PROMPT_TEMPLATE)
     │       ├── rubric_generator.py # Gemini-powered assessment rubric synthesizer
     │       ├── schemas.py     # Pydantic schemas (ParsedJD, InterviewTopic, InterviewRubric, Stage1Output)
     │       ├── search_engine.py # Tavily Search API client with expanded domain whitelist
@@ -50,10 +51,12 @@ backend/
     │   └── model/
     │       ├── front.py       # Stage 2 Kivy Desktop GUI Client
     │       ├── cache.py       # SQLite hash-based caching engine (cache.db)
-    │       ├── config.py      # Stage 2 configuration loader
+    │       ├── config.py      # Stage 2 configuration loader (Stage2Config)
+    │       ├── pipeline.py    # Stage 2 master orchestrator pipeline (Stage2Pipeline)
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
-    │       ├── question_generator.py # Gemini 15-question tree & system prompt generator
-    │       ├── resume_parser.py # PDF (pypdf), DOCX (python-docx), TXT, and JSON resume extractor
+    │       ├── prompts.py     # Centralized Stage 2 system prompt templates
+    │       ├── question_generator.py # Backward compatibility alias for pipeline.py
+    │       ├── resume_parser.py # PDF, DOCX, TXT, and JSON resume extractor
     │       ├── schemas.py     # Pydantic schemas (QuestionItem, Stage2Output)
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
@@ -67,10 +70,13 @@ backend/
     │   └── model/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
     │       ├── brain.py       # Local Ollama Qwen2.5:1.5b streaming LLM engine ('Eva' persona)
+    │       ├── config.py      # Stage 3 configuration loader (Stage3Config)
     │       ├── download_vad.py # Downloader utility for Silero VAD ONNX model weights
     │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── interview_scripts.json # Pre-scripted calibration tracks for Script Mode
     │       ├── listener.py    # Silero VAD v3, auto-gain peak normalizer, Faster-Whisper STT
+    │       ├── pipeline.py    # Stage 3 master pipeline entry point (WorkflowVoiceEngine)
+    │       ├── prompts.py     # Centralized Stage 3 system prompts (SYSTEM_PROMPT, WHISPER_INITIAL_PROMPT)
     │       ├── session_logger.py # Monotonic timer & session_manifest.json logger
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
     │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
@@ -85,10 +91,14 @@ backend/
     │   │   └── output/        # Generated report sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
     │   └── model/
     │       ├── audio_slicer.py # Non-destructive WAV slicing utility (turn_XX.wav)
+    │       ├── config.py      # Stage 4 configuration loader (Stage4Config)
     │       ├── front.py       # Kivy Desktop GUI test client for Stage 4
     │       ├── gemini_evaluator.py # 3-branch Gemini multimodal evaluation engine
-    │       ├── report_builder.py # Stage 4 orchestrator & dual artifact renderer (JSON + MD)
-    │       ├── report_schema.py # Pydantic schemas (CandidateReportPayload, TurnAnalysis, PillarScore)
+    │       ├── pipeline.py    # Stage 4 master orchestrator pipeline (Stage4Pipeline)
+    │       ├── prompts.py     # Centralized Stage 4 system prompts (AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT)
+    │       ├── report_builder.py # Backward compatibility alias for pipeline.py
+    │       ├── report_schema.py # Backward compatibility alias for schemas.py
+    │       ├── schemas.py     # Pydantic schemas (CandidateReportPayload, TurnAnalysis, PillarScore)
     │       └── test_pipeline.py # Standalone CLI test harness for Stage 4
     │
     └── workflow/              # UNIFIED WORKFLOW ORCHESTRATOR (Stage 1→4)

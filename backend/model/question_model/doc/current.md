@@ -21,12 +21,14 @@ By analyzing the Candidate's Resume (PDF/DOCX/TXT) alongside the target Job Desc
 
 | File Name | Purpose & Functionality |
 | --- | --- |
-| `config.py` | Loads `GEMINI_API_KEY` and `GEMINI_MODEL` (`gemini-3.6-flash`) from root `.env`. |
+| `config.py` | Configuration loader (`Stage2Config`) loading `GEMINI_API_KEY` and `GEMINI_MODEL` (`gemini-3.6-flash`). |
+| `prompts.py` | Centralized system prompt repository containing `SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE`, `STAGE2_FULL_PROMPT_TEMPLATE`, and `FALLBACK_SYSTEM_PROMPT_TEMPLATE`. |
 | `schemas.py` | Pydantic v2 schemas (`QuestionItem`, `Stage2Output`) enforcing strict JSON schema constraints. |
-| `cache.py` | SQLite-based hashing subsystem (`cache.db`) for caching generated Stage 2 question trees by SHA-256 hash. |
-| `resume_parser.py` | Multimodal resume extractor supporting `.pdf` (`pypdf`), `.docx` (`python-docx`), `.txt`, and `.json` files. |
-| `prompt_builder.py` | Constructs base instruction guardrails for Gemini to synthesize Stage 3 latency-constrained behavioral system prompts. |
-| `question_generator.py` | Core reasoning engine using `google-genai` SDK (`gemini-3.6-flash`) with structured JSON schema output (`response_schema=Stage2Output`). Checks SQLite cache before querying Gemini. |
+| `cache.py` | Class-based SQLite hashing subsystem (`Stage2Cache`) caching Stage 2 question trees by SHA-256 hash. |
+| `pipeline.py` | Master Stage 2 orchestrator pipeline (`Stage2Pipeline`) executing resume parsing, cache check, Gemini prompt generation, and artifact saving. |
+| `prompt_builder.py` | Class-based `PromptBuilder` constructing base instruction guardrails for Gemini system prompt synthesis. |
+| `resume_parser.py` | Multimodal `ResumeParser` supporting `.pdf` (`pypdf`), `.docx` (`python-docx`), `.txt`, and `.json` files. |
+| `question_generator.py` | Backward-compatibility alias wrapping `pipeline.py`. |
 | `front.py` | Kivy Desktop GUI Client for Stage 2. |
 | `test_pipeline.py` | Standalone CLI test suite that executes Stage 2 pipeline and verifies output artifacts. |
 

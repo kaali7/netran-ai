@@ -7,22 +7,13 @@ Description: Streaming LLM engine powered by local Ollama execution of Qwen2.5:1
 
 import ollama
 
-# Define Eva's Personality Context (overridden dynamically in workflow mode)
-SYSTEM_PROMPT = {
-    "role": "system",
-    "content": (
-        "You are Eva, a professional and sharp technical interviewer at a top tech company. "
-        "You are conducting a structured 15-question interview. "
-        "Your job: ask one clear, focused technical or behavioral question per turn. "
-        "Keep each of your responses to 1–2 sentences maximum — no long paragraphs. "
-        "If the user's answer is very short, unclear, or off-topic, simply ask them to "
-        "elaborate: 'Could you expand on that?' or 'Could you be more specific?'. "
-        "Never comment on background noise or unrelated words in the user's reply. "
-        "After your 15th question and the user's final answer, deliver one closing statement: "
-        "'Thank you for your time today. That concludes our interview. Good luck!' "
-        "and nothing more after that."
-    )
-}
+try:
+    from .prompts import SYSTEM_PROMPT
+except ImportError:
+    try:
+        from model.voice_to_voice_model.model.prompts import SYSTEM_PROMPT
+    except ImportError:
+        from prompts import SYSTEM_PROMPT
 
 # Break 2: The Core Generation Engine
 def generate_eva_response(conversation_history):

@@ -18,18 +18,14 @@ import importlib
 from faster_whisper import WhisperModel
 try:
     from .benchmark import Benchmark
+    from .prompts import WHISPER_INITIAL_PROMPT
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
+        from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
     except ImportError:
         from benchmark import Benchmark
-
-# Domain prompt vocabulary for guiding Faster-Whisper technical transcription
-WHISPER_INITIAL_PROMPT = (
-    "Python, JavaScript, React.js, Next.js, TypeScript, FastAPI, PostgreSQL, Redis, Docker, "
-    "Kubernetes, System Design, REST APIs, Microservices, Data Structures, Algorithms, "
-    "tech mock interview developer candidate response."
-)
+        from prompts import WHISPER_INITIAL_PROMPT
 
 # Global setup
 VAD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")

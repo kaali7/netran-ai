@@ -27,6 +27,7 @@ backend/model/reports_model/
 │   ├── input/                  # Stage 3 preset input sessions (sample_session/)
 │   └── output/                 # Generated session report artifacts (sess_<timestamp>/)
 └── model/
+    ├── prompts.py              # Centralized system prompts (AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT)
     ├── report_schema.py        # Pydantic v2 data models for report payload & evaluation outputs
     ├── audio_slicer.py         # Non-destructive WAV slicing utility
     ├── gemini_evaluator.py     # 3-stage Gemini multimodal evaluation engine (Audio, Technical, Combine)
