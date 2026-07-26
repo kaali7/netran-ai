@@ -55,6 +55,7 @@ def run_full_pipeline(
     resume_path: str,
     session_id: Optional[str] = None,
     target_seniority: str = "Mid",
+    max_questions: Optional[int] = None,
     status_callback: Optional[Callable[[str, str, int, Dict[str, Any]], None]] = None,
     voice_callback: Optional[Callable[[int, str, str, str], None]] = None,
     voice_engine_ref: Optional[list] = None
@@ -105,9 +106,10 @@ def run_full_pipeline(
     if voice_engine_ref is not None:
         voice_engine_ref.append(engine)
         
+    stage3_max_turns = min(max_questions, len(stage2_output.question_tree)) if max_questions else len(stage2_output.question_tree)
     engine.run_interview(
         status_callback=voice_callback,
-        max_turns=len(stage2_output.question_tree)
+        max_turns=stage3_max_turns
     )
     notify("Stage 3: Voice Interview", "Voice interview completed & session manifest saved.", 85)
     

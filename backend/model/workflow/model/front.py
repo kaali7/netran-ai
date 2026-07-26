@@ -113,8 +113,14 @@ KV = """
                             id: seniority_spinner
                             text: 'Mid'
                             values: ('Junior', 'Mid', 'Senior')
-                            size_hint_x: 0.3
+                            size_hint_x: 0.25
                             background_color: 0.20, 0.40, 0.60, 1
+                        Spinner:
+                            id: limit_spinner
+                            text: 'Fast Testing (5 Questions)'
+                            values: ('Fast Testing (5 Questions)', 'Real-Time Live (15 Questions)', 'Extended Live (10 Questions)')
+                            size_hint_x: 0.45
+                            background_color: 0.25, 0.35, 0.55, 1
 
                 # Section 2: Job Description Input (Upload OR Paste)
                 BoxLayout:
@@ -553,6 +559,8 @@ class SetupScreen(Screen):
     def start_workflow(self):
         candidate_name = self.ids.candidate_name.text.strip() or "Candidate"
         seniority = self.ids.seniority_spinner.text
+        limit_text = self.ids.limit_spinner.text
+        max_q = 5 if "5" in limit_text else (10 if "10" in limit_text else 15)
         
         jd_text = self.ids.jd_text_input.text.strip()
         if not jd_text and self.selected_jd_path and os.path.exists(self.selected_jd_path):
@@ -570,6 +578,7 @@ class SetupScreen(Screen):
         app.workflow_data = {
             "candidate_name": candidate_name,
             "seniority": seniority,
+            "max_questions": max_q,
             "jd_text": jd_text,
             "resume_path": resume_path
         }
@@ -715,6 +724,7 @@ class NetranWorkflowApp(App):
             jd_text = self.workflow_data.get("jd_text", "")
             resume_path = self.workflow_data.get("resume_path", "")
             seniority = self.workflow_data.get("seniority", "Mid")
+            max_q = self.workflow_data.get("max_questions", 15)
             
             def status_cb(stage, msg, pct, payload):
                 Clock.schedule_once(lambda dt: self._on_stage_update(stage, msg, pct, payload))
@@ -727,6 +737,7 @@ class NetranWorkflowApp(App):
                     jd_text=jd_text,
                     resume_path=resume_path,
                     target_seniority=seniority,
+                    max_questions=max_q,
                     status_callback=status_cb,
                     voice_callback=voice_cb,
                     voice_engine_ref=self.voice_engine_instances

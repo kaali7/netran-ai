@@ -67,7 +67,14 @@ goto menu
 :run_unified_workflow
 echo.
 echo [LAUNCHING] Complete Unified 4-Stage Netran AI Interview Workflow...
-.venv\Scripts\python.exe -m model.workflow.model.front
+echo  1. Kivy Desktop GUI Client (front.py)
+echo  2. Headless CLI Test Harness (test_pipeline.py)
+set /p wchoice="Select execution mode (1-2, default 1): "
+if "%wchoice%"=="2" (
+    .venv\Scripts\python.exe -m model.workflow.model.test_pipeline
+) else (
+    .venv\Scripts\python.exe -m model.workflow.model.front
+)
 pause
 goto menu
 
