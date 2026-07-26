@@ -135,7 +135,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
   - `orchestrator.py`: Master pipeline coordinator executing Stage 1 → Stage 2 → Stage 3 → Stage 4 in background threads with live UI progress callbacks.
   - `voice_engine.py`: Stage 3 voice loop adapter that injects Stage 2 dynamic prompt (`system_prompt.txt`) into Ollama Qwen2.5 persona and auto-stops after 15 questions.
   - `config.py`: Unified `.env` configuration and non-colliding module path injector.
-  - `sample_data.py`: Built-in demo testing harness with sample resume (`sample_resume.txt`) and JD (`sample_jd.txt`).
+  - `sample_data.py`: Built-in demo testing harness with sample resume (`sample_resume.json`) and JD (`sample_job_detail.json`).
 * **Root Suite Launcher**:
   - Root [`run.bat`](file:///c:/kali/product/netran%20ai/backend/run.bat): Interactive Windows Command Prompt launcher providing a 17-choice menu for workflow execution, stage testing, setup, code auditing, and deep data cleaning.
 

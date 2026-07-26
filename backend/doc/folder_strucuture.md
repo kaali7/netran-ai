@@ -94,15 +94,15 @@ backend/
         ├── doc/
         │   └── current.md     # Unified workflow technical documentation
         ├── test/              # Workflow test harness input/output directories
-        │   ├── input/         # Preset input data (sample_session/ -> sample_jd.txt & sample_resume.txt)
+        │   ├── input/         # Preset input data (sample_session/ -> sample_job_detail.json & sample_resume.json)
         │   └── output/        # Generated workflow sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
         └── model/
             ├── front.py       # Unified 5-Screen Kivy Desktop Application
             ├── config.py      # Master configuration & non-colliding sys.path injector
             ├── orchestrator.py # Master 4-stage pipeline execution coordinator
-            ├── sample_data.py # Demo testing data provider (Arjun Sharma + DataFlow Inc.)
-            ├── sample_jd.txt  # Demo job description text file
-            ├── sample_resume.txt # Demo resume text file
+            ├── sample_data.py # Demo testing data provider (sample_job_detail.json + sample_resume.json)
+            ├── sample_job_detail.json # Demo job description JSON input file
+            ├── sample_resume.json # Demo resume JSON input file
             ├── test_pipeline.py # Standalone Headless CLI test harness for Unified Workflow
             └── voice_engine.py # Stage 3 adapter with dynamic system prompt injection
 ```

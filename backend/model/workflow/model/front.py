@@ -565,7 +565,15 @@ class SetupScreen(Screen):
         jd_text = self.ids.jd_text_input.text.strip()
         if not jd_text and self.selected_jd_path and os.path.exists(self.selected_jd_path):
             with open(self.selected_jd_path, "r", encoding="utf-8", errors="ignore") as f:
-                jd_text = f.read()
+                if self.selected_jd_path.endswith(".json"):
+                    try:
+                        data = json.load(f)
+                        jd_text = data.get("jd_text", "")
+                    except Exception:
+                        f.seek(0)
+                        jd_text = f.read()
+                else:
+                    jd_text = f.read()
                 
         if not jd_text:
             jd_text = get_sample_jd_text()

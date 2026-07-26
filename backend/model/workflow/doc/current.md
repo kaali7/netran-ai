@@ -43,12 +43,12 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
 └─────────────────────────────────────┬────────────────────────────────────┘
                                       │
                                       ▼
-┌─────────────────| File Name | Purpose & Functionality |
+| File Name | Purpose & Functionality |
 | --- | --- |
 | `config.py` | Loads root `.env`, sets up session storage paths, and injects stage paths (`sys.path`) into Python module resolution cleanly. |
-| `sample_data.py` | Built-in demo testing harness exposing `sample_resume.txt` and `sample_jd.txt` data. |
-| `sample_resume.txt` | Pre-written candidate resume for Arjun Sharma (Senior Python Backend Engineer). |
-| `sample_jd.txt` | Pre-written job description for DataFlow Inc. (Senior Backend Engineer). |
+| `sample_data.py` | Built-in demo testing harness exposing `sample_job_detail.json` and `sample_resume.json` data. |
+| `sample_resume.json` | Pre-written candidate resume JSON file for John Doe (Senior Backend Engineer). |
+| `sample_job_detail.json` | Pre-written job description JSON file for InnovateAI Solutions (Senior Backend Engineer). |
 | `voice_engine.py` | Stage 3 loop controller that overrides Ollama's `SYSTEM_PROMPT` with Stage 2's dynamic prompt, handles the turn loop, manages `ContinuousMicWriter`, and logs turn timing data. |
 | `orchestrator.py` | Master thread coordinator executing Stage 1 → Stage 2 → Stage 3 → Stage 4 in background threads with live progress callbacks to the UI. Accepts `max_questions` parameter (5 questions max fast testing vs 15 context live). |
 | `front.py` | Main Kivy Desktop application implementing the 5-screen `ScreenManager` (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportScreen`). |

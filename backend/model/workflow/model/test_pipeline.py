@@ -31,12 +31,13 @@ def main():
     resume_path = str(SAMPLE_RESUME_PATH)
 
     if input_dir.exists():
-        sample_jd_file = input_dir / "sample_jd.txt"
+        sample_jd_file = input_dir / "sample_job_detail.json"
         if sample_jd_file.exists():
             with open(sample_jd_file, "r", encoding="utf-8", errors="ignore") as f:
-                jd_text = f.read()
+                data = json.load(f)
+                jd_text = data.get("jd_text", "")
 
-        sample_resume_file = input_dir / "sample_resume.txt"
+        sample_resume_file = input_dir / "sample_resume.json"
         if sample_resume_file.exists():
             resume_path = str(sample_resume_file)
 
