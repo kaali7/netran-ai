@@ -93,5 +93,12 @@ This document defines the complete technology stack powering **Netran AI**, an a
 ## 🛠️ 6. Development & DevOps Tooling
 
 * **Runtime Environment**: Python 3.12+ (Virtual environment `.venv`)
-* **Interactive Command Script**: `run.bat` (Windows automated launcher for CLI test harnesses, GUI apps, hardware diagnostics, and cache management)
+* **Interactive Command Script**: `run.bat` (Windows automated launcher for CLI test harnesses, GUI apps, hardware diagnostics, cache management, and quality audits)
+* **Automated Code Quality & Security Audit Suite**:
+  * **Ruff**: Ultra-fast Linter and Code Formatter.
+  * **Pylint**: Static code analyzer checking coding standards.
+  * **Mypy**: Static type checker enforcing Python 3.10+ type safety.
+  * **Bandit**: Automated security audit scanner identifying AST vulnerability patterns.
+  * **Radon**: Cyclomatic Complexity (`cc`) and Maintainability Index (`mi`) telemetry analyzer.
+  * **Audit Launcher Script**: `scan_code_quality.py` (Automated backend quality scanner executing Ruff, Pylint, Mypy, Bandit, and Radon).
 * **Version Control**: Git & GitHub
