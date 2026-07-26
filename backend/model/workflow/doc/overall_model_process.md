@@ -90,8 +90,8 @@ This document tracks the multi-stage AI pipeline components implemented inside t
   - `question_generator.py`: Core reasoning engine utilizing Gemini 3.6 Flash with structured Pydantic schema outputs.
   - `test_pipeline.py`: Automated CLI testing harness with dummy resume generator.
 * **Output Artifacts**:
-  - `interview_questions.json` (Saved to `backend/model/sessions/<session_id>/`)
-  - `system_prompt.txt` (Saved to `backend/model/sessions/<session_id>/`)
+  - `interview_questions.json` (Saved to `model/workflow/test/process/<session_id>/`)
+  - `system_prompt.txt` (Saved to `model/workflow/test/process/<session_id>/`)
 
 ---
 
@@ -106,8 +106,8 @@ This document tracks the multi-stage AI pipeline components implemented inside t
   - `session_logger.py`: High-resolution monotonic timer (`time.perf_counter()`) logging per-turn millisecond offsets and outputting `session_manifest.json`.
   - `benchmark.py`: Latency performance telemetry (`stt_ms`, `ttft_ms`, `ttfa_ms`) saved to `benchmark_log.csv`.
 * **Output Artifacts**:
-  - `continuous_mic_input.wav` (Saved to `backend/model/sessions/<session_id>/`)
-  - `session_manifest.json` (Saved to `backend/model/sessions/<session_id>/`)
+  - `continuous_mic_input.wav` (Saved to `model/workflow/test/process/<session_id>/`)
+  - `session_manifest.json` (Saved to `model/workflow/test/process/<session_id>/`)
 
 ---
 
@@ -122,9 +122,9 @@ This document tracks the multi-stage AI pipeline components implemented inside t
   - `test_pipeline.py`: Headless CLI test runner.
   - `test_ui.py`: Kivy desktop GUI application.
 * **Output Artifacts**:
-  - `report.json` (Saved to `backend/model/sessions/<session_id>/`)
-  - `evaluation_summary.md` (Saved to `backend/model/sessions/<session_id>/`)
-  - `turn_XX.wav` (Saved to `backend/model/sessions/<session_id>/`)
+  - `report.json` (Saved to `model/workflow/test/output/<session_id>/`)
+  - `evaluation_summary.md` (Saved to `model/workflow/test/output/<session_id>/`)
+  - `turn_XX.wav` (Saved to `model/workflow/test/process/<session_id>/`)
 
 ---
 

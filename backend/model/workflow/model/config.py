@@ -35,10 +35,8 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
 
-SESSIONS_BASE_DIR = MODEL_DIR / "sessions"
 PROCESS_BASE_DIR = WORKFLOW_DIR / "test" / "process"
 OUTPUT_BASE_DIR = WORKFLOW_DIR / "test" / "output"
 
-os.makedirs(SESSIONS_BASE_DIR, exist_ok=True)
 os.makedirs(PROCESS_BASE_DIR, exist_ok=True)
 os.makedirs(OUTPUT_BASE_DIR, exist_ok=True)

@@ -13,14 +13,14 @@ from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 
 try:
-    from .config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
+    from .config import PROCESS_BASE_DIR, OUTPUT_BASE_DIR
     from .voice_engine import WorkflowVoiceEngine
 except ImportError:
     try:
-        from model.workflow.model.config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
+        from model.workflow.model.config import PROCESS_BASE_DIR, OUTPUT_BASE_DIR
         from model.workflow.model.voice_engine import WorkflowVoiceEngine
     except ImportError:
-        from config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
+        from config import PROCESS_BASE_DIR, OUTPUT_BASE_DIR
         from voice_engine import WorkflowVoiceEngine
 
 try:

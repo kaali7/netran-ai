@@ -123,7 +123,5 @@ backend/
 
 ### 3. `backend/model/`
 - Contains all AI model subsystems organized cleanly into `research_model`, `question_model`, `voice_to_voice_model`, `reports_model`, and `workflow`.
-- Includes `overall_model_process.md` detailing the complete high-level process matrix.
-
-### 4. `backend/model/sessions/`
-- Output directory storing timestamped session folders (`sess_<timestamp>/`) containing all generated artifacts (`interview_questions.json`, `system_prompt.txt`, `continuous_mic_input.wav`, `session_manifest.json`, `turn_XX.wav`, `report.json`, `evaluation_summary.md`).
+- Includes `workflow/doc/overall_model_process.md` detailing the complete high-level process matrix.
+- Middle process data is saved in `workflow/test/process/sess_<timestamp>/` and final report evaluation artifacts are saved in `workflow/test/output/sess_<timestamp>/`.

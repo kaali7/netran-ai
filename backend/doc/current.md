@@ -111,9 +111,9 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 2. **Automated Audit Scanner**:
    - [`scan_code_quality.py`](file:///c:/kali/product/netran%20ai/backend/scan_code_quality.py) verifies docstring coverage, file hygiene, and single requirements file enforcement across all 34 Python files.
 
-3. **Isolated Test Data Storage**:
+3. **Isolated Test & Workflow Storage**:
    - Standalone stage test executions save output locally inside `<stage>/model/test_output/`.
-   - Unified workflow runs store session artifacts in `backend/model/sessions/sess_<timestamp>/`.
+   - Unified workflow runs store middle process data in `model/workflow/test/process/sess_<timestamp>/` and final reports in `model/workflow/test/output/sess_<timestamp>/`.
 
 4. **Interactive Batch Launcher**:
-   - Root [`run.bat`](file:///c:/kali/product/netran%20ai/backend/run.bat) provides an interactive 12-choice menu to run the full workflow or any single-stage test independently.
+   - Root [`run.bat`](file:///c:/kali/product/netran%20ai/backend/run.bat) provides an interactive Command Prompt menu to launch the full workflow, execute stage tests, or clean test data.

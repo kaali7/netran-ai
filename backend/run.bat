@@ -189,10 +189,10 @@ goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting generated session directories (model/sessions & sessions)...
-if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Session directories purged.
+echo [CLEANING] Deleting deprecated session directories (model/sessions & sessions)...
+if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Deprecated session directories deleted.
 pause
 goto menu
 
@@ -222,8 +222,8 @@ echo ===================================================================
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'process' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
 powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
