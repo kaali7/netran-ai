@@ -11,6 +11,7 @@ import threading
 import json
 import shutil
 from datetime import datetime
+from typing import Optional, Dict, Any, List
 
 try:
     from . import config
@@ -422,6 +423,12 @@ KV = """
         BoxLayout:
             size_hint_y: None
             height: '45dp'
+            spacing: 15
+            Button:
+                text: "⚡ Done Speaking (Finish Answer)"
+                background_color: 0.50, 0.30, 0.80, 1
+                bold: True
+                on_press: root.finish_speech_now()
             Button:
                 text: "⏹ End Interview & Generate Report"
                 background_color: 0.70, 0.25, 0.25, 1
@@ -635,6 +642,61 @@ class QuestionScreen(Screen):
             container.add_widget(box)
 
 
+class ReportCard(BoxLayout):
+    def __init__(self, title: str, score: Optional[int], summary: str, is_summary: bool = False, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint_y = None
+        self.padding = [15, 12]
+        self.spacing = 6
+        
+        with self.canvas.before:
+            Color(0.14, 0.16, 0.22, 1) if is_summary else Color(0.12, 0.14, 0.18, 1)
+            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[8])
+        self.bind(pos=self._update_rect, size=self._update_rect)
+
+        hdr_text = f"🔹 {title}" if not is_summary else title
+        if score is not None:
+            hdr_text += f" ({score}/100)"
+            
+        title_lbl = Label(
+            text=hdr_text,
+            font_size='15sp' if is_summary else '14sp',
+            bold=True,
+            color=(0.3, 0.6, 0.9, 1) if is_summary else (0.2, 0.8, 0.4, 1),
+            size_hint_y=None,
+            height='24dp',
+            halign='left',
+            valign='middle'
+        )
+        title_lbl.bind(size=title_lbl.setter('text_size'))
+        
+        desc_lbl = Label(
+            text=summary,
+            font_size='13sp',
+            color=(0.85, 0.85, 0.90, 1),
+            size_hint_y=None,
+            halign='left',
+            valign='top'
+        )
+        desc_lbl.bind(width=lambda instance, val: setattr(instance, 'text_size', (val, None)))
+        desc_lbl.bind(texture_size=lambda instance, val: setattr(instance, 'height', val[1]))
+        
+        self.add_widget(title_lbl)
+        self.add_widget(desc_lbl)
+        self.bind(children=self._update_height)
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def _update_height(self, *args):
+        total_h = self.padding[1] + self.padding[3]
+        for child in self.children:
+            total_h += child.height + self.spacing
+        self.height = total_h
+
+
 class InterviewScreen(Screen):
     def update_turn(self, turn_idx: int, state_str: str, question: str, candidate_txt: str, max_turns: int = 5):
         self.ids.turn_counter_label.text = f"Turn {turn_idx} / {max_turns}"
@@ -642,13 +704,34 @@ class InterviewScreen(Screen):
         if question:
             self.ids.current_question_label.text = question
         if candidate_txt:
-            self.ids.transcript_log.text += f"Candidate: \"{candidate_txt}\"\n\n"
+            if "\n\n[Eva]:" in candidate_txt:
+                parts = candidate_txt.split("\n\n[Eva]: ")
+                self.ids.transcript_log.text += f"Candidate: \"{parts[0]}\"\nEva: \"{parts[1]}\"\n\n"
+            else:
+                self.ids.transcript_log.text += f"Candidate: \"{candidate_txt}\"\n\n"
+
+    def finish_speech_now(self):
+        """Forces immediate speech endpointing when candidate finishes speaking."""
+        try:
+            from model.voice_to_voice_model.model.listener import trigger_speech_done
+            trigger_speech_done()
+        except Exception:
+            try:
+                from listener import trigger_speech_done
+                trigger_speech_done()
+            except Exception:
+                pass
+        self.ids.state_label.text = "STATUS: PROCESSING_RESPONSE"
 
     def stop_interview(self):
         app = App.get_running_app()
+        self.ids.state_label.text = "STATUS: GENERATING_FINAL_REPORT"
         if app.voice_engine_instances:
             for engine in app.voice_engine_instances:
-                engine.stop()
+                try:
+                    engine.stop()
+                except Exception as e:
+                    print(f"Error stopping engine: {e}")
 
 
 class ReportScreen(Screen):
@@ -666,34 +749,17 @@ class ReportScreen(Screen):
         container = self.ids.report_details_container
         container.clear_widgets()
 
-        # Executive summary block
-        summary_box = BoxLayout(orientation='vertical', size_hint_y=None, height='120dp', padding=10, spacing=5)
-        with summary_box.canvas.before:
-            Color(0.14, 0.15, 0.20, 1)
-            RoundedRectangle(pos=summary_box.pos, size=summary_box.size, radius=[6])
-            
-        summary_title = Label(text="Executive Summary", font_size='15sp', bold=True, color=(0.3, 0.6, 0.8, 1), size_hint_y=None, height='24dp')
-        summary_text = Label(text=summary, font_size='13sp', color=(0.9, 0.9, 0.9, 1), size_hint_y=None, height='80dp', text_size=(container.width - 40, None))
-        summary_box.add_widget(summary_title)
-        summary_box.add_widget(summary_text)
-        container.add_widget(summary_box)
+        # Executive summary card
+        summary_card = ReportCard(title="Executive Summary", score=None, summary=summary, is_summary=True)
+        container.add_widget(summary_card)
 
-        # Pillars
+        # Pillars cards
         for pillar in pillars:
             p_name = pillar.get("pillar_name", "Pillar")
             p_score = pillar.get("score", 80)
             p_summary = pillar.get("summary", "")
-
-            p_box = BoxLayout(orientation='vertical', size_hint_y=None, height='90dp', padding=10, spacing=4)
-            with p_box.canvas.before:
-                Color(0.12, 0.14, 0.18, 1)
-                RoundedRectangle(pos=p_box.pos, size=p_box.size, radius=[6])
-
-            p_title = Label(text=f"🔹 {p_name} ({p_score}/100)", font_size='14sp', bold=True, color=(0.2, 0.8, 0.4, 1), size_hint_y=None, height='20dp')
-            p_desc = Label(text=p_summary, font_size='12sp', color=(0.8, 0.8, 0.8, 1), size_hint_y=None, height='55dp', text_size=(container.width - 40, None))
-            p_box.add_widget(p_title)
-            p_box.add_widget(p_desc)
-            container.add_widget(p_box)
+            p_card = ReportCard(title=p_name, score=p_score, summary=p_summary, is_summary=False)
+            container.add_widget(p_card)
 
     def export_report(self):
         app = App.get_running_app()

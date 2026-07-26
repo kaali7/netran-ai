@@ -19,6 +19,13 @@ from .config import GEMINI_API_KEY, GEMINI_MODEL
 from .schemas import Stage2Output
 from .prompt_builder import get_system_prompt_instructions
 from .resume_parser import parse_resume
+try:
+    from .cache import get_cached_stage2_output, set_cached_stage2_output
+except ImportError:
+    try:
+        from model.question_model.model.cache import get_cached_stage2_output, set_cached_stage2_output
+    except ImportError:
+        from cache import get_cached_stage2_output, set_cached_stage2_output
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +40,30 @@ def generate_stage2_output(
     Core reasoning engine leveraging Gemini to generate structured interview questions
     and the behavioral system prompt based on JD and Candidate Resume.
     """
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY is not configured.")
-
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    
     # 1. Parse the resume
     try:
         resume_text = parse_resume(resume_path)
     except Exception as e:
         logger.error(f"Failed to parse resume: {e}")
         raise
+
+    # 2. Check SQLite cache first for instant re-runs (<1ms)
+    cached_output = get_cached_stage2_output(
+        jd_text=jd_text,
+        resume_text=resume_text,
+        target_seniority=target_seniority,
+        session_id=session_id
+    )
+    if cached_output:
+        logger.info("Loaded Stage 2 question tree & system prompt from SQLite cache!")
+        if output_dir:
+            _save_stage2_artifacts(output_dir, session_id, target_seniority, cached_output)
+        return cached_output
+
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is not configured.")
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
     # 2. Build instructions for prompt generation
     prompt_instructions = get_system_prompt_instructions(target_seniority)
@@ -116,38 +136,51 @@ Return exactly the JSON object matching the requested schema.
             stage2_output = Stage2Output.model_validate_json(response.text)
             stage2_output.session_id = session_id
 
+        # Save successfully generated output to SQLite cache
+        set_cached_stage2_output(jd_text, resume_text, target_seniority, stage2_output)
+
     except Exception as e:
         logger.warning(f"Gemini generation exception ({e}). Utilizing fallback question generator.")
         stage2_output = generate_fallback_stage2_output(session_id, target_seniority)
 
     # 4. Save artifacts if output_dir is provided
     if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # File 1: Generated 15-question interview tree
-        questions_path = os.path.join(output_dir, "interview_questions.json")
-        with open(questions_path, "w", encoding="utf-8") as f:
-            json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
-            
-        # File 2: LLM interviewer behavior & runtime system prompt
-        behavior_path = os.path.join(output_dir, "interviewer_behavior.json")
-        behavior_payload = {
-            "session_id": session_id,
-            "persona": "Eva",
-            "target_seniority": target_seniority,
-            "interviewer_system_prompt": stage2_output.interviewer_system_prompt,
-            "behavior_rules": [
-              "Maximum 1-2 sentences per response for low-latency streaming voice execution",
-              "Maintain direct, professional, conversational roleplay persona",
-              "Probe architectural trade-offs, edge cases, and failure modes"
-            ]
-        }
-        with open(behavior_path, "w", encoding="utf-8") as f:
-            json.dump(behavior_payload, f, indent=2)
-            
-        logger.info(f"Stage 2 output artifacts (interview_questions.json & interviewer_behavior.json) saved to {output_dir}")
+        _save_stage2_artifacts(output_dir, session_id, target_seniority, stage2_output)
 
     return stage2_output
+
+
+def _save_stage2_artifacts(output_dir: str, session_id: str, target_seniority: str, stage2_output: Stage2Output):
+    """Helper function to save interview_questions.json and interviewer_behavior.json artifacts."""
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # File 1: Generated 15-question interview tree
+    questions_path = os.path.join(output_dir, "interview_questions.json")
+    with open(questions_path, "w", encoding="utf-8") as f:
+        json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
+        
+    # File 2: LLM interviewer behavior & runtime system prompt
+    behavior_path = os.path.join(output_dir, "interviewer_behavior.json")
+    behavior_payload = {
+        "session_id": session_id,
+        "persona": "Eva",
+        "target_seniority": target_seniority,
+        "interviewer_system_prompt": stage2_output.interviewer_system_prompt,
+        "behavior_rules": [
+          "Maximum 1-2 sentences per response for low-latency streaming voice execution",
+          "Maintain direct, professional, conversational roleplay persona",
+          "Probe architectural trade-offs, edge cases, and failure modes"
+        ]
+    }
+    with open(behavior_path, "w", encoding="utf-8") as f:
+        json.dump(behavior_payload, f, indent=2)
+
+    # File 3: Plain text system prompt for voice loop
+    prompt_path = os.path.join(output_dir, "system_prompt.txt")
+    with open(prompt_path, "w", encoding="utf-8") as f:
+        f.write(stage2_output.interviewer_system_prompt)
+        
+    logger.info(f"Stage 2 output artifacts saved to {output_dir}")
 
 
 def generate_fallback_stage2_output(session_id: str, target_seniority: str = "Senior") -> Stage2Output:

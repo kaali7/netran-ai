@@ -179,16 +179,17 @@ goto menu
 
 :clean_test_outputs
 echo.
-echo [CLEANING] Deleting single-stage test output directories...
+echo [CLEANING] Deleting stage test output & workflow process directories...
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'process' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Stage test output directories removed.
+echo Clean complete: Stage test output & process directories removed.
 pause
 goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting generated session directories (model/sessions ^& sessions)...
+echo [CLEANING] Deleting generated session directories (model/sessions & sessions)...
 if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Session directories purged.
@@ -197,9 +198,10 @@ goto menu
 
 :clean_cache_db
 echo.
-echo [CLEANING] Deleting SQLite research cache database (cache.db)...
+echo [CLEANING] Deleting SQLite cache databases (cache.db)...
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
-echo Clean complete: SQLite cache.db deleted.
+if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
+echo Clean complete: SQLite cache.db files deleted.
 pause
 goto menu
 
@@ -218,10 +220,12 @@ echo ===================================================================
 echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
 echo ===================================================================
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'process' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
+if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
 powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo.

@@ -1,0 +1,62 @@
+{
+  "session_id": "sess_20260726_173154",
+  "session_start_iso": "2026-07-26T12:02:11.283557Z",
+  "total_turns": 5,
+  "turns": [
+    {
+      "turn_id": 1,
+      "topic": "Python AsyncIO Fundamentals",
+      "question_text": "How does Python's asyncio event loop handle non-blocking I/O tasks under the hood compared to traditional multi-threading?",
+      "candidate_transcript": "The same is basically handled by multiple MNs, though it handles multiple APIs called at the same time.",
+      "audio_start_sec": 20.931,
+      "audio_end_sec": 35.867,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 0.0,
+      "ttft_ms": 3620.4
+    },
+    {
+      "turn_id": 2,
+      "topic": "Database Indexing Foundations",
+      "question_text": "Can you explain how a B-tree index in PostgreSQL speeds up read queries, and what trade-off it introduces for write operations?",
+      "candidate_transcript": "It makes in PostgreSQL, but I have idea and makes it is, it is basically used as for the searching purpose and post-encouraging purpose.",
+      "audio_start_sec": 61.736,
+      "audio_end_sec": 83.462,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 0.0,
+      "ttft_ms": 1140.4
+    },
+    {
+      "turn_id": 3,
+      "topic": "FastAPI & Concurrency Architecture",
+      "question_text": "At TechCorp, you managed 25M daily requests on FastAPI. How did you structure your Uvicorn worker process count and thread pool allocations to avoid blocking the event loop with synchronous operations?",
+      "candidate_transcript": "",
+      "audio_start_sec": 111.853,
+      "audio_end_sec": 123.533,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 0.0,
+      "ttft_ms": 942.6
+    },
+    {
+      "turn_id": 4,
+      "topic": "PostgreSQL Query Optimization",
+      "question_text": "When running EXPLAIN ANALYZE on a sluggish PostgreSQL query, what specific metrics indicate a missing index versus bad statistics or buffer cache misses?",
+      "candidate_transcript": "",
+      "audio_start_sec": 144.309,
+      "audio_end_sec": 145.906,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 0.0,
+      "ttft_ms": 1044.0
+    },
+    {
+      "turn_id": 5,
+      "topic": "gRPC vs REST API Protocols",
+      "question_text": "InnovateAI uses gRPC for inter-service communication. How does gRPC with HTTP/2 and Protocol Buffers differ from traditional REST with JSON in terms of serialization overhead and multiplexing?",
+      "candidate_transcript": "Basically, the gRPC support because API calls and text, whether in the web or graphical, maybe create the API calls.",
+      "audio_start_sec": 174.652,
+      "audio_end_sec": 189.35,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 0.0,
+      "ttft_ms": 1014.4
+    }
+  ]
+}

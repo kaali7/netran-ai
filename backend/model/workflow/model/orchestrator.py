@@ -6,20 +6,21 @@ Description: Master end-to-end pipeline coordinator linking Stage 1 (Research) -
 """
 
 import os
+import json
 import time
 import logging
 from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 
 try:
-    from .config import SESSIONS_BASE_DIR
+    from .config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
     from .voice_engine import WorkflowVoiceEngine
 except ImportError:
     try:
-        from model.workflow.model.config import SESSIONS_BASE_DIR
+        from model.workflow.model.config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
         from model.workflow.model.voice_engine import WorkflowVoiceEngine
     except ImportError:
-        from config import SESSIONS_BASE_DIR
+        from config import SESSIONS_BASE_DIR, PROCESS_BASE_DIR, OUTPUT_BASE_DIR
         from voice_engine import WorkflowVoiceEngine
 
 try:
@@ -42,13 +43,15 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-def create_session_directory(session_id: Optional[str] = None) -> tuple[str, str]:
+def create_workflow_directories(session_id: Optional[str] = None) -> tuple[str, str, str]:
     if not session_id:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_id = f"sess_{timestamp}"
-    session_dir = os.path.join(SESSIONS_BASE_DIR, session_id)
-    os.makedirs(session_dir, exist_ok=True)
-    return session_id, session_dir
+    process_dir = os.path.join(PROCESS_BASE_DIR, session_id)
+    output_dir = os.path.join(OUTPUT_BASE_DIR, session_id)
+    os.makedirs(process_dir, exist_ok=True)
+    os.makedirs(output_dir, exist_ok=True)
+    return session_id, process_dir, output_dir
 
 def run_full_pipeline(
     jd_text: str,
@@ -62,24 +65,23 @@ def run_full_pipeline(
 ) -> Dict[str, Any]:
     """
     Master pipeline orchestrator running Stage 1 -> 2 -> 3 -> 4.
-    
-    status_callback signature:
-        callback(stage_name, message, progress_pct, payload)
+    Middle processing artifacts are stored in process_dir (model/workflow/test/process/).
+    Final report output artifacts are stored in output_dir (model/workflow/test/output/).
     """
     def notify(stage: str, msg: str, pct: int, payload: Dict[str, Any] = None):
         logger.info(f"[{stage}] ({pct}%) {msg}")
         if status_callback:
             status_callback(stage, msg, pct, payload or {})
 
-    session_id, session_dir = create_session_directory(session_id)
-    results = {"session_id": session_id, "session_dir": session_dir}
+    session_id, process_dir, output_dir = create_workflow_directories(session_id)
+    results = {"session_id": session_id, "process_dir": process_dir, "output_dir": output_dir, "session_dir": output_dir}
     
     # --- STAGE 1: RESEARCH MODEL ---
     notify("Stage 1: Research", "Initializing Market Intelligence & JD Analysis...", 5)
     stage1_res = research_pipeline.run_pipeline(
         jd_text=jd_text,
         status_callback=lambda msg: notify("Stage 1: Research", msg, 15),
-        output_dir=session_dir
+        output_dir=process_dir
     )
     rubric = stage1_res.rubric if hasattr(stage1_res, 'rubric') else stage1_res
     results["rubric"] = rubric
@@ -92,11 +94,11 @@ def run_full_pipeline(
         jd_text=jd_text,
         resume_path=resume_path,
         target_seniority=target_seniority,
-        output_dir=session_dir
+        output_dir=process_dir
     )
     if max_questions and max_questions < len(stage2_output.question_tree):
         stage2_output.question_tree = stage2_output.question_tree[:max_questions]
-        questions_path = os.path.join(session_dir, "interview_questions.json")
+        questions_path = os.path.join(process_dir, "interview_questions.json")
         try:
             with open(questions_path, "w", encoding="utf-8") as f:
                 json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
@@ -111,7 +113,16 @@ def run_full_pipeline(
     
     # --- STAGE 3: VOICE INTERVIEW LOOP ---
     notify("Stage 3: Voice Interview", "Initializing Voice-to-Voice Loop engine...", 55)
-    engine = WorkflowVoiceEngine(session_dir=session_dir, session_id=session_id)
+    engine = WorkflowVoiceEngine(session_dir=process_dir, session_id=session_id)
+    
+    # Inject Stage 2 question tree directly in-memory — do NOT read from disk.
+    # This ensures the voice engine always uses the freshly generated (or cache-retrieved)
+    # question tree for this specific session, not any leftover file from a previous run.
+    engine.inject_question_tree(
+        questions=[q.model_dump() for q in stage2_output.question_tree],
+        system_prompt=stage2_output.interviewer_system_prompt
+    )
+    
     if voice_engine_ref is not None:
         voice_engine_ref.append(engine)
         
@@ -124,7 +135,7 @@ def run_full_pipeline(
     
     # --- STAGE 4: REPORT ENGINE ---
     notify("Stage 4: Evaluation Report", "Synthesizing multimodal audio & technical report...", 90)
-    report_payload = report_builder.build_report(session_dir=session_dir)
+    report_payload = report_builder.build_report(session_dir=process_dir, output_dir=output_dir)
     results["report"] = report_payload
     notify("Stage 4: Evaluation Report", "Final Candidate Evaluation Report generated successfully!", 100, {
         "report": report_payload.model_dump()

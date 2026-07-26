@@ -83,8 +83,8 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 
 ### 2. Stage 2: Question Engine (`question_model`)
 - **Location**: `backend/model/question_model/model/`
-- **Core Files**: `front.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
-- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`) and JD text (`sample_job_detail.json` & `sample_resume.json`). Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`). Outputs `interview_questions.json` and `interviewer_behavior.json` inside session folder `sess_<timestamp>/`.
+- **Core Files**: `front.py`, `cache.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
+- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`, `.json`) and JD text. Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`). Caches generated results in SQLite `cache.db` for instant re-runs (<1ms). Outputs `interview_questions.json` and `interviewer_behavior.json` inside session folder `sess_<timestamp>/`.
 
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`

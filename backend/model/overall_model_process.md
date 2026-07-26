@@ -83,7 +83,8 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 * **Status**: ✅ **COVERED & OPERATIONAL**
 * **Location**: `backend/model/question_model/model/`
 * **Implemented Code**:
-  - `resume_parser.py`: PDF (`pypdf`), DOCX (`python-docx`), and TXT document extractor.
+  - `resume_parser.py`: PDF (`pypdf`), DOCX (`python-docx`), TXT, and JSON document extractor.
+  - `cache.py`: SQLite hashing engine (`cache.db`) for caching Stage 2 question trees by SHA-256 hash.
   - `schemas.py`: Pydantic v2 schemas (`Stage2Output`, `QuestionItem`) for structured question tree and system prompt.
   - `prompt_builder.py`: System prompt constraint compiler enforcing latency limits (1-2 sentences) and probing strategy for Stage 3 `brain.py`.
   - `question_generator.py`: Core reasoning engine utilizing Gemini 3.6 Flash with structured Pydantic schema outputs.

@@ -49,10 +49,11 @@ backend/
     │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> interview_questions.json & interviewer_behavior.json )
     │   └── model/
     │       ├── front.py       # Stage 2 Kivy Desktop GUI Client
+    │       ├── cache.py       # SQLite hash-based caching engine (cache.db)
     │       ├── config.py      # Stage 2 configuration loader
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
     │       ├── question_generator.py # Gemini 15-question tree & system prompt generator
-    │       ├── resume_parser.py # PDF (pypdf), DOCX (python-docx), and TXT resume extractor
+    │       ├── resume_parser.py # PDF (pypdf), DOCX (python-docx), TXT, and JSON resume extractor
     │       ├── schemas.py     # Pydantic schemas (QuestionItem, Stage2Output)
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
@@ -93,9 +94,10 @@ backend/
     └── workflow/              # UNIFIED WORKFLOW ORCHESTRATOR (Stage 1→4)
         ├── doc/
         │   └── current.md     # Unified workflow technical documentation
-        ├── test/              # Workflow test harness input/output directories
+        ├── test/              # Workflow test harness input/process/output directories
         │   ├── input/         # Preset input data (sample_session/ -> sample_job_detail.json & sample_resume.json)
-        │   └── output/        # Generated workflow sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
+        │   ├── process/       # Middle processing & cache data (sess_<timestamp>/ -> Stage 1, 2, 3 intermediate artifacts & cache.db)
+        │   └── output/        # Final workflow evaluation reports (sess_<timestamp>/ -> report.json & evaluation_summary.md)
         └── model/
             ├── front.py       # Unified 5-Screen Kivy Desktop Application
             ├── config.py      # Master configuration & non-colliding sys.path injector
