@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "topic": "Asynchronous Concurrency",
+    "difficulty": "Junior",
+    "question_text": "Can you explain the event loop mechanism in Python asyncio and how it handles non-blocking I/O?",
+    "expected_keywords": ["event loop", "async", "await", "coroutine", "non-blocking"],
+    "resume_reference": "FastAPI Microservices Migration"
+  },
+  {
+    "id": 2,
+    "topic": "PostgreSQL Indexing",
+    "difficulty": "Junior",
+    "question_text": "How do B-Tree indexes work in PostgreSQL, and under what conditions will the query planner choose a sequential scan?",
+    "expected_keywords": ["B-Tree", "cardinality", "sequential scan", "query planner"],
+    "resume_reference": "Database Optimization"
+  },
+  {
+    "id": 3,
+    "topic": "gRPC vs REST",
+    "difficulty": "Mid",
+    "question_text": "What are the architectural trade-offs between gRPC with Protocol Buffers and REST over HTTP/1.1?",
+    "expected_keywords": ["gRPC", "Protobuf", "HTTP/2", "binary serialization"],
+    "resume_reference": null
+  }
+]

@@ -105,8 +105,15 @@ goto menu
 
 :run_voice_model
 echo.
-echo [LAUNCHING] Stage 3: Standalone Voice-to-Voice Interview Client (Kivy Desktop)...
-.venv\Scripts\python.exe -m model.voice_to_voice_model.model.main_app
+echo [LAUNCHING] Stage 3: Live Voice-to-Voice Streaming Loop...
+echo  1. Kivy Desktop GUI Client (main_app.py)
+echo  2. Headless CLI Test Harness (test_pipeline.py)
+set /p vchoice="Select execution mode (1-2, default 1): "
+if "%vchoice%"=="2" (
+    .venv\Scripts\python.exe -m model.voice_to_voice_model.model.test_pipeline
+) else (
+    .venv\Scripts\python.exe -m model.voice_to_voice_model.model.main_app
+)
 pause
 goto menu
 

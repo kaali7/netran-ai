@@ -23,7 +23,7 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 | Stage | Module Name | Status | Location | Key Technologies & Output |
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | Gemini 3.6 Flash, Tavily Search API, SQLite caching (`cache.db`), Kivy UI |
-| **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, `interview_questions.json`, `system_prompt.txt` |
+| **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`app.py`), `interview_questions.json`, `interviewer_behavior.json` |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:1.5b, Kokoro-82M TTS, `continuous_mic_input.wav`, `session_manifest.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, `report.json`, `evaluation_summary.md` |
 | **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`app.py`), demo data testing harness |
@@ -83,8 +83,8 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 
 ### 2. Stage 2: Question Engine (`question_model`)
 - **Location**: `backend/model/question_model/model/`
-- **Core Files**: `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
-- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`) and JD text. Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`).
+- **Core Files**: `app.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
+- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`) and JD text (`sample_job_detail.json` & `sample_resume.json`). Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`). Outputs `interview_questions.json` and `interviewer_behavior.json` inside session folder `sess_<timestamp>/`.
 
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`

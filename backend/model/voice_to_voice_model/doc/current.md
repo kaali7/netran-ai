@@ -64,12 +64,16 @@ Additionally, Stage 3 continuous microphone recording and millisecond-precision 
 * **Abbreviation & Length Safeguards**: Requires a minimum chunk length of >15 characters and skips standard abbreviations (e.g., `Mr.`, `Dr.`, `e.g.`, `vs.`), ensuring natural speech cadence.
 * **Overlapping Execution**: TTS synthesizes and speaks the first sentence while the LLM is actively computing subsequent sentences, significantly reducing Time-to-First-Audio (TTFA).
 
-### 6. Desktop Application & Dual Modes ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/main_app.py))
-* **Kivy Modern Dark GUI**: Includes real-time VAD diagnostics, volume meter bar, live conversation transcript panel, and control buttons (Start, Stop & Save, Restart).
-* **Automatic Session Artifact Management**: On `Start Interview`, initializes session folder (`backend/sessions/sess_YYYYMMDD_HHMMSS/`), starts `ContinuousMicWriter` and `SessionLogger`. On `Stop Interview`, safely closes WAV headers and flushes manifest JSON.
-* **Dual Operation Modes**:
-  1. **Dynamic Live LLM Mode**: Standard 15-question AI technical interview powered by Qwen2.5.
-  2. **Script Calibration Mode**: Practice mode utilizing pre-scripted technical tracks from `interview_scripts.json` (React, Next.js, TypeScript, Build Tools, CSS/Tailwind) with fuzzy sequence-matching (`difflib.SequenceMatcher`) for reading-accuracy scoring.
+### 6. Desktop Application & Dual Execution Modes ([main_app.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/main_app.py) & [test_pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/test_pipeline.py))
+* **Preset Test Inputs (`model/voice_to_voice_model/test/input/`)**:
+  - Ingests `interview_questions.json` (Stage 2 question tree) and `interviewer_behavior.json` (Eva persona guidelines & prompt).
+  - Presets: `sample_backend/`, `sample_frontend/`, `sample_fullstack/`.
+* **Output Session Directory (`model/voice_to_voice_model/test/output/sess_<timestamp>/`)**:
+  - `recording.wav`: Continuous raw PCM/WAV candidate & interviewer mic audio.
+  - `transcript.json` / `session_manifest.json`: Turn-by-turn dialogue transcript with timestamp & latency telemetry (`stt_ms`, `llm_ms`, `tts_ms`).
+* **Dual Execution Modes**:
+  1. 🖥️ **Kivy Modern Dark GUI Client (`main_app.py`)**: Visual interactive application with real-time VAD diagnostics, volume meter, live transcript panel, and control buttons.
+  2. 💻 **Headless CLI Test Harness (`test_pipeline.py`)**: Command-line interface for automated testing and preset verification.
 
 ### 7. Metrics & Benchmarking ([benchmark.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/benchmark.py))
 * Measures high-resolution timing via `time.perf_counter()`.

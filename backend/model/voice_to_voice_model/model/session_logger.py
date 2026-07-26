@@ -54,7 +54,7 @@ class SessionLogger:
         self.turns.append(turn_data)
 
     def finalize(self):
-        """Writes the session manifest JSON to disk."""
+        """Writes the session manifest and transcript JSON files to disk."""
         manifest = {
             "session_id": self.session_id,
             "session_start_iso": self.session_start_iso,
@@ -62,9 +62,12 @@ class SessionLogger:
             "turns": self.turns
         }
         manifest_path = os.path.join(self.session_dir, "session_manifest.json")
+        transcript_path = os.path.join(self.session_dir, "transcript.json")
         try:
             with open(manifest_path, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2)
-            print(f"[SessionLogger] Finalized manifest: {manifest_path}", flush=True)
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2)
+            print(f"[SessionLogger] Finalized manifest & transcript artifacts in: {self.session_dir}", flush=True)
         except Exception as e:
             print(f"[SessionLogger Error] Failed to write manifest: {e}", flush=True)

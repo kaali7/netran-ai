@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "topic": "React 18 Concurrent Rendering",
+    "difficulty": "Junior",
+    "question_text": "How do useTransition and useDeferredValue improve UI responsiveness in React 18?",
+    "expected_keywords": ["useTransition", "concurrent mode", "fiber architecture", "non-blocking"],
+    "resume_reference": "React 18 Migration"
+  },
+  {
+    "id": 2,
+    "topic": "Virtualization",
+    "difficulty": "Mid",
+    "question_text": "How do virtualized lists (e.g. react-window) handle rendering thousands of real-time data rows efficiently?",
+    "expected_keywords": ["virtualization", "viewport calculation", "DOM node recycling"],
+    "resume_reference": "Analytics Table Virtualization"
+  },
+  {
+    "id": 3,
+    "topic": "Web Worker Offloading",
+    "difficulty": "Senior",
+    "question_text": "How would you design a Web Worker background thread layer to offload heavy JSON parsing and data transformation?",
+    "expected_keywords": ["Web Worker", "postMessage", "SharedArrayBuffer", "main thread"],
+    "resume_reference": "Web Worker Caching"
+  }
+]

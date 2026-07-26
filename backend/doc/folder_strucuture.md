@@ -60,6 +60,9 @@ backend/
     │   ├── doc/
     │   │   ├── current.md     # Stage 3 technical implementation status
     │   │   └── prd.md         # Stage 3 Product Requirements Document
+    │   ├── test/              # Stage 3 test harness input/output directories
+    │   │   ├── input/         # Stage 2 preset inputs (interview_questions.json & interviewer_behavior.json)
+    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> recording.wav & transcript.json )
     │   └── model/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
     │       ├── brain.py       # Local Ollama Qwen2.5:1.5b streaming LLM engine ('Eva' persona)
@@ -69,7 +72,8 @@ backend/
     │       ├── main_app.py    # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── session_logger.py # Monotonic timer & session_manifest.json logger
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
-    │       └── speaker.py     # Kokoro-82M neural TTS streaming playback engine
+    │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
+    │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
     │
     ├── reports_model/         # STAGE 4: Post-Session Multimodal Evaluation Engine
     │   ├── doc/

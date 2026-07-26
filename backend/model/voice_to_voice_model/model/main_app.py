@@ -22,17 +22,20 @@ try:
     from .listener import listen_and_transcribe, ContinuousMicWriter
     from .speaker import speak_text, preload_models as preload_speaker
     from .session_logger import SessionLogger
+    from .benchmark import Benchmark
 except ImportError:
     try:
         from model.voice_to_voice_model.model.brain import generate_eva_response, preload as preload_brain
         from model.voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
         from model.voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
         from model.voice_to_voice_model.model.session_logger import SessionLogger
+        from model.voice_to_voice_model.model.benchmark import Benchmark
     except ImportError:
         from brain import generate_eva_response, preload as preload_brain
         from listener import listen_and_transcribe, ContinuousMicWriter
         from speaker import speak_text, preload_models as preload_speaker
         from session_logger import SessionLogger
+        from benchmark import Benchmark
 
 # Clean visual layout utilizing a modern dark visual palette
 KV = """
@@ -77,6 +80,14 @@ KV = """
             height: '40dp'
             background_color: 0.2, 0.4, 0.6, 1
             on_press: root.toggle_llm_mode(self)
+
+        Spinner:
+            id: limit_selector
+            text: 'Fast Testing (5 Questions)'
+            values: ('Fast Testing (5 Questions)', 'Real-Time Live (15 Questions)', 'Extended Live (10 Questions)')
+            size_hint_y: None
+            height: '40dp'
+            on_text: root.on_limit_select(self.text)
 
         Spinner:
             id: script_selector
@@ -191,6 +202,13 @@ KV = """
                 on_press: root.start_interview()
 
             Button:
+                id: send_btn
+                text: "⚡ Done Speaking"
+                background_normal: ''
+                background_color: 0.6, 0.4, 0.9, 1
+                on_press: root.submit_answer_now()
+
+            Button:
                 id: stop_btn
                 text: "Stop & Save Log"
                 background_normal: ''
@@ -218,7 +236,7 @@ class InterviewWindow(BoxLayout):
         self.log_filename = os.path.join(test_out_dir, "interview_log.txt")
         self.conversation_history = []
         self.question_count = 0
-        self.MAX_QUESTIONS = 15
+        self.MAX_QUESTIONS = 5  # Default to 5 questions during testing time
         
         # Session artifacts tracking
         self.session_logger = None
@@ -243,19 +261,26 @@ class InterviewWindow(BoxLayout):
         except Exception as e:
             print(f"[Error loading scripts] {e}")
 
+    def on_limit_select(self, text):
+        if "5" in text:
+            self.MAX_QUESTIONS = 5
+        elif "15" in text:
+            self.MAX_QUESTIONS = 15
+        elif "10" in text:
+            self.MAX_QUESTIONS = 10
+        self.update_question_label(self.question_count)
+
     def toggle_llm_mode(self, toggle_btn):
         if toggle_btn.state == 'down':
             self.llm_enabled = True
             toggle_btn.text = 'LLM Engine: ACTIVE'
             self.ids.script_selector.disabled = True
             self.ids.target_script_label.text = "[Running in dynamic live mode via Qwen LLM.]"
-            self.MAX_QUESTIONS = 15
         else:
             self.llm_enabled = False
             toggle_btn.text = 'SCRIPT CALIBRATION MODE'
             self.ids.script_selector.disabled = False
             self._update_script_display()
-            self.MAX_QUESTIONS = 10
             
         self.update_question_label(self.question_count if self.llm_enabled else self.question_count + 1)
 
@@ -302,9 +327,10 @@ class InterviewWindow(BoxLayout):
         self.question_count = 0
         self.update_question_label(0)
 
-        # Initialize Session Logger & Continuous Mic Writer inside test_output
+        # Initialize Session Logger & Continuous Mic Writer inside test/output/
         session_id = f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        test_out_dir = os.path.join(os.path.dirname(__file__), "test_output")
+        model_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        test_out_dir = os.path.join(model_root_dir, "test", "output")
         self.session_dir = os.path.join(test_out_dir, session_id)
         os.makedirs(self.session_dir, exist_ok=True)
 
@@ -315,7 +341,7 @@ class InterviewWindow(BoxLayout):
             )
 
         self.session_logger = SessionLogger(session_id=session_id, session_dir=self.session_dir)
-        mic_wav_path = os.path.join(self.session_dir, "continuous_mic_input.wav")
+        mic_wav_path = os.path.join(self.session_dir, "recording.wav")
         self.mic_writer = ContinuousMicWriter(filepath=mic_wav_path)
         self.mic_writer.start()
 
@@ -328,11 +354,33 @@ class InterviewWindow(BoxLayout):
         )
         self.interview_thread.start()
 
+    def submit_answer_now(self):
+        """Forces immediate speech endpointing when candidate finishes speaking."""
+        try:
+            from .listener import trigger_speech_done
+            trigger_speech_done()
+        except Exception:
+            try:
+                from listener import trigger_speech_done
+                trigger_speech_done()
+            except Exception:
+                pass
+        self.update_status("⚡ Processing answer immediately...")
+
     def stop_interview(self):
         self.is_running = False
         if self.mic_writer:
             self.mic_writer.stop()
             self.mic_writer = None
+        if self.session_dir and os.path.exists(os.path.join(self.session_dir, "recording.wav")):
+            try:
+                import shutil
+                shutil.copyfile(
+                    os.path.join(self.session_dir, "recording.wav"),
+                    os.path.join(self.session_dir, "continuous_mic_input.wav")
+                )
+            except Exception:
+                pass
         if self.session_logger:
             self.session_logger.finalize()
             self.session_logger = None
@@ -441,7 +489,6 @@ class InterviewWindow(BoxLayout):
 
                     # 2. GENERATION & THINKING STAGE
                     self.update_status("Eva is evaluating...")
-                    from benchmark import Benchmark
                     Benchmark.start("ttft")
                     brain_generator = generate_eva_response(self.conversation_history)
 

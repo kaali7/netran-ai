@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "topic": "Asynchronous Concurrency",
+    "difficulty": "Junior",
+    "question_text": "Can you explain the event loop mechanism in Python asyncio and how it handles non-blocking I/O?",
+    "expected_keywords": ["event loop", "async", "await", "coroutine", "non-blocking"],
+    "resume_reference": "FastAPI Microservices Migration"
+  },
+  {
+    "id": 2,
+    "topic": "PostgreSQL Indexing",
+    "difficulty": "Junior",
+    "question_text": "How do B-Tree indexes work in PostgreSQL, and under what conditions will the query planner choose a sequential scan?",
+    "expected_keywords": ["B-Tree", "cardinality", "sequential scan", "query planner"],
+    "resume_reference": "Database Optimization"
+  },
+  {
+    "id": 3,
+    "topic": "gRPC vs REST",
+    "difficulty": "Mid",
+    "question_text": "What are the architectural trade-offs between gRPC with Protocol Buffers and REST over HTTP/1.1?",
+    "expected_keywords": ["gRPC", "Protobuf", "HTTP/2", "binary serialization"],
+    "resume_reference": null
+  },
+  {
+    "id": 4,
+    "topic": "Distributed Caching",
+    "difficulty": "Mid",
+    "question_text": "How do you handle cache stampede and cache invalidation strategies in Redis for high-throughput backend services?",
+    "expected_keywords": ["Redis", "cache-aside", "TTL", "mutex lock"],
+    "resume_reference": "Redis Caching Layer"
+  },
+  {
+    "id": 5,
+    "topic": "System Architecture",
+    "difficulty": "Senior",
+    "question_text": "How would you design a distributed rate-limiting pipeline capable of scaling to 100,000 requests per second?",
+    "expected_keywords": ["token bucket", "sliding window", "Redis cluster", "rate limiting"],
+    "resume_reference": "High Throughput API Gateway"
+  }
+]

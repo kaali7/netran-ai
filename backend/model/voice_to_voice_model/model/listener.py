@@ -47,12 +47,23 @@ print("Loading Faster-Whisper model (small)...", flush=True)
 whisper_model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
 print("Models loaded successfully!", flush=True)
 
+# Global manual speech endpointing flag
+FORCE_SPEECH_DONE = False
+
+def trigger_speech_done():
+    """Triggers immediate speech endpointing to skip waiting for silence."""
+    global FORCE_SPEECH_DONE
+    FORCE_SPEECH_DONE = True
+
 def listen_and_transcribe(ui_callback=None, mic_writer=None):
     """
     Opens the microphone, uses Silero VAD to detect speech start and end,
     respects the echo gate, transcribes the speech using Faster-Whisper,
     and optionally streams raw frames to continuous mic writer.
     """
+    global FORCE_SPEECH_DONE
+    FORCE_SPEECH_DONE = False
+
     # Audio hardware recording constraints
     CHANNELS = 1
     RATE = 16000     # 16kHz for VAD and Whisper
@@ -72,7 +83,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
     audio_buffer = []
     has_spoken = False
     silence_frames_counter = 0
-    max_silence_frames = 15  # 15 * 32ms = 480ms (approx half a second silence threshold)
+    max_silence_frames = 10  # 10 * 32ms = 320ms (snappy silence threshold)
     total_frames_counter = 0 # 12-second hard timeout for the recording
 
     # Initialize VAD state tensors (Silero VAD v3 ONNX: only state is required, no context)
@@ -81,6 +92,12 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
 
     try:
         while True:
+            # Check manual force submit flag
+            if FORCE_SPEECH_DONE:
+                print("[Manual Done Speaking Triggered! Processing speech...]", flush=True)
+                FORCE_SPEECH_DONE = False
+                break
+
             # 1. Read raw PCM data from the microphone
             try:
                 raw_data, overflowed = stream.read(CHUNK)
@@ -89,8 +106,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                 continue
 
             # 2. Check Echo Gate: If agent is speaking, drop input to prevent feedback
-            # Fix Bug #1: use importlib lazy-check instead of `import speaker` at top level
-            # This avoids loading Kokoro TTS model when listener.py runs standalone.
             try:
                 _speaker_mod = importlib.import_module("speaker")
                 _agent_speaking = getattr(_speaker_mod, "IS_AGENT_SPEAKING", False)
@@ -133,16 +148,14 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
             rms = np.sqrt(np.mean(audio_frame ** 2))
             
             if not has_spoken:
-                # Based on the standalone test, your max VAD prob was ~0.20.
-                # So we lower the threshold to 0.05, but rely on your silence RMS (0.00002) to gate noise!
-                # FAILSAFE: If your voice is loud enough to fill the bar (RMS > 0.03), trigger even if VAD fails.
-                if (speech_prob > 0.05 and rms > 0.005) or (rms > 0.03):
+                if (speech_prob > 0.10 and rms > 0.005) or (rms > 0.025):
                     print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
                     has_spoken = True
                     silence_frames_counter = 0
             else:
-                # If probability stays above 0.02 OR volume stays above 0.002, reset silence
-                if speech_prob > 0.02 or rms > 0.002:
+                # Require speech_prob > 0.05 AND rms > 0.004 to count as active speech.
+                # Room background noise below 0.004 will no longer prevent silence detection!
+                if speech_prob > 0.05 and rms > 0.004:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
@@ -161,10 +174,10 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                 audio_buffer.append(original_frame.copy())
                 total_frames_counter += 1
 
-            # Break loop when silence threshold is reached after speech, or if hard timeout is hit
+            # Break loop when silence threshold (320ms) is reached after speech, or if hard timeout is hit
             if has_spoken:
                 if silence_frames_counter >= max_silence_frames or total_frames_counter > 375:
-                    print(f"[Silence/Timeout Detected. Processing speech...]")
+                    print(f"[Silence Detected ({silence_frames_counter * 32}ms). Processing speech...]")
                     if ui_callback:
                         ui_callback({
                             "type": "audio_level",
@@ -172,7 +185,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                             "vad_prob": 0.0,
                             "state": "Processing transcription..."
                         })
-                    # Fix Bug #2: Benchmark already imported at top of file — no deferred import needed
                     Benchmark.start("ttfa")
                     Benchmark.start("stt")
                     break

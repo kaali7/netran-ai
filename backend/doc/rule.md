@@ -31,15 +31,27 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 4: Mandatory Git Commits After Verification
-* After implementing and verifying any feature, bug fix, or structure change:
-  1. Run tests/verifications to ensure zero syntax or runtime errors.
-  2. Stage all changed files: `git add .`
-  3. Commit with standard Conventional Commit messages:
-     - `feat(...)`: New features or UI components
-     - `fix(...)`: Bug fixes or error resilience updates
-     - `docs(...)`: Documentation updates
-     - `chore(...)`: Cleanup or dependency updates
+## 📌 Rule 4: Stage 3 (Voice-to-Voice Model) I/O Contract
+* **Inputs**: Loaded from `model/voice_to_voice_model/test/input/`:
+  - `interview_questions.json` (Question tree from Stage 2)
+  - `interviewer_behavior.json` (Eva interviewer persona & system prompt from Stage 2)
+* **Outputs**: Dedicated session directory `model/voice_to_voice_model/test/output/sess_<timestamp>/` containing:
+  1. `recording.wav`: Continuous raw PCM/WAV candidate & interviewer mic audio.
+  2. `transcript.json` / `session_manifest.json`: Turn-by-turn dialogue transcript with timestamp & latency telemetry (`stt_ms`, `llm_ms`, `tts_ms`).
+* **Question Limit Scoping**:
+  - **Testing Time**: Bounded to **5 questions max** (`MAX_QUESTIONS = 5`) for fast automated test harness execution.
+  - **Real-Time Live Interview Time**: Supports **10 to 15 questions** (`MAX_QUESTIONS = 10..15`) tailored to job description requirements.
+
+---
+
+## 📌 Rule 5: Git Commits Executed Only Upon User Request
+* Run tests/verifications to ensure zero syntax or runtime errors after editing code.
+* Only execute `git commit` when the USER explicitly requests/instructs to commit the changes (e.g., "commit changes", "commit current stage").
+* When committing upon user request, use standard Conventional Commit messages:
+  - `feat(...)`: New features or UI components
+  - `fix(...)`: Bug fixes or error resilience updates
+  - `docs(...)`: Documentation updates
+  - `chore(...)`: Cleanup or dependency updates
 
 ---
 
