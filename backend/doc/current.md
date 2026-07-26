@@ -98,7 +98,7 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 
 ### 5. Workflow Orchestrator (`workflow`)
 - **Location**: `backend/model/workflow/model/`
-- **Core Files**: `front.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `sample_job_detail.json`, `sample_resume.json`, `test_pipeline.py`
+- **Core Files**: `front.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `test_pipeline.py`
 - **Functionality**: Master multi-stage controller. Houses the unified 5-screen Kivy desktop GUI application (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportScreen`), orchestrates background pipeline threads, and provides built-in demo testing data.
 
 ---

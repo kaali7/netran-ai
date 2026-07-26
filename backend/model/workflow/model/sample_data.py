@@ -8,8 +8,11 @@ import os
 import json
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-SAMPLE_RESUME_PATH = os.path.join(CURRENT_DIR, "sample_resume.json")
-SAMPLE_JOB_DETAIL_PATH = os.path.join(CURRENT_DIR, "sample_job_detail.json")
+WORKFLOW_DIR = os.path.dirname(CURRENT_DIR)
+TEST_INPUT_DIR = os.path.join(WORKFLOW_DIR, "test", "input", "sample_session")
+
+SAMPLE_RESUME_PATH = os.path.join(TEST_INPUT_DIR, "sample_resume.json")
+SAMPLE_JOB_DETAIL_PATH = os.path.join(TEST_INPUT_DIR, "sample_job_detail.json")
 SAMPLE_JD_PATH = SAMPLE_JOB_DETAIL_PATH
 
 def get_sample_resume_text() -> str:
