@@ -37,7 +37,7 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
                                       │
                                       ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
-│  STAGE 2: Question Engine (question_model/model/question_generator.py)  │
+│  STAGE 2: Question Engine (question_model/model/pipeline.py)             │
 │  • Gemini 3.6 Flash structured JSON schema generation                    │
 │  • Output: interview_questions.json & system_prompt.txt                  │
 └─────────────────────────────────────┬────────────────────────────────────┘
@@ -48,7 +48,7 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
 | `config.py` | Loads root `.env`, sets up session storage paths, and injects stage paths (`sys.path`) into Python module resolution cleanly. |
 | `sample_data.py` | Built-in demo testing harness exposing sample data loaded from `test/input/sample_session/` (`sample_job_detail.json` and `sample_resume.json`). |
 | `voice_engine.py` | Stage 3 loop controller that overrides Ollama's `SYSTEM_PROMPT` with Stage 2's dynamic prompt, receives in-memory question tree injection (`inject_question_tree`), handles 1-sentence brain acknowledgments, manages `ContinuousMicWriter`, and logs turn timing data. |
-| `orchestrator.py` | Master thread coordinator executing Stage 1 → Stage 2 → Stage 3 → Stage 4 in background threads with live progress callbacks to the UI. Directs intermediate artifacts to `model/workflow/test/process/` and final report artifacts to `model/workflow/test/output/`. |
+| `orchestrator.py` | Master thread coordinator executing Stage 1 (`Stage1Pipeline`) → Stage 2 (`Stage2Pipeline`) → Stage 3 (`WorkflowVoiceEngine`) → Stage 4 (`Stage4Pipeline`) using uniform stage pipelines. Directs intermediate artifacts to `model/workflow/test/process/` and final report artifacts to `model/workflow/test/output/`. |
 | `front.py` | Main Kivy Desktop application implementing the 5-screen `ScreenManager` (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportScreen`) with dynamic `ReportCard` component and live transcript sync. |
 | `test_pipeline.py` | Standalone CLI headless test runner executing Stage 1 → 2 → 3 → 4 end-to-end with 5-question test scoping. |
 | `run.bat` | Batch launcher script for direct execution. |
