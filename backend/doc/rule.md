@@ -44,9 +44,10 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 5: Git Commits Executed Only Upon User Request
+## 📌 Rule 5: Git Commits Executed Only Upon User Request (with Pre-Commit Documentation Audit)
 * Run tests/verifications to ensure zero syntax or runtime errors after editing code.
 * Only execute `git commit` when the USER explicitly requests/instructs to commit the changes (e.g., "commit changes", "commit current stage").
+* **Pre-Commit Documentation Check**: When the user requests to commit, FIRST check if any documentation files (e.g., `model/<stage_folder>/doc/current.md`, `doc/folder_strucuture.md`, `doc/tech_stack.md`, `doc/rule.md`) need to be updated for recent code/schema/architecture changes. If any documentation updates are pending, update those files FIRST before running `git commit`.
 * When committing upon user request, use standard Conventional Commit messages:
   - `feat(...)`: New features or UI components
   - `fix(...)`: Bug fixes or error resilience updates
@@ -55,7 +56,7 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 5: Immediate Documentation Synchronization
+## 📌 Rule 6: Immediate Documentation Synchronization
 * Whenever code paths, function signatures, input/output schemas, or test directories are altered:
   - Immediately update `model/<stage_folder>/doc/current.md`.
   - Immediately update `doc/folder_strucuture.md`.
@@ -63,7 +64,7 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 6: Dual-Mode Execution Support (GUI + CLI)
+## 📌 Rule 7: Dual-Mode Execution Support (GUI + CLI)
 Every stage model in `model/` must maintain two execution entry points:
 1. 🖥️ **Kivy Desktop GUI Client (`app.py`)**: Modern glassmorphic desktop interface for interactive user execution.
 2. 💻 **Headless CLI Test Harness (`test_pipeline.py`)**: Command-line interface for automated testing and preset verification.
@@ -71,6 +72,6 @@ Every stage model in `model/` must maintain two execution entry points:
 
 ---
 
-## 📌 Rule 7: Error Resilience & Offline Fallbacks
+## 📌 Rule 8: Error Resilience & Offline Fallbacks
 * AI generation calls (Gemini API / Local LLM) must never crash uncaught on rate limits (`429 RESOURCE_EXHAUSTED`) or network disconnects (`RemoteProtocolError`).
 * Always wrap external LLM API calls with exponential backoff retries and graceful rule-based offline fallback generators.

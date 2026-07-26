@@ -5,4 +5,4 @@ Before performing research or modifying any code in this repository:
 2. Check `model/<stage_folder>/doc/current.md` before editing any code within a specific model stage.
 3. Adhere strictly to the Stage 1 output contract (`sess_<timestamp>.json` single file) and Stage 2 dual input/output contracts (`sample_job_detail.json` + `sample_resume.json` -> `sess_<timestamp>/` containing `interview_questions.json` & `interviewer_behavior.json`).
 4. Always update documentation when code or schema changes are made.
-5. Only execute `git commit` when the USER explicitly requests/instructs to commit.
+5. Only execute `git commit` when the USER explicitly requests/instructs to commit. When instructed to commit, ALWAYS check first if any documentation files (`model/<stage_folder>/doc/current.md`, `doc/folder_strucuture.md`, `doc/tech_stack.md`, `doc/rule.md`) need to be updated. If any documentation updates are pending, update those files FIRST before running `git commit`.

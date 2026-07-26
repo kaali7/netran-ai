@@ -118,6 +118,10 @@ Additionally, Stage 3 continuous microphone recording and millisecond-precision 
    - *Issue*: `from benchmark import Benchmark` inline import in `main_app.py` failed when run as a package module.
    - *Fix*: Added robust try/except fallback import chain at top-level of `main_app.py`.
 
+8. **Premature Speech Endpointing / Answer Cutoff (Fixed)**
+   - *Issue*: Processing was triggering mid-answer after only 320ms of silence, causing candidate transcripts to be cut off into 1-2 word fragments.
+   - *Fix*: Increased silence window to ~900ms (28 frames), enforced a minimum speech gate of 480ms (15 frames), added 2-frame speech start debouncing, and relaxed speech continuation to OR-gating (`speech_prob > 0.05 OR rms > 0.008`).
+
 ---
 
 ## 📊 Performance Benchmark Targets

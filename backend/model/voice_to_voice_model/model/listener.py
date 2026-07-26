@@ -82,8 +82,10 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
 
     audio_buffer = []
     has_spoken = False
+    speech_start_candidate_frames = 0
     silence_frames_counter = 0
-    max_silence_frames = 10  # 10 * 32ms = 320ms (snappy silence threshold)
+    max_silence_frames = 28  # 28 * 32ms = ~900ms (natural interview pause window)
+    MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
     total_frames_counter = 0 # 12-second hard timeout for the recording
 
     # Initialize VAD state tensors (Silero VAD v3 ONNX: only state is required, no context)
@@ -155,14 +157,19 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
             rms = np.sqrt(np.mean(audio_frame ** 2))
             
             if not has_spoken:
+                # Debounce speech start: require 2 consecutive frames to avoid false triggers
                 if (speech_prob > 0.10 and rms > 0.005) or (rms > 0.025):
-                    print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
-                    has_spoken = True
-                    silence_frames_counter = 0
+                    speech_start_candidate_frames += 1
+                    if speech_start_candidate_frames >= 2:
+                        print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
+                        has_spoken = True
+                        silence_frames_counter = 0
+                else:
+                    speech_start_candidate_frames = 0
             else:
-                # Require speech_prob > 0.05 AND rms > 0.004 to count as active speech.
-                # Room background noise below 0.004 will no longer prevent silence detection!
-                if speech_prob > 0.05 and rms > 0.004:
+                # Forgiving speech continuation: reset silence counter if speech_prob > 0.05 OR rms > 0.008.
+                # This ensures natural pauses (breathing, hesitation) don't cut off speech prematurely.
+                if speech_prob > 0.05 or rms > 0.008:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
@@ -181,9 +188,10 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                 audio_buffer.append(proc_frame.copy())
                 total_frames_counter += 1
 
-            # Break loop when silence threshold (320ms) is reached after speech, or if hard timeout is hit
+            # Break loop when silence threshold (~900ms) is reached after speech (and minimum speech duration met), or hard timeout
             if has_spoken:
-                if silence_frames_counter >= max_silence_frames or total_frames_counter > 375:
+                can_endpoint = total_frames_counter >= MIN_SPEECH_FRAMES
+                if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > 375:
                     print(f"[Silence Detected ({silence_frames_counter * 32}ms). Processing speech...]")
                     if ui_callback:
                         ui_callback({
