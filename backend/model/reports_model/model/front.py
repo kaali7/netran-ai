@@ -1,6 +1,6 @@
 """
 Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
-Module: test_ui.py
+Module: front.py
 Description: Interactive Kivy desktop application for testing Stage 4 multimodal report generation.
 """
 
@@ -35,15 +35,16 @@ class ReportEngineApp(App):
         self.title = "Netran AI — Stage 4 Multimodal Evaluation Engine"
         
         # Locate target session directory dynamically
-        sessions_dir = backend_dir / "model" / "sessions"
-        target_dir = sessions_dir / "sess_20260724_194457"
+        target_dir = backend_dir / "model" / "reports_model" / "test" / "input" / "sample_session"
         
-        if not target_dir.exists() and sessions_dir.exists():
-            existing_sessions = [d for d in sessions_dir.iterdir() if d.is_dir()]
-            if existing_sessions:
-                existing_sessions.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                target_dir = existing_sessions[0]
-                
+        if not target_dir.exists():
+            v2v_out_dir = backend_dir / "model" / "voice_to_voice_model" / "test" / "output"
+            if v2v_out_dir.exists():
+                existing = [d for d in v2v_out_dir.iterdir() if d.is_dir()]
+                if existing:
+                    existing.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    target_dir = existing[0]
+
         self.session_dir = target_dir
 
         # Main Root Layout
@@ -165,15 +166,20 @@ class ReportEngineApp(App):
             self.append_log("Parsing session manifest and audio recording...")
             self.append_log("Slicing continuous audio into per-turn WAV clips...")
             
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            out_session_dir = backend_dir / "model" / "reports_model" / "test" / "output" / f"sess_{timestamp}"
+
             report: CandidateReportPayload = build_report(
                 session_dir=self.session_dir,
-                model_name="gemini-3.6-flash"
+                model_name="gemini-3.6-flash",
+                output_dir=out_session_dir
             )
 
             self.append_log("Gemini Multimodal Audio Branch: COMPLETED ✓")
             self.append_log("Gemini Technical Evaluation Branch: COMPLETED ✓")
             self.append_log("Fused Combine Synthesis Branch: COMPLETED ✓")
-            self.append_log(f"Saved artifacts: report.json & evaluation_summary.md ✓")
+            self.append_log(f"Saved artifacts to {out_session_dir.name}: report.json & evaluation_summary.md ✓")
 
             # Update UI on main thread
             Clock.schedule_once(lambda dt: self.display_report(report))

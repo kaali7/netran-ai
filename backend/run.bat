@@ -19,48 +19,46 @@ echo  --- COMBINED PIPELINE ---
 echo   1. Launch Unified 5-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
 echo  --- INDIVIDUAL STAGE MODELS ---
-echo   2. Run Stage 1: JD Research ^& Market Intelligence Engine (Kivy Desktop)
-echo   3. Run Stage 2: Contextual Question Tree ^& Prompt Engine (Headless CLI)
-echo   4. Run Stage 3: Voice-to-Voice Interview Loop (Kivy Desktop)
-echo   5. Run Stage 4: Post-Session Report Generator UI (Kivy Desktop)
-echo   6. Run Stage 4: Post-Session Report Generator CLI (Headless CLI)
+echo   2. Run Stage 1: JD Research ^& Market Intelligence Engine
+echo   3. Run Stage 2: Contextual Question Tree ^& Prompt Engine
+echo   4. Run Stage 3: Voice-to-Voice Interview Loop
+echo   5. Run Stage 4: Post-Session Multimodal Report Generator Engine
 echo.
 echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
-echo   7. Test Speech-to-Text ^& Silero VAD (listener.py)
-echo   8. Test Text-to-Speech Kokoro-82M (speaker.py)
-echo   9. Test Ollama Qwen2.5 Streaming Brain (brain.py)
+echo   6. Test Speech-to-Text ^& Silero VAD (listener.py)
+echo   7. Test Text-to-Speech Kokoro-82M (speaker.py)
+echo   8. Test Ollama Qwen2.5 Streaming Brain (brain.py)
 echo.
 echo  --- SETUP TOOLS ---
-echo  10. Install / Update Backend Dependencies (requirements.txt)
-echo  11. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo   9. Install / Update Backend Dependencies (requirements.txt)
+echo  10. Download / Verify Silero VAD Model Weights (download_vad.py)
 echo.
 echo  --- MAINTENANCE ^& DATA CLEANING ---
-echo  13. Clean Stage Test Output Directories (model/*/model/test_output/)
-echo  14. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  15. Clean SQLite Research Cache Database (cache.db)
-echo  16. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
-echo  17. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  11. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/model/test_output/)
+echo  12. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
+echo  13. Clean SQLite Research Cache Database (cache.db)
+echo  14. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
+echo  15. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-17): "
+set /p choice="Enter your choice (0-15): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
 if "%choice%"=="3" goto run_question_model_cli
 if "%choice%"=="4" goto run_voice_model
-if "%choice%"=="5" goto run_report_ui
-if "%choice%"=="6" goto run_report_cli
-if "%choice%"=="7" goto test_listener
-if "%choice%"=="8" goto test_speaker
-if "%choice%"=="9" goto test_brain
-if "%choice%"=="10" goto install_reqs
-if "%choice%"=="11" goto run_vad
-if "%choice%"=="13" goto clean_test_outputs
-if "%choice%"=="14" goto clean_sessions
-if "%choice%"=="15" goto clean_cache_db
-if "%choice%"=="16" goto clean_bytecode_trash
-if "%choice%"=="17" goto clean_full_deep
+if "%choice%"=="5" goto run_report_model
+if "%choice%"=="6" goto test_listener
+if "%choice%"=="7" goto test_speaker
+if "%choice%"=="8" goto test_brain
+if "%choice%"=="9" goto install_reqs
+if "%choice%"=="10" goto run_vad
+if "%choice%"=="11" goto clean_test_outputs
+if "%choice%"=="12" goto clean_sessions
+if "%choice%"=="13" goto clean_cache_db
+if "%choice%"=="14" goto clean_bytecode_trash
+if "%choice%"=="15" goto clean_full_deep
 if "%choice%"=="0" goto end
 goto menu
 
@@ -69,7 +67,7 @@ goto menu
 :run_unified_workflow
 echo.
 echo [LAUNCHING] Complete Unified 4-Stage Netran AI Interview Workflow...
-.venv\Scripts\python.exe -m model.workflow.model.app
+.venv\Scripts\python.exe -m model.workflow.model.front
 pause
 goto menu
 
@@ -78,13 +76,13 @@ goto menu
 :run_research_model
 echo.
 echo [LAUNCHING] Stage 1: JD Research ^& Market Intelligence Engine...
-echo  1. Kivy Desktop GUI Client (app.py)
+echo  1. Kivy Desktop GUI Client (front.py)
 echo  2. Headless CLI Test Harness (test_pipeline.py)
 set /p rchoice="Select execution mode (1-2, default 1): "
 if "%rchoice%"=="2" (
     .venv\Scripts\python.exe -m model.research_model.model.test_pipeline
 ) else (
-    .venv\Scripts\python.exe -m model.research_model.model.app
+    .venv\Scripts\python.exe -m model.research_model.model.front
 )
 pause
 goto menu
@@ -92,13 +90,13 @@ goto menu
 :run_question_model_cli
 echo.
 echo [LAUNCHING] Stage 2: Contextual Question ^& Behavioral Prompt Engine...
-echo  1. Kivy Desktop GUI Client (app.py)
+echo  1. Kivy Desktop GUI Client (front.py)
 echo  2. Headless CLI Test Harness (test_pipeline.py)
 set /p qchoice="Select execution mode (1-2, default 1): "
 if "%qchoice%"=="2" (
     .venv\Scripts\python.exe -m model.question_model.model.test_pipeline
 ) else (
-    .venv\Scripts\python.exe -m model.question_model.model.app
+    .venv\Scripts\python.exe -m model.question_model.model.front
 )
 pause
 goto menu
@@ -106,28 +104,28 @@ goto menu
 :run_voice_model
 echo.
 echo [LAUNCHING] Stage 3: Live Voice-to-Voice Streaming Loop...
-echo  1. Kivy Desktop GUI Client (main_app.py)
+echo  1. Kivy Desktop GUI Client (front.py)
 echo  2. Headless CLI Test Harness (test_pipeline.py)
 set /p vchoice="Select execution mode (1-2, default 1): "
 if "%vchoice%"=="2" (
     .venv\Scripts\python.exe -m model.voice_to_voice_model.model.test_pipeline
 ) else (
-    .venv\Scripts\python.exe -m model.voice_to_voice_model.model.main_app
+    .venv\Scripts\python.exe -m model.voice_to_voice_model.model.front
 )
 pause
 goto menu
 
-:run_report_ui
+:run_report_model
 echo.
-echo [LAUNCHING] Stage 4: Multimodal Report Engine Test Desktop (Kivy Desktop)...
-.venv\Scripts\python.exe -m model.reports_model.model.test_ui
-pause
-goto menu
-
-:run_report_cli
-echo.
-echo [LAUNCHING] Stage 4: Multimodal Report Engine Headless Pipeline (CLI)...
-.venv\Scripts\python.exe -m model.reports_model.model.test_pipeline
+echo [LAUNCHING] Stage 4: Post-Session Multimodal Evaluation ^& Report Engine...
+echo  1. Kivy Desktop GUI Client (front.py)
+echo  2. Headless CLI Test Harness (test_pipeline.py)
+set /p repchoice="Select execution mode (1-2, default 1): "
+if "%repchoice%"=="2" (
+    .venv\Scripts\python.exe -m model.reports_model.model.test_pipeline
+) else (
+    .venv\Scripts\python.exe -m model.reports_model.model.front
+)
 pause
 goto menu
 
@@ -175,8 +173,9 @@ goto menu
 :clean_test_outputs
 echo.
 echo [CLEANING] Deleting single-stage test output directories...
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Stage test_output directories removed.
+echo Clean complete: Stage test output directories removed.
 pause
 goto menu
 
@@ -211,6 +210,7 @@ echo.
 echo ===================================================================
 echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
 echo ===================================================================
+powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -Command "Remove-Item -Path 'sessions\*' -Recurse -Force -ErrorAction SilentlyContinue"

@@ -1,6 +1,6 @@
 """
 Netran AI — Workflow Orchestrator
-Module: app.py
+Module: front.py
 Description: Main 5-screen Kivy Desktop Application (`SetupScreen` -> `ResearchScreen`
              -> `QuestionScreen` -> `InterviewScreen` -> `ReportScreen`) integrating all 4 interview stages.
 """

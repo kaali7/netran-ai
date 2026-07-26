@@ -1,0 +1,51 @@
+{
+  "session_id": "sess_20260726_140034",
+  "session_start_iso": "2026-07-26T08:30:34.928991Z",
+  "total_turns": 4,
+  "turns": [
+    {
+      "turn_id": 1,
+      "topic": "Frontend Engineering",
+      "question_text": "Hello! Welcome to your technical interview today. [Clears Throat] Could you please start by describing your core frontend stack?",
+      "candidate_transcript": "I have knowledge in React.js and Next.js.",
+      "audio_start_sec": 19.166,
+      "audio_end_sec": 27.734,
+      "silence_duration_before_answer_sec": 0.0,
+      "stt_latency_ms": 1703.5,
+      "ttft_ms": 1678.0
+    },
+    {
+      "turn_id": 2,
+      "topic": "Frontend Engineering",
+      "question_text": "That's great! How do these technologies integrate with each other, if at all?",
+      "candidate_transcript": "It is both to integration about talking, so React.js can be used in the Next.js, because Next.js is a combination of",
+      "audio_start_sec": 36.307,
+      "audio_end_sec": 50.851,
+      "silence_duration_before_answer_sec": 0.001,
+      "stt_latency_ms": 2050.1,
+      "ttft_ms": 1700.7
+    },
+    {
+      "turn_id": 3,
+      "topic": "Frontend Engineering",
+      "question_text": "Could you elaborate on how Next.js integrates with React.js? Also, what specific features or functionalities does Next.js offer that differentiate it from other build tools for frontend development?",
+      "candidate_transcript": "Well, in this, I will not know about this, but I will be a learn more.",
+      "audio_start_sec": 72.805,
+      "audio_end_sec": 83.89,
+      "silence_duration_before_answer_sec": 0.001,
+      "stt_latency_ms": 1893.8,
+      "ttft_ms": 1634.1
+    },
+    {
+      "turn_id": 4,
+      "topic": "Frontend Engineering",
+      "question_text": "That's perfect! Let\u2019s move to the next question. Please tell me your experience with TypeScript or JavaScript frameworks like Angular and Vue.js.",
+      "candidate_transcript": "I do have experience in Angular, I only have one knowledge about React and Nages because I already created many projects in that.",
+      "audio_start_sec": 100.123,
+      "audio_end_sec": 116.823,
+      "silence_duration_before_answer_sec": 0.001,
+      "stt_latency_ms": 2085.8,
+      "ttft_ms": 1567.6
+    }
+  ]
+}

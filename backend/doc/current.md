@@ -23,10 +23,10 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 | Stage | Module Name | Status | Location | Key Technologies & Output |
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | Gemini 3.6 Flash, Tavily Search API, SQLite caching (`cache.db`), Kivy UI |
-| **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`app.py`), `interview_questions.json`, `interviewer_behavior.json` |
-| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:1.5b, Kokoro-82M TTS. Per-frame DC offset + auto-gain (up to 50x) applied before `ContinuousMicWriter` write AND Whisper STT. Snappy 320ms silence endpointing. `⚡ Done Speaking` button. `test/input/` & `test/output/sess_<timestamp>/` I/O contract. |
-| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, `report.json`, `evaluation_summary.md` |
-| **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`app.py`), demo data testing harness |
+| **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`front.py`), `interview_questions.json`, `interviewer_behavior.json` |
+| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:1.5b, Kokoro-82M TTS. Per-frame DC offset + auto-gain (up to 50x) applied before `ContinuousMicWriter` write AND Whisper STT. ~900ms silence endpointing. `⚡ Done Speaking` button. `test/input/` & `test/output/sess_<timestamp>/` I/O contract. |
+| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, `report.json`, `evaluation_summary.md`, Kivy GUI (`front.py`) |
+| **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`front.py`), demo data testing harness |
 
 ---
 
@@ -34,7 +34,7 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  SetupScreen (Kivy UI / app.py)                                             │
+│  SetupScreen (Kivy UI / front.py)                                           │
 │  • Candidate Metadata & Seniority Selector                                  │
 │  • Dual JD Input: Paste text  OR  Upload File (PDF/DOCX/TXT)                │
 │  • Resume File Upload (PDF/DOCX/TXT)                                        │
@@ -78,27 +78,27 @@ Netran AI (SAMWINI) is an intelligent, multimodal AI technical interviewer. The 
 
 ### 1. Stage 1: Research Model (`research_model`)
 - **Location**: `backend/model/research_model/model/`
-- **Core Files**: `pipeline.py`, `jd_parser.py`, `search_engine.py`, `rubric_generator.py`, `cache.py`, `gemini_client.py`, `schemas.py`, `app.py`
+- **Core Files**: `pipeline.py`, `jd_parser.py`, `search_engine.py`, `rubric_generator.py`, `cache.py`, `gemini_client.py`, `schemas.py`, `front.py`
 - **Functionality**: Extracts role requirements from JD text, performs Tavily web search filtered to trusted domains (`leetcode.com`, `glassdoor.com`, `github.com`, `geeksforgeeks.org`, `reddit.com`), synthesizes an assessment rubric using Gemini 3.6 Flash, and caches results in `cache.db` for instant re-runs (< 1s).
 
 ### 2. Stage 2: Question Engine (`question_model`)
 - **Location**: `backend/model/question_model/model/`
-- **Core Files**: `app.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
+- **Core Files**: `front.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
 - **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`) and JD text (`sample_job_detail.json` & `sample_resume.json`). Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`). Outputs `interview_questions.json` and `interviewer_behavior.json` inside session folder `sess_<timestamp>/`.
 
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`
-- **Core Files**: `listener.py`, `brain.py`, `speaker.py`, `session_logger.py`, `benchmark.py`, `download_vad.py`, `main_app.py`
+- **Core Files**: `listener.py`, `brain.py`, `speaker.py`, `session_logger.py`, `benchmark.py`, `download_vad.py`, `front.py`
 - **Functionality**: Drives the real-time cascaded voice loop. Uses Silero VAD v3 + dynamic peak auto-gain for robust speech detection, Faster-Whisper (`small` int8) for STT, Ollama `qwen2.5:1.5b` for LLM reasoning, Kokoro-82M (`af_bella`) for neural TTS streaming, and logs raw continuous PCM mic audio alongside a millisecond-precision timing manifest.
 
 ### 4. Stage 4: Reports Model (`reports_model`)
 - **Location**: `backend/model/reports_model/model/`
-- **Core Files**: `audio_slicer.py`, `gemini_evaluator.py`, `report_builder.py`, `report_schema.py`, `test_ui.py`, `test_pipeline.py`
+- **Core Files**: `audio_slicer.py`, `gemini_evaluator.py`, `report_builder.py`, `report_schema.py`, `front.py`, `test_pipeline.py`
 - **Functionality**: Post-interview analytics module. Uses Python `wave` to cut non-destructive turn audio clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps, runs a 3-branch Gemini multimodal evaluation (Audio Branch, Technical Branch, Combine Branch), and generates `report.json` and `evaluation_summary.md`.
 
 ### 5. Workflow Orchestrator (`workflow`)
 - **Location**: `backend/model/workflow/model/`
-- **Core Files**: `app.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `sample_resume.txt`, `sample_jd.txt`
+- **Core Files**: `front.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `sample_resume.txt`, `sample_jd.txt`
 - **Functionality**: Master multi-stage controller. Houses the unified 5-screen Kivy desktop GUI application (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportScreen`), orchestrates background pipeline threads, and provides built-in demo testing data.
 
 ---

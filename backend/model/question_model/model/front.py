@@ -1,6 +1,6 @@
 """
 Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
-Module: app.py
+Module: front.py
 Description: Standalone Kivy Desktop GUI application for Stage 2 Question Tree & System Prompt generation.
 """
 

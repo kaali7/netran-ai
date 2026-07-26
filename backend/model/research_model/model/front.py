@@ -1,6 +1,6 @@
 """
 Netran AI — Stage 1: JD Research & Market Intelligence Engine
-Module: app.py
+Module: front.py
 Description: Standalone Kivy Desktop GUI application for Stage 1 JD research, web intelligence visualization,
              preset dummy input loading, and rubric generation.
 """

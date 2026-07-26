@@ -2,5 +2,5 @@
 title Netran AI - Unified Workflow Orchestrator
 cd /d %~dp0
 set PYTHONPATH=..\..\..\..\backend
-python app.py
+python front.py
 pause

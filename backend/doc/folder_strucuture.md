@@ -29,7 +29,7 @@ backend/
     │   │   └── output/        # Generated session outputs ( sess_<timestamp>.json )
     │   └── model/
     │       ├── __init__.py    # Package initializer
-    │       ├── app.py         # Kivy Desktop GUI test client with web intel visualizer
+    │       ├── front.py       # Kivy Desktop GUI test client with web intel visualizer
     │       ├── cache.py       # SQLite hash-based caching engine (cache.db)
     │       ├── config.py      # Stage 1 configuration & environment loader (TRUSTED_DOMAINS)
     │       ├── gemini_client.py # Gemini 3.6 Flash Interactions API client & REST fallback
@@ -48,7 +48,7 @@ backend/
     │   │   ├── input/         # Pre-saved dummy input JSON files (sample_job_detail.json & sample_resume.json)
     │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> interview_questions.json & interviewer_behavior.json )
     │   └── model/
-    │       ├── app.py         # Stage 2 Kivy Desktop GUI Client
+    │       ├── front.py       # Stage 2 Kivy Desktop GUI Client
     │       ├── config.py      # Stage 2 configuration loader
     │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
     │       ├── question_generator.py # Gemini 15-question tree & system prompt generator
@@ -67,9 +67,9 @@ backend/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
     │       ├── brain.py       # Local Ollama Qwen2.5:1.5b streaming LLM engine ('Eva' persona)
     │       ├── download_vad.py # Downloader utility for Silero VAD ONNX model weights
+    │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── interview_scripts.json # Pre-scripted calibration tracks for Script Mode
     │       ├── listener.py    # Silero VAD v3, auto-gain peak normalizer, Faster-Whisper STT
-    │       ├── main_app.py    # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── session_logger.py # Monotonic timer & session_manifest.json logger
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
     │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
@@ -79,19 +79,22 @@ backend/
     │   ├── doc/
     │   │   ├── current.md     # Stage 4 technical implementation status
     │   │   └── prd.md         # Stage 4 Product Requirements Document
+    │   ├── test/              # Stage 4 test harness input/output directories
+    │   │   ├── input/         # Stage 3 preset input sessions (sample_session/ -> continuous_mic_input.wav & session_manifest.json)
+    │   │   └── output/        # Generated report sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
     │   └── model/
     │       ├── audio_slicer.py # Non-destructive WAV slicing utility (turn_XX.wav)
+    │       ├── front.py       # Kivy Desktop GUI test client for Stage 4
     │       ├── gemini_evaluator.py # 3-branch Gemini multimodal evaluation engine
     │       ├── report_builder.py # Stage 4 orchestrator & dual artifact renderer (JSON + MD)
     │       ├── report_schema.py # Pydantic schemas (CandidateReportPayload, TurnAnalysis, PillarScore)
-    │       ├── test_pipeline.py # Standalone CLI test harness for Stage 4
-    │       └── test_ui.py     # Kivy Desktop GUI test client for Stage 4
+    │       └── test_pipeline.py # Standalone CLI test harness for Stage 4
     │
     └── workflow/              # UNIFIED WORKFLOW ORCHESTRATOR (Stage 1→4)
         ├── doc/
         │   └── current.md     # Unified workflow technical documentation
         └── model/
-            ├── app.py         # Unified 5-Screen Kivy Desktop Application
+            ├── front.py       # Unified 5-Screen Kivy Desktop Application
             ├── config.py      # Master configuration & non-colliding sys.path injector
             ├── orchestrator.py # Master 4-stage pipeline execution coordinator
             ├── sample_data.py # Demo testing data provider (Arjun Sharma + DataFlow Inc.)

@@ -1,6 +1,6 @@
 """
 Netran AI — Stage 3: Live Voice-to-Voice Loop
-Module: main_app.py
+Module: front.py
 Description: Standalone Kivy Desktop GUI client for testing live voice interviews and Script Calibration Mode.
 """
 

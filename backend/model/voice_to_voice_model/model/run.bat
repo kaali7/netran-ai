@@ -15,7 +15,7 @@ echo ===================================================
 echo     NETRAN AI - VOICE-TO-VOICE TEST INTERACTION
 echo ===================================================
 echo.
-echo  1. Run Full Kivy Interview Client (main_app.py)
+echo  1. Run Full Kivy Interview Client (front.py)
 echo  2. Test Speech-to-Text Listener (listener.py)
 echo  3. Test Text-to-Speech Speaker (speaker.py)
 echo  4. Test Conversation LLM Brain (brain.py)
@@ -36,7 +36,7 @@ goto menu
 :run_app
 echo.
 echo Starting Kivy Interview Window...
-..\..\..\.venv\Scripts\python.exe main_app.py
+..\..\..\.venv\Scripts\python.exe front.py
 pause
 goto menu
 

@@ -61,14 +61,16 @@ def render_markdown_report(report: CandidateReportPayload) -> str:
 
 def build_report(
     session_dir: Union[str, Path],
-    model_name: str = "gemini-3.6-flash"
+    model_name: str = "gemini-3.6-flash",
+    output_dir: Union[str, Path] = None
 ) -> CandidateReportPayload:
     """
     Main entry point for Stage 4 Report Generation.
 
     Args:
-        session_dir: Directory path containing continuous_mic_input.wav and session_manifest.json
+        session_dir: Directory path containing continuous_mic_input.wav (or recording.wav) and session_manifest.json
         model_name: Gemini model name (default: gemini-3.6-flash)
+        output_dir: Optional custom output directory for report artifacts. If None, saves in session_dir.
 
     Returns:
         Validated CandidateReportPayload object.
@@ -79,8 +81,14 @@ def build_report(
 
     if not manifest_path.exists():
         raise FileNotFoundError(f"Manifest missing at {manifest_path}")
+
+    # Fallback to recording.wav if continuous_mic_input.wav is missing
     if not wav_path.exists():
-        raise FileNotFoundError(f"Audio file missing at {wav_path}")
+        alt_wav_path = session_dir / "recording.wav"
+        if alt_wav_path.exists():
+            wav_path = alt_wav_path
+        else:
+            raise FileNotFoundError(f"Audio file missing at {wav_path} or {alt_wav_path}")
 
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest_data = json.load(f)
@@ -90,11 +98,15 @@ def build_report(
 
     print(f"[ReportBuilder] Starting Stage 4 processing for session: {session_id}")
 
+    # Target directory for saving report.json and evaluation_summary.md
+    target_out_dir = Path(output_dir) if output_dir else session_dir
+    target_out_dir.mkdir(parents=True, exist_ok=True)
+
     # Step 1: Slice audio
     turn_clips = slice_audio(
         wav_path=wav_path,
         manifest=manifest_data,
-        output_dir=session_dir
+        output_dir=target_out_dir
     )
 
     # Step 2: Initialize Evaluator
@@ -135,16 +147,26 @@ def build_report(
         final_report.generated_at = datetime.utcnow().isoformat() + "Z"
 
     # Step 5: Save report.json
-    json_path = session_dir / "report.json"
+    json_path = target_out_dir / "report.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(final_report.model_dump(), f, indent=2)
     print(f"[ReportBuilder] Saved JSON report artifact to: {json_path}")
 
     # Step 6: Save evaluation_summary.md
     md_content = render_markdown_report(final_report)
-    md_path = session_dir / "evaluation_summary.md"
+    md_path = target_out_dir / "evaluation_summary.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md_content)
     print(f"[ReportBuilder] Saved Markdown evaluation summary to: {md_path}")
+
+    # Also save to session_dir if custom output_dir was specified
+    if output_dir and target_out_dir != session_dir:
+        try:
+            with open(session_dir / "report.json", "w", encoding="utf-8") as f:
+                json.dump(final_report.model_dump(), f, indent=2)
+            with open(session_dir / "evaluation_summary.md", "w", encoding="utf-8") as f:
+                f.write(md_content)
+        except Exception:
+            pass
 
     return final_report
