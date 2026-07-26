@@ -345,7 +345,7 @@ KV = """
                 color: 0.30, 0.60, 0.80, 1
             Label:
                 id: turn_counter_label
-                text: "Turn 1 / 15"
+                text: "Turn 1 / 5"
                 font_size: '16sp'
                 bold: True
                 color: 0.90, 0.70, 0.20, 1
@@ -550,6 +550,7 @@ class SetupScreen(Screen):
     def fill_demo_data(self):
         self.ids.candidate_name.text = "Arjun Sharma"
         self.ids.seniority_spinner.text = "Senior"
+        self.ids.limit_spinner.text = "Fast Testing (5 Questions)"
         self.selected_resume_path = SAMPLE_RESUME_PATH
         self.ids.resume_file_label.text = os.path.basename(SAMPLE_RESUME_PATH)
         self.selected_jd_path = SAMPLE_JD_PATH
@@ -635,8 +636,8 @@ class QuestionScreen(Screen):
 
 
 class InterviewScreen(Screen):
-    def update_turn(self, turn_idx: int, state_str: str, question: str, candidate_txt: str):
-        self.ids.turn_counter_label.text = f"Turn {turn_idx} / 15"
+    def update_turn(self, turn_idx: int, state_str: str, question: str, candidate_txt: str, max_turns: int = 5):
+        self.ids.turn_counter_label.text = f"Turn {turn_idx} / {max_turns}"
         self.ids.state_label.text = f"STATUS: {state_str}"
         if question:
             self.ids.current_question_label.text = question
@@ -788,8 +789,9 @@ class NetranWorkflowApp(App):
         if self.root:
             if self.root.current != 'interview':
                 self.root.current = 'interview'
+            max_q = self.workflow_data.get("max_questions", 5)
             interview_scr = self.root.get_screen('interview')
-            interview_scr.update_turn(turn_idx=turn_id, state_str=state_label, question=question, candidate_txt=candidate_txt)
+            interview_scr.update_turn(turn_idx=turn_id, state_str=state_label, question=question, candidate_txt=candidate_txt, max_turns=max_q)
 
 
 if __name__ == '__main__':

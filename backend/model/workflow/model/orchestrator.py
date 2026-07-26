@@ -94,6 +94,15 @@ def run_full_pipeline(
         target_seniority=target_seniority,
         output_dir=session_dir
     )
+    if max_questions and max_questions < len(stage2_output.question_tree):
+        stage2_output.question_tree = stage2_output.question_tree[:max_questions]
+        questions_path = os.path.join(session_dir, "interview_questions.json")
+        try:
+            with open(questions_path, "w", encoding="utf-8") as f:
+                json.dump([q.model_dump() for q in stage2_output.question_tree], f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to overwrite interview_questions.json with max_questions: {e}")
+
     results["stage2_output"] = stage2_output
     notify("Stage 2: Question Engine", f"Generated {len(stage2_output.question_tree)} questions & dynamic system prompt.", 50, {
         "questions": [q.model_dump() for q in stage2_output.question_tree],
