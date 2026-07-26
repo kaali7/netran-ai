@@ -5,18 +5,18 @@ Description: Master end-to-end pipeline coordinator linking Stage 1 (Research) -
              -> Stage 3 (Voice Interview) -> Stage 4 (Reports Engine) using clean, unified StagePipeline objects.
 """
 
-import os
 import json
-import time
 import logging
+import os
+from collections.abc import Callable
 from datetime import datetime
-from typing import Callable, Optional, Dict, Any
+from typing import Any
 
 try:
-    from .config import PROCESS_BASE_DIR, OUTPUT_BASE_DIR
+    from .config import OUTPUT_BASE_DIR, PROCESS_BASE_DIR
     from .voice_engine import WorkflowVoiceEngine
 except ImportError:
-    from model.workflow.model.config import PROCESS_BASE_DIR, OUTPUT_BASE_DIR
+    from model.workflow.model.config import OUTPUT_BASE_DIR, PROCESS_BASE_DIR
     from model.workflow.model.voice_engine import WorkflowVoiceEngine
 
 try:
@@ -37,7 +37,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def create_workflow_directories(session_id: Optional[str] = None) -> tuple[str, str, str]:
+def create_workflow_directories(session_id: str | None = None) -> tuple[str, str, str]:
     if not session_id:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         session_id = f"sess_{timestamp}"
@@ -51,19 +51,19 @@ def create_workflow_directories(session_id: Optional[str] = None) -> tuple[str, 
 def run_full_pipeline(
     jd_text: str,
     resume_path: str,
-    session_id: Optional[str] = None,
+    session_id: str | None = None,
     target_seniority: str = "Mid",
-    max_questions: Optional[int] = None,
-    status_callback: Optional[Callable[[str, str, int, Dict[str, Any]], None]] = None,
-    voice_callback: Optional[Callable[[int, str, str, str], None]] = None,
-    voice_engine_ref: Optional[list] = None
-) -> Dict[str, Any]:
+    max_questions: int | None = None,
+    status_callback: Callable[[str, str, int, dict[str, Any]], None] | None = None,
+    voice_callback: Callable[[int, str, str, str], None] | None = None,
+    voice_engine_ref: list | None = None
+) -> dict[str, Any]:
     """
     Master pipeline orchestrator running Stage 1 -> 2 -> 3 -> 4 using uniform StagePipelines.
     Middle processing artifacts are stored in process_dir (model/workflow/test/process/).
     Final report output artifacts are stored in output_dir (model/workflow/test/output/).
     """
-    def notify(stage: str, msg: str, pct: int, payload: Dict[str, Any] = None):
+    def notify(stage: str, msg: str, pct: int, payload: dict[str, Any] = None):
         logger.info(f"[{stage}] ({pct}%) {msg}")
         if status_callback:
             status_callback(stage, msg, pct, payload or {})

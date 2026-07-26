@@ -6,8 +6,8 @@ Description: Configuration loader for Stage 1. Enforces Stage1Config object mode
 
 import os
 from dataclasses import dataclass, field
-from typing import List
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Search for .env file up to backend root
@@ -35,7 +35,7 @@ class Stage1Config:
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
     tavily_api_key: str = field(default_factory=lambda: os.getenv("TAVILY_API_KEY", ""))
-    trusted_domains: List[str] = field(default_factory=lambda: TRUSTED_DOMAINS_DEFAULT)
+    trusted_domains: list[str] = field(default_factory=lambda: TRUSTED_DOMAINS_DEFAULT)
 
     @classmethod
     def from_env(cls) -> "Stage1Config":

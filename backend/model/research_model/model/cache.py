@@ -4,12 +4,10 @@ Module: cache.py
 Description: Class-based SQLite caching subsystem (`cache.db`) for interview rubrics.
 """
 
-import sqlite3
 import hashlib
-import json
 import logging
+import sqlite3
 from pathlib import Path
-from typing import Optional
 
 try:
     from .schemas import InterviewRubric
@@ -52,7 +50,7 @@ class Stage1Cache:
         """Computes SHA-256 hash of input text."""
         return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
 
-    def get(self, jd_text: str) -> Optional[InterviewRubric]:
+    def get(self, jd_text: str) -> InterviewRubric | None:
         """Retrieves cached InterviewRubric if available."""
         jd_hash = self.hash_text(jd_text)
         try:
@@ -86,7 +84,7 @@ class Stage1Cache:
 # Global default cache instance for module-level functions
 default_cache = Stage1Cache()
 
-def get_cached_rubric(jd_text: str) -> Optional[InterviewRubric]:
+def get_cached_rubric(jd_text: str) -> InterviewRubric | None:
     return default_cache.get(jd_text)
 
 def set_cached_rubric(jd_text: str, rubric: InterviewRubric):

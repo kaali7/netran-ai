@@ -4,12 +4,12 @@ Module: front.py
 Description: Standalone Kivy Desktop GUI application for Stage 2 Question Tree & System Prompt generation.
 """
 
+import json
 import os
 import sys
-import json
 import threading
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Add paths for direct execution
 current_dir = Path(__file__).resolve().parent
@@ -19,29 +19,28 @@ for d in [str(current_dir), str(parent_dir), str(root_dir)]:
     if d not in sys.path:
         sys.path.insert(0, d)
 
-import kivy
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.graphics import Color, Line, RoundedRectangle
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.uix.screenmanager import FadeTransition, Screen, ScreenManager
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 
 try:
     from .question_generator import generate_stage2_output
-    from .schemas import Stage2Output, QuestionItem
+    from .schemas import QuestionItem, Stage2Output
 except ImportError:
     try:
         from model.question_model.model.question_generator import generate_stage2_output
-        from model.question_model.model.schemas import Stage2Output, QuestionItem
+        from model.question_model.model.schemas import QuestionItem, Stage2Output
     except ImportError:
         from question_generator import generate_stage2_output
-        from schemas import Stage2Output, QuestionItem
+        from schemas import Stage2Output
 
 # Window Setup
 Window.size = (1024, 768)

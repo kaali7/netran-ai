@@ -7,6 +7,7 @@ Description: Configuration loader for Stage 3. Enforces Stage3Config object mode
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Search for .env file up to backend root

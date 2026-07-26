@@ -5,43 +5,48 @@ Description: Main 5-screen Kivy Desktop Application (`SetupScreen` -> `ResearchS
              -> `QuestionScreen` -> `InterviewScreen` -> `ReportScreen`) integrating all 4 interview stages.
 """
 
-import os
-import sys
-import threading
 import json
+import os
 import shutil
-from datetime import datetime
-from typing import Optional, Dict, Any, List
+import threading
 
 try:
     from . import config
-    from .sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
     from .orchestrator import run_full_pipeline
+    from .sample_data import (
+        SAMPLE_JD_PATH,
+        SAMPLE_RESUME_PATH,
+        get_sample_jd_text,
+        get_sample_resume_text,
+    )
 except ImportError:
     try:
         from model.workflow.model import config
-        from model.workflow.model.sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
         from model.workflow.model.orchestrator import run_full_pipeline
+        from model.workflow.model.sample_data import (
+            SAMPLE_JD_PATH,
+            SAMPLE_RESUME_PATH,
+            get_sample_jd_text,
+            get_sample_resume_text,
+        )
     except ImportError:
-        import config
-        from sample_data import get_sample_resume_text, get_sample_jd_text, SAMPLE_RESUME_PATH, SAMPLE_JD_PATH
         from orchestrator import run_full_pipeline
+        from sample_data import (
+            SAMPLE_JD_PATH,
+            SAMPLE_RESUME_PATH,
+            get_sample_jd_text,
+        )
 
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.graphics import Color, RoundedRectangle
 from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.textinput import TextInput
-from kivy.uix.popup import Popup
 from kivy.uix.filechooser import FileChooserListView
-from kivy.uix.progressbar import ProgressBar
-from kivy.uix.spinner import Spinner
-from kivy.graphics import Color, RoundedRectangle, Rectangle
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
+from kivy.uix.screenmanager import FadeTransition, Screen, ScreenManager
 
 # Styling & Layout KV Definition
 KV = """
@@ -643,7 +648,7 @@ class QuestionScreen(Screen):
 
 
 class ReportCard(BoxLayout):
-    def __init__(self, title: str, score: Optional[int], summary: str, is_summary: bool = False, **kwargs):
+    def __init__(self, title: str, score: int | None, summary: str, is_summary: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None

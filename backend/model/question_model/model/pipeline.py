@@ -9,32 +9,35 @@ import json
 import logging
 import os
 import time
-from typing import Optional
+
 from google import genai
 from google.genai import types
 
 try:
-    from .config import Stage2Config
-    from .schemas import Stage2Output, QuestionItem
-    from .prompts import STAGE2_FULL_PROMPT_TEMPLATE, FALLBACK_SYSTEM_PROMPT_TEMPLATE
-    from .prompt_builder import PromptBuilder
-    from .resume_parser import ResumeParser
     from .cache import Stage2Cache
+    from .config import Stage2Config
+    from .prompt_builder import PromptBuilder
+    from .prompts import FALLBACK_SYSTEM_PROMPT_TEMPLATE, STAGE2_FULL_PROMPT_TEMPLATE
+    from .resume_parser import ResumeParser
+    from .schemas import QuestionItem, Stage2Output
 except ImportError:
     try:
-        from model.question_model.model.config import Stage2Config
-        from model.question_model.model.schemas import Stage2Output, QuestionItem
-        from model.question_model.model.prompts import STAGE2_FULL_PROMPT_TEMPLATE, FALLBACK_SYSTEM_PROMPT_TEMPLATE
-        from model.question_model.model.prompt_builder import PromptBuilder
-        from model.question_model.model.resume_parser import ResumeParser
         from model.question_model.model.cache import Stage2Cache
+        from model.question_model.model.config import Stage2Config
+        from model.question_model.model.prompt_builder import PromptBuilder
+        from model.question_model.model.prompts import (
+            FALLBACK_SYSTEM_PROMPT_TEMPLATE,
+            STAGE2_FULL_PROMPT_TEMPLATE,
+        )
+        from model.question_model.model.resume_parser import ResumeParser
+        from model.question_model.model.schemas import QuestionItem, Stage2Output
     except ImportError:
-        from config import Stage2Config
-        from schemas import Stage2Output, QuestionItem
-        from prompts import STAGE2_FULL_PROMPT_TEMPLATE, FALLBACK_SYSTEM_PROMPT_TEMPLATE
-        from prompt_builder import PromptBuilder
-        from resume_parser import ResumeParser
         from cache import Stage2Cache
+        from config import Stage2Config
+        from prompt_builder import PromptBuilder
+        from prompts import FALLBACK_SYSTEM_PROMPT_TEMPLATE, STAGE2_FULL_PROMPT_TEMPLATE
+        from resume_parser import ResumeParser
+        from schemas import QuestionItem, Stage2Output
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +45,7 @@ logger = logging.getLogger(__name__)
 class Stage2Pipeline:
     """Master pipeline execution class for Stage 2 (Question & Behavioral Prompt Engine)."""
 
-    def __init__(self, config: Optional[Stage2Config] = None):
+    def __init__(self, config: Stage2Config | None = None):
         self.config = config or Stage2Config.from_env()
         self.cache = Stage2Cache()
         self.resume_parser = ResumeParser()
@@ -54,7 +57,7 @@ class Stage2Pipeline:
         jd_text: str,
         resume_path: str,
         target_seniority: str = "Mid",
-        output_dir: Optional[str] = None
+        output_dir: str | None = None
     ) -> Stage2Output:
         """
         Core reasoning engine leveraging Gemini to generate structured interview questions

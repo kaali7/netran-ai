@@ -5,12 +5,11 @@ Description: Standalone Headless CLI test harness for Stage 2 question tree and 
              Pairs sample_job_detail.json and sample_resume.json inputs into complete test presets.
 """
 
-import os
-import sys
 import json
 import logging
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 # Adjust Python path for direct execution
 current_dir = Path(__file__).resolve().parent
@@ -217,8 +216,8 @@ def run_test():
         print(f"Generated Question Tree: {len(output.question_tree)} Tiered Questions")
         print(f"System Prompt Length: {len(output.interviewer_system_prompt)} characters")
         print(f"Output Session Directory: {session_output_dir}")
-        print(f"  ├── interview_questions.json")
-        print(f"  └── interviewer_behavior.json\n")
+        print("  ├── interview_questions.json")
+        print("  └── interviewer_behavior.json\n")
         
         print("--- FIRST QUESTION PREVIEW ---")
         if output.question_tree:

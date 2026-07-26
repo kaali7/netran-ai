@@ -1,13 +1,21 @@
 """
 Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation Engine
-Module: report_schema.py (Backward Compatibility Alias)
-Description: Imports schemas from schemas.py for backward compatibility.
+Module: report_schema.py (Backward Compatibility Re-export)
+Description: Re-exports schemas from schemas.py for backward compatibility.
 """
 
 from .schemas import (
-    TurnAnalysis,
-    PillarScore,
     AudioBranchOutput,
+    CandidateReportPayload,
+    PillarScore,
     TechnicalBranchOutput,
-    CandidateReportPayload
+    TurnAnalysis,
 )
+
+__all__ = [
+    "TurnAnalysis",
+    "PillarScore",
+    "AudioBranchOutput",
+    "TechnicalBranchOutput",
+    "CandidateReportPayload",
+]

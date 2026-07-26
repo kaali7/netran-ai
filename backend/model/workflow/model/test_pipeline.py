@@ -5,11 +5,10 @@ Description: Standalone CLI headless test runner for verifying the complete 4-st
              (Stage 1 Research -> Stage 2 Questions -> Stage 3 Voice -> Stage 4 Reports).
 """
 
-import sys
-import os
 import json
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 # Add backend directory to sys.path
 backend_dir = Path(__file__).resolve().parents[3]
@@ -17,7 +16,8 @@ if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
 from model.workflow.model.orchestrator import run_full_pipeline
-from model.workflow.model.sample_data import get_sample_jd_text, SAMPLE_RESUME_PATH
+from model.workflow.model.sample_data import SAMPLE_RESUME_PATH, get_sample_jd_text
+
 
 def main():
     print("=" * 65)
@@ -52,7 +52,7 @@ def main():
 
     print(f"Target Session ID: {session_id}")
     print(f"Target Session Output Directory: {test_out_dir}")
-    print(f"Testing Mode: Bounded to 5 Questions Max (Fast Test Scoping)")
+    print("Testing Mode: Bounded to 5 Questions Max (Fast Test Scoping)")
     print("=" * 65)
 
     def status_callback(stage, msg, pct, payload):
@@ -76,7 +76,7 @@ def main():
 
         report = results.get("report")
         if report:
-            print(f"\n--- Final Synthesis Summary ---")
+            print("\n--- Final Synthesis Summary ---")
             print(f"Hiring Signal:    {report.overall_hiring_signal}")
             print(f"Technical Score:  {report.overall_technical_score}/100")
             print(f"Vocal Score:      {report.overall_vocal_confidence_score}/100")

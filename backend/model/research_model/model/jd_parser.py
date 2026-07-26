@@ -4,23 +4,21 @@ Module: jd_parser.py
 Description: Class-based Job Description (JD) parser extracting role, company, tech stack, and queries.
 """
 
-import json
 import logging
-from typing import Optional
 
 try:
-    from .schemas import ParsedJD
     from .gemini_client import GeminiClient
     from .prompts import JD_PARSER_PROMPT_TEMPLATE
+    from .schemas import ParsedJD
 except ImportError:
     try:
-        from model.research_model.model.schemas import ParsedJD
         from model.research_model.model.gemini_client import GeminiClient
         from model.research_model.model.prompts import JD_PARSER_PROMPT_TEMPLATE
+        from model.research_model.model.schemas import ParsedJD
     except ImportError:
-        from schemas import ParsedJD
         from gemini_client import GeminiClient
         from prompts import JD_PARSER_PROMPT_TEMPLATE
+        from schemas import ParsedJD
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +26,7 @@ logger = logging.getLogger(__name__)
 class JDParser:
     """Class-based JD parser leveraging Gemini to extract structured role metadata."""
 
-    def __init__(self, gemini_client: Optional[GeminiClient] = None):
+    def __init__(self, gemini_client: GeminiClient | None = None):
         self.gemini_client = gemini_client or GeminiClient()
 
     def parse(self, jd_text: str) -> ParsedJD:

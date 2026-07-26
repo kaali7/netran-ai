@@ -5,7 +5,6 @@ Description: Class-based Tavily Search API client for querying web intelligence 
 """
 
 import logging
-from typing import List, Dict, Optional
 
 try:
     from .config import Stage1Config
@@ -21,10 +20,10 @@ logger = logging.getLogger(__name__)
 class MarketSearchEngine:
     """Class-based web intelligence search engine utilizing Tavily Search API."""
 
-    def __init__(self, config: Optional[Stage1Config] = None):
+    def __init__(self, config: Stage1Config | None = None):
         self.config = config or Stage1Config.from_env()
 
-    def search(self, search_queries: List[str]) -> List[Dict[str, str]]:
+    def search(self, search_queries: list[str]) -> list[dict[str, str]]:
         """
         Executes web searches using Tavily Search API for live market intelligence.
         Returns a list of dicts with title, url, and content.
@@ -76,5 +75,5 @@ class MarketSearchEngine:
 
 
 # Backward compatibility wrapper
-def search_market_intelligence(search_queries: List[str]) -> List[Dict[str, str]]:
+def search_market_intelligence(search_queries: list[str]) -> list[dict[str, str]]:
     return MarketSearchEngine().search(search_queries)

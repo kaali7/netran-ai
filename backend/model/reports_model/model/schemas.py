@@ -4,7 +4,6 @@ Module: schemas.py
 Description: Pydantic v2 data models enforcing output structures for candidate report payloads.
 """
 
-from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -18,7 +17,7 @@ class TurnAnalysis(BaseModel):
     hesitation_level: str = Field(description="Observed hesitation level: 'Low', 'Medium', or 'High'.")
     emotional_state: str = Field(description="Primary vocal emotion: 'Calm', 'Stressed', 'Uncertain', or 'Confident'.")
     filler_word_count: int = Field(ge=0, description="Estimated count of filler words (e.g., um, ah, like, you know).")
-    missing_concepts: List[str] = Field(default_factory=list, description="Key technical concepts missing from the candidate's response.")
+    missing_concepts: list[str] = Field(default_factory=list, description="Key technical concepts missing from the candidate's response.")
     audio_notes: str = Field(description="Specific qualitative feedback on candidate's vocal tone, pacing, and speech delivery.")
 
 
@@ -41,7 +40,7 @@ class AudioBranchOutput(BaseModel):
 class TechnicalBranchOutput(BaseModel):
     turn_id: int
     technical_score: int = Field(ge=1, le=10)
-    missing_concepts: List[str]
+    missing_concepts: list[str]
     technical_notes: str
 
 
@@ -51,6 +50,6 @@ class CandidateReportPayload(BaseModel):
     overall_hiring_signal: str = Field(description="Overall recommendation: 'Strong Hire', 'Hire', 'Lean No Hire', or 'No Hire'.")
     overall_technical_score: int = Field(ge=0, le=100, description="Aggregated overall technical score across all turns.")
     overall_vocal_confidence_score: int = Field(ge=0, le=100, description="Aggregated overall vocal delivery score across all turns.")
-    technical_pillars: List[PillarScore] = Field(default_factory=list, description="Domain-specific score breakdowns.")
-    turn_evaluations: List[TurnAnalysis] = Field(default_factory=list, description="Detailed per-turn evaluation items.")
+    technical_pillars: list[PillarScore] = Field(default_factory=list, description="Domain-specific score breakdowns.")
+    turn_evaluations: list[TurnAnalysis] = Field(default_factory=list, description="Detailed per-turn evaluation items.")
     executive_summary: str = Field(description="High-level narrative summary of candidate performance for hiring managers.")

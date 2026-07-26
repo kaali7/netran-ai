@@ -4,8 +4,8 @@ Module: download_vad.py
 Description: Download and verification utility for Silero VAD v3 ONNX model weights (`silero_vad.onnx`).
 """
 
-import urllib.request
 import os
+import urllib.request
 
 VAD_URL = "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx"
 OUT_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")

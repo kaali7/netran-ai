@@ -4,8 +4,8 @@ Module: sample_data.py
 Description: Demo testing data provider exposing sample resume and job description JSON files.
 """
 
-import os
 import json
+import os
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKFLOW_DIR = os.path.dirname(CURRENT_DIR)
@@ -21,7 +21,7 @@ def get_sample_resume_text() -> str:
             with open(SAMPLE_RESUME_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("resume_text", "")
-        except Exception:
+        except (json.JSONDecodeError, OSError):
             pass
     return "Sample Resume Content"
 
@@ -31,6 +31,6 @@ def get_sample_jd_text() -> str:
             with open(SAMPLE_JOB_DETAIL_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 return data.get("jd_text", "")
-        except Exception:
+        except (json.JSONDecodeError, OSError):
             pass
     return "Sample Job Description Content"

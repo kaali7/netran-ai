@@ -5,9 +5,8 @@ Description: Standalone Headless CLI test harness for verifying Stage 1 JD resea
              market intelligence retrieval, and rubric synthesis.
 """
 
-import os
-import sys
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 

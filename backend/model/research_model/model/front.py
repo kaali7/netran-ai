@@ -5,12 +5,11 @@ Description: Standalone Kivy Desktop GUI application for Stage 1 JD research, we
              preset dummy input loading, and rubric generation.
 """
 
-import os
+import json
 import sys
 import threading
-import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Add current directory to path for clean imports when running directly
 current_dir = Path(__file__).resolve().parent
@@ -23,18 +22,17 @@ root_dir = parent_dir.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-import kivy
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Line
+from kivy.graphics import Color, Line, RoundedRectangle
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.label import Label
+from kivy.uix.screenmanager import FadeTransition, Screen, ScreenManager
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.textinput import TextInput
 
 try:
     from .pipeline import run_pipeline
@@ -45,7 +43,7 @@ except ImportError:
         from model.research_model.model.schemas import InterviewRubric, Stage1Output
     except ImportError:
         from pipeline import run_pipeline
-        from schemas import InterviewRubric, Stage1Output
+        from schemas import Stage1Output
 
 # Window setup with modern dimensions
 Window.size = (1024, 768)

@@ -4,9 +4,9 @@ Module: benchmark.py
 Description: High-resolution timing metrics utility tracking STT latency, TTFT, and TTFA telemetry into benchmark_log.csv.
 """
 
-import time
 import csv
 import os
+import time
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "benchmark_log.csv")
 

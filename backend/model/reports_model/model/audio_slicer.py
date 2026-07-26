@@ -5,17 +5,16 @@ Description: Non-destructive WAV slicing utility using standard Python `wave` mo
              audio clips (`turn_01.wav`, `turn_02.wav`, etc.) based on `session_manifest.json` millisecond timestamps.
 """
 
-import json
 import wave
 from pathlib import Path
-from typing import Dict, Any, Union
+from typing import Any
 
 
 def slice_audio(
-    wav_path: Union[str, Path],
-    manifest: Dict[str, Any],
-    output_dir: Union[str, Path]
-) -> Dict[int, Path]:
+    wav_path: str | Path,
+    manifest: dict[str, Any],
+    output_dir: str | Path
+) -> dict[int, Path]:
     """
     Slices continuous_mic_input.wav into per-turn WAV clips based on session_manifest.json timestamps.
 
@@ -31,7 +30,7 @@ def slice_audio(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    sliced_clips: Dict[int, Path] = {}
+    sliced_clips: dict[int, Path] = {}
 
     if not wav_path.exists():
         raise FileNotFoundError(f"Continuous audio recording not found at: {wav_path}")

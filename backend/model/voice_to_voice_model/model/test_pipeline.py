@@ -6,15 +6,13 @@ Description: Standalone Headless CLI test harness for Stage 3 Voice-to-Voice Eng
              and generates session outputs (recording.wav + transcript.json / session_manifest.json).
 """
 
-import os
-import sys
 import json
-import time
-import wave
-import struct
 import logging
-from pathlib import Path
+import struct
+import sys
+import wave
 from datetime import datetime
+from pathlib import Path
 
 # Adjust Python path for direct execution
 current_dir = Path(__file__).resolve().parent
@@ -188,9 +186,9 @@ def run_test():
     print(f"Persona: {behavior.get('persona', 'Eva')}")
     print(f"Recorded Turns: {len(logger_inst.turns)} Dialogue Turns")
     print(f"Output Session Directory: {session_output_dir}")
-    print(f"  ├── recording.wav (Continuous Audio Recording)")
-    print(f"  ├── transcript.json (Turn Dialogue & Telemetry)")
-    print(f"  └── session_manifest.json (Timing Telemetry)\n")
+    print("  ├── recording.wav (Continuous Audio Recording)")
+    print("  ├── transcript.json (Turn Dialogue & Telemetry)")
+    print("  └── session_manifest.json (Timing Telemetry)\n")
     
     print("--- FIRST TURN TRANSCRIPT PREVIEW ---")
     if logger_inst.turns:

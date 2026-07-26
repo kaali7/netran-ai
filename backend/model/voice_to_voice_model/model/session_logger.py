@@ -5,10 +5,11 @@ Description: Session telemetry tracking module using high-resolution monotonic c
              to generate the atomic `session_manifest.json` artifact for downstream Stage 4 audio slicing.
 """
 
-import os
 import json
+import os
 import time
 from datetime import datetime
+
 
 class SessionLogger:
     """

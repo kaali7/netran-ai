@@ -6,16 +6,18 @@ Description: Audio capture engine utilizing sounddevice, Silero VAD ONNX inferen
              and asynchronous continuous PCM mic WAV streaming.
 """
 
-import wave
+import atexit
+import importlib
+import os
 import queue
 import threading
-import atexit
+import wave
+
 import numpy as np
-import sounddevice as sd
 import onnxruntime as ort
-import os
-import importlib
+import sounddevice as sd
 from faster_whisper import WhisperModel
+
 try:
     from .benchmark import Benchmark
     from .prompts import WHISPER_INITIAL_PROMPT
@@ -279,7 +281,7 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
     print("=" * 52, flush=True)
     print(f"  Rounds        : {rounds}", flush=True)
     print(f"  Record time   : {record_seconds}s per round (VAD trims silence)", flush=True)
-    print(f"  Whisper model : small  |  VAD: Silero v3", flush=True)
+    print("  Whisper model : small  |  VAD: Silero v3", flush=True)
     print("=" * 52, flush=True)
 
     for round_num in range(1, rounds + 1):
@@ -303,7 +305,7 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
             print(f"  [>>>] {tick+1}s / {record_seconds}s  Recording... ({remaining}s left) ", end="\r", flush=True)
             time.sleep(1)
         sd.wait()
-        print(f"  [DONE] Recording complete. Running VAD + Whisper...              ", flush=True)
+        print("  [DONE] Recording complete. Running VAD + Whisper...              ", flush=True)
 
         # Flatten to 1D float32
         audio_flat = raw_recording.flatten()

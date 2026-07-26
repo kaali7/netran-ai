@@ -5,8 +5,6 @@ Description: Local neural Text-to-Speech (TTS) playback engine using Kokoro-82M 
              and sounddevice native 24kHz float32 audio streaming with echo-gate state tracking.
 """
 
-import numpy as np
-import pyaudio
 from kokoro import KPipeline
 
 # Global agent speaking state for echo gate
@@ -60,7 +58,7 @@ def speak_text(text_to_say, voice_preset="af_bella"):
             sd.wait() # Block until this chunk finishes playing
         
     except Exception as e:
-        print(f"\n[Speaker Error: Check audio drivers. Details: {str(e)}]")
+        print(f"\n[Speaker Error: Check audio drivers. Details: {e!s}]")
         
     finally:
         IS_AGENT_SPEAKING = False

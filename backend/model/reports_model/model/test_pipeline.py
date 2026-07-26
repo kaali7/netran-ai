@@ -5,7 +5,6 @@ Description: Standalone CLI headless test runner for verifying Stage 4 audio sli
 """
 
 import sys
-import json
 from pathlib import Path
 
 # Add backend directory to sys.path
@@ -16,6 +15,7 @@ if str(backend_dir) not in sys.path:
 from datetime import datetime
 
 from model.reports_model.model.report_builder import build_report
+
 
 def main():
     # 1. Locate input session directory from test/input/ or fallback paths
@@ -69,7 +69,7 @@ def main():
             print(f"Emotion:            {turn1.emotional_state}")
             print(f"Hesitation:         {turn1.hesitation_level}")
 
-        print(f"\nArtifacts verified in output directory:")
+        print("\nArtifacts verified in output directory:")
         print(f" - {out_session_dir / 'report.json'}")
         print(f" - {out_session_dir / 'evaluation_summary.md'}")
 

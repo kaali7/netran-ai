@@ -8,7 +8,9 @@ try:
     from .prompts import SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE
 except ImportError:
     try:
-        from model.question_model.model.prompts import SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE
+        from model.question_model.model.prompts import (
+            SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE,
+        )
     except ImportError:
         from prompts import SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE
 

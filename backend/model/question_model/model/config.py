@@ -4,10 +4,11 @@ Module: config.py
 Description: Configuration loader for Stage 2. Enforces Stage2Config object model.
 """
 
-import os
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Search for .env file up to backend root

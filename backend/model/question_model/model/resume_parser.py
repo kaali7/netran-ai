@@ -4,8 +4,9 @@ Module: resume_parser.py
 Description: Class-based ResumeParser supporting PDF, DOCX, TXT, and JSON files to extract clean candidate resume text.
 """
 
-import os
 import json
+import os
+
 import docx
 from pypdf import PdfReader
 

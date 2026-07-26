@@ -42,7 +42,7 @@ def generate_eva_response(conversation_history):
                 yield token
                 
     except Exception as e:
-        yield f"\n[Brain Error: Make sure Ollama is running and qwen2.5 is pulled. Details: {str(e)}]"
+        yield f"\n[Brain Error: Make sure Ollama is running and qwen2.5 is pulled. Details: {e!s}]"
 
 def preload():
     """Preloads the Ollama LLM engine into memory to ensure instant first response."""

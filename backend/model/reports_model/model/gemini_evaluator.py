@@ -6,20 +6,14 @@ Description: 3-branch Gemini Multimodal Evaluation Engine using `google-genai` S
              and Combine Synthesis Branch (final executive hiring report).
 """
 
-import os
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from google import genai
-from dotenv import load_dotenv
+from typing import Any
 
-from .schemas import (
-    AudioBranchOutput,
-    TechnicalBranchOutput,
-    CandidateReportPayload,
-    TurnAnalysis,
-    PillarScore
-)
+from google import genai
+
+from .schemas import AudioBranchOutput, CandidateReportPayload, TechnicalBranchOutput
+
 try:
     from .config import Stage4Config
 except ImportError:
@@ -29,16 +23,28 @@ except ImportError:
         from config import Stage4Config
 
 try:
-    from .prompts import AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT
+    from .prompts import (
+        AUDIO_SYSTEM_PROMPT,
+        COMBINE_SYSTEM_PROMPT,
+        TECHNICAL_SYSTEM_PROMPT,
+    )
 except ImportError:
     try:
-        from model.reports_model.model.prompts import AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT
+        from model.reports_model.model.prompts import (
+            AUDIO_SYSTEM_PROMPT,
+            COMBINE_SYSTEM_PROMPT,
+            TECHNICAL_SYSTEM_PROMPT,
+        )
     except ImportError:
-        from prompts import AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT
+        from prompts import (
+            AUDIO_SYSTEM_PROMPT,
+            COMBINE_SYSTEM_PROMPT,
+            TECHNICAL_SYSTEM_PROMPT,
+        )
 
 
 class GeminiMultimodalEvaluator:
-    def __init__(self, model_name: Optional[str] = None, config: Optional[Stage4Config] = None):
+    def __init__(self, model_name: str | None = None, config: Stage4Config | None = None):
         self.config = config or Stage4Config.from_env()
         api_key = self.config.gemini_api_key
         if not api_key:
@@ -114,9 +120,9 @@ Evaluate technical depth, correctness, missing concepts, and assign a score (1-1
     def evaluate_combine_branch(
         self,
         session_id: str,
-        turns_data: List[Dict[str, Any]],
-        audio_outputs: List[AudioBranchOutput],
-        technical_outputs: List[TechnicalBranchOutput]
+        turns_data: list[dict[str, Any]],
+        audio_outputs: list[AudioBranchOutput],
+        technical_outputs: list[TechnicalBranchOutput]
     ) -> CandidateReportPayload:
         """
         Branch 3: Combine Branch - fuses Audio & Technical branch outputs into full CandidateReportPayload.

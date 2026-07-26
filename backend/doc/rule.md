@@ -85,3 +85,11 @@ Before modifying any source code in a model stage:
 ## 📌 Rule 9: Error Resilience & Offline Fallbacks
 * AI generation calls (Gemini API / Local LLM) must never crash uncaught on rate limits (`429 RESOURCE_EXHAUSTED`) or network disconnects (`RemoteProtocolError`).
 * Always wrap external LLM API calls with exponential backoff retries and graceful rule-based offline fallback generators.
+
+---
+
+## 📌 Rule 10: Code Execution Standard & Environment Directives
+* **Virtual Environment Required**: Always execute Python scripts, test suites, and code quality tools using the workspace virtual environment (`.\.venv\Scripts\python.exe` or `.\.venv\Scripts\pip.exe`).
+* **Root Execution Context**: Always execute scripts and test modules from the `backend/` root directory using module path format (e.g. `.\.venv\Scripts\python.exe -m model.workflow.model.test_pipeline` or `.\.venv\Scripts\python.exe -m model.<stage_folder>.model.test_pipeline`) to guarantee relative imports and `sys.path` resolution succeed across all 4 stages.
+* **Interactive Launcher**: Use `run.bat` for interactive GUI/CLI launcher menu options across individual model stages and the full workflow application.
+* **Quality & Security Audits**: Execute `.\.venv\Scripts\python.exe scan_code_quality.py` to run automated code quality audits (`ruff`, `pylint`, `mypy`, `bandit`, `radon`).

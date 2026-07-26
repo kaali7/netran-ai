@@ -4,23 +4,21 @@ Module: rubric_generator.py
 Description: Class-based Rubric Generator synthesizing JD text, role metadata, and web market context into InterviewRubric.
 """
 
-import json
 import logging
-from typing import List, Dict, Optional
 
 try:
-    from .schemas import ParsedJD, InterviewRubric
     from .gemini_client import GeminiClient
     from .prompts import RUBRIC_GENERATOR_PROMPT_TEMPLATE
+    from .schemas import InterviewRubric, ParsedJD
 except ImportError:
     try:
-        from model.research_model.model.schemas import ParsedJD, InterviewRubric
         from model.research_model.model.gemini_client import GeminiClient
         from model.research_model.model.prompts import RUBRIC_GENERATOR_PROMPT_TEMPLATE
+        from model.research_model.model.schemas import InterviewRubric, ParsedJD
     except ImportError:
-        from schemas import ParsedJD, InterviewRubric
         from gemini_client import GeminiClient
         from prompts import RUBRIC_GENERATOR_PROMPT_TEMPLATE
+        from schemas import InterviewRubric, ParsedJD
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +26,10 @@ logger = logging.getLogger(__name__)
 class RubricGenerator:
     """Class-based rubric synthesizer leveraging Gemini to generate InterviewRubric."""
 
-    def __init__(self, gemini_client: Optional[GeminiClient] = None):
+    def __init__(self, gemini_client: GeminiClient | None = None):
         self.gemini_client = gemini_client or GeminiClient()
 
-    def generate(self, jd_text: str, parsed_jd: ParsedJD, search_context: List[Dict[str, str]]) -> InterviewRubric:
+    def generate(self, jd_text: str, parsed_jd: ParsedJD, search_context: list[dict[str, str]]) -> InterviewRubric:
         """
         Synthesizes raw JD and live market search context into a structured Interview Rubric.
         """
@@ -57,5 +55,5 @@ class RubricGenerator:
 
 
 # Backward compatibility wrapper
-def generate_rubric(jd_text: str, parsed_jd: ParsedJD, search_context: List[Dict[str, str]]) -> InterviewRubric:
+def generate_rubric(jd_text: str, parsed_jd: ParsedJD, search_context: list[dict[str, str]]) -> InterviewRubric:
     return RubricGenerator().generate(jd_text, parsed_jd, search_context)

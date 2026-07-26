@@ -4,9 +4,9 @@ Module: gemini_client.py
 Description: Class-based Gemini Interactions API client with REST fallback resilience.
 """
 
-import requests
 import logging
-from typing import Optional
+
+import requests
 
 try:
     from .config import Stage1Config
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class GeminiClient:
     """Class-based Gemini API client using google-genai SDK Interactions API with REST fallback."""
 
-    def __init__(self, config: Optional[Stage1Config] = None):
+    def __init__(self, config: Stage1Config | None = None):
         self.config = config or Stage1Config.from_env()
 
     @staticmethod

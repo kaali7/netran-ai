@@ -4,13 +4,13 @@ Module: front.py
 Description: Standalone Kivy Desktop GUI client for testing live voice interviews and Script Calibration Mode.
 """
 
-import threading
-import time
-import re
-import os
-import json
 import difflib
+import json
+import os
+import re
+import threading
 from datetime import datetime
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.lang import Builder
@@ -18,24 +18,35 @@ from kivy.uix.boxlayout import BoxLayout
 
 # Import the functional blocks we created in this exact folder
 try:
-    from .brain import generate_eva_response, preload as preload_brain
-    from .listener import listen_and_transcribe, ContinuousMicWriter
-    from .speaker import speak_text, preload_models as preload_speaker
-    from .session_logger import SessionLogger
     from .benchmark import Benchmark
+    from .brain import generate_eva_response
+    from .brain import preload as preload_brain
+    from .listener import ContinuousMicWriter, listen_and_transcribe
+    from .session_logger import SessionLogger
+    from .speaker import preload_models as preload_speaker
+    from .speaker import speak_text
 except ImportError:
     try:
-        from model.voice_to_voice_model.model.brain import generate_eva_response, preload as preload_brain
-        from model.voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
-        from model.voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
-        from model.voice_to_voice_model.model.session_logger import SessionLogger
         from model.voice_to_voice_model.model.benchmark import Benchmark
+        from model.voice_to_voice_model.model.brain import generate_eva_response
+        from model.voice_to_voice_model.model.brain import preload as preload_brain
+        from model.voice_to_voice_model.model.listener import (
+            ContinuousMicWriter,
+            listen_and_transcribe,
+        )
+        from model.voice_to_voice_model.model.session_logger import SessionLogger
+        from model.voice_to_voice_model.model.speaker import (
+            preload_models as preload_speaker,
+        )
+        from model.voice_to_voice_model.model.speaker import speak_text
     except ImportError:
-        from brain import generate_eva_response, preload as preload_brain
-        from listener import listen_and_transcribe, ContinuousMicWriter
-        from speaker import speak_text, preload_models as preload_speaker
-        from session_logger import SessionLogger
         from benchmark import Benchmark
+        from brain import generate_eva_response
+        from brain import preload as preload_brain
+        from listener import ContinuousMicWriter, listen_and_transcribe
+        from session_logger import SessionLogger
+        from speaker import preload_models as preload_speaker
+        from speaker import speak_text
 
 # Clean visual layout utilizing a modern dark visual palette
 KV = """
@@ -642,7 +653,7 @@ class InterviewWindow(BoxLayout):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            self.update_status(f"Pipeline Error: {str(e)}")
+            self.update_status(f"Pipeline Error: {e!s}")
 
 
 class AIInterviewerApp(App):

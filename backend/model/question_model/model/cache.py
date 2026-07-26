@@ -4,12 +4,11 @@ Module: cache.py
 Description: Class-based SQLite caching subsystem (`cache.db`) for generated Stage 2 question trees.
 """
 
-import sqlite3
 import hashlib
 import json
 import logging
+import sqlite3
 from pathlib import Path
-from typing import Optional
 
 try:
     from .schemas import Stage2Output
@@ -58,7 +57,7 @@ class Stage2Cache:
         resume_text: str,
         target_seniority: str,
         session_id: str
-    ) -> Optional[Stage2Output]:
+    ) -> Stage2Output | None:
         """Retrieves cached Stage2Output if available for the given input parameters."""
         cache_key = self.hash_key(jd_text, resume_text, target_seniority)
         try:
@@ -100,7 +99,7 @@ class Stage2Cache:
 # Backward compatibility default instance and wrappers
 default_cache = Stage2Cache()
 
-def get_cached_stage2_output(jd_text: str, resume_text: str, target_seniority: str, session_id: str) -> Optional[Stage2Output]:
+def get_cached_stage2_output(jd_text: str, resume_text: str, target_seniority: str, session_id: str) -> Stage2Output | None:
     return default_cache.get(jd_text, resume_text, target_seniority, session_id)
 
 def set_cached_stage2_output(jd_text: str, resume_text: str, target_seniority: str, stage2_output: Stage2Output):

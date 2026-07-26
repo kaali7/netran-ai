@@ -6,28 +6,38 @@ Description: Stage 3 voice loop adapter that injects Stage 2's dynamic prompt (`
              and manages continuous mic audio recording.
 """
 
-import os
 import json
-import time
 import logging
+import os
 import threading
-from typing import Callable, Optional, List, Dict, Any
+import time
+from collections.abc import Callable
+from typing import Any
 
 try:
     from .config import OLLAMA_MODEL
 except ImportError:
-    from model.workflow.model.config import OLLAMA_MODEL
+    pass
 
 try:
     from model.voice_to_voice_model.model import brain
-    from model.voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
-    from model.voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
+    from model.voice_to_voice_model.model.listener import (
+        ContinuousMicWriter,
+        listen_and_transcribe,
+    )
     from model.voice_to_voice_model.model.session_logger import SessionLogger
+    from model.voice_to_voice_model.model.speaker import (
+        preload_models as preload_speaker,
+    )
+    from model.voice_to_voice_model.model.speaker import speak_text
 except ImportError:
     from voice_to_voice_model.model import brain
-    from voice_to_voice_model.model.listener import listen_and_transcribe, ContinuousMicWriter
-    from voice_to_voice_model.model.speaker import speak_text, preload_models as preload_speaker
+    from voice_to_voice_model.model.listener import (
+        ContinuousMicWriter,
+        listen_and_transcribe,
+    )
     from voice_to_voice_model.model.session_logger import SessionLogger
+    from voice_to_voice_model.model.speaker import speak_text
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +56,7 @@ class WorkflowVoiceEngine:
         self.prompt_path = os.path.join(session_dir, "system_prompt.txt")
         self.wav_path = os.path.join(session_dir, "continuous_mic_input.wav")
         
-        self.question_tree: List[Dict[str, Any]] = []
+        self.question_tree: list[dict[str, Any]] = []
         self.system_prompt_text: str = ""
         self._load_stage2_artifacts()
         
@@ -63,7 +73,7 @@ class WorkflowVoiceEngine:
         else:
             logger.warning(f"System prompt not found at {self.prompt_path}")
 
-    def inject_question_tree(self, questions: List[Dict[str, Any]], system_prompt: str):
+    def inject_question_tree(self, questions: list[dict[str, Any]], system_prompt: str):
         """
         Injects Stage 2 question tree and system prompt directly in-memory.
         Called by the orchestrator to bypass disk-based loading and ensure
@@ -76,7 +86,7 @@ class WorkflowVoiceEngine:
 
     def run_interview(
         self,
-        status_callback: Optional[Callable[[int, str, str, str], None]] = None,
+        status_callback: Callable[[int, str, str, str], None] | None = None,
         max_turns: int = 15
     ):
         """
@@ -99,7 +109,7 @@ class WorkflowVoiceEngine:
         mic_writer = ContinuousMicWriter(filepath=self.wav_path)
         mic_writer.start()
         
-        conversation_history: List[Dict[str, str]] = []
+        conversation_history: list[dict[str, str]] = []
         total_questions = len(self.question_tree) if self.question_tree else max_turns
         total_turns = min(max_turns, total_questions)
         

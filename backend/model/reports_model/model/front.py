@@ -4,7 +4,6 @@ Module: front.py
 Description: Interactive Kivy desktop application for testing Stage 4 multimodal report generation.
 """
 
-import os
 import sys
 import threading
 from pathlib import Path
@@ -16,12 +15,11 @@ if str(backend_dir) not in sys.path:
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.label import Label
-from kivy.uix.button import Button
 from kivy.core.window import Window
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
 
 # Set window dimensions
 Window.size = (950, 700)

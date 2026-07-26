@@ -4,33 +4,36 @@ Module: pipeline.py
 Description: Master class-based Stage1Pipeline orchestrator linking cache, parser, search, and rubric generator.
 """
 
-import os
-import json
 import logging
-from typing import Callable, Optional
+import os
+from collections.abc import Callable
 
 try:
-    from .config import Stage1Config
-    from .schemas import InterviewRubric, ParsedJD, Stage1Output
     from .cache import Stage1Cache
+    from .config import Stage1Config
     from .jd_parser import JDParser
-    from .search_engine import MarketSearchEngine
     from .rubric_generator import RubricGenerator
+    from .schemas import InterviewRubric, ParsedJD, Stage1Output
+    from .search_engine import MarketSearchEngine
 except ImportError:
     try:
-        from model.research_model.model.config import Stage1Config
-        from model.research_model.model.schemas import InterviewRubric, ParsedJD, Stage1Output
         from model.research_model.model.cache import Stage1Cache
+        from model.research_model.model.config import Stage1Config
         from model.research_model.model.jd_parser import JDParser
-        from model.research_model.model.search_engine import MarketSearchEngine
         from model.research_model.model.rubric_generator import RubricGenerator
+        from model.research_model.model.schemas import (
+            InterviewRubric,
+            ParsedJD,
+            Stage1Output,
+        )
+        from model.research_model.model.search_engine import MarketSearchEngine
     except ImportError:
-        from config import Stage1Config
-        from schemas import InterviewRubric, ParsedJD, Stage1Output
         from cache import Stage1Cache
+        from config import Stage1Config
         from jd_parser import JDParser
-        from search_engine import MarketSearchEngine
         from rubric_generator import RubricGenerator
+        from schemas import ParsedJD, Stage1Output
+        from search_engine import MarketSearchEngine
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,7 @@ logger = logging.getLogger(__name__)
 class Stage1Pipeline:
     """Master pipeline execution class for Stage 1 (Research & Rubric Synthesis)."""
 
-    def __init__(self, config: Optional[Stage1Config] = None):
+    def __init__(self, config: Stage1Config | None = None):
         self.config = config or Stage1Config.from_env()
         self.cache = Stage1Cache()
         self.parser = JDParser()
@@ -48,8 +51,8 @@ class Stage1Pipeline:
     def run(
         self,
         jd_text: str,
-        status_callback: Optional[Callable[[str], None]] = None,
-        output_dir: Optional[str] = None
+        status_callback: Callable[[str], None] | None = None,
+        output_dir: str | None = None
     ) -> Stage1Output:
         """
         Executes the end-to-end Stage 1 pipeline.
@@ -135,7 +138,7 @@ class Stage1Pipeline:
 # Backward compatibility pipeline function wrapper
 def run_pipeline(
     jd_text: str,
-    status_callback: Optional[Callable[[str], None]] = None,
-    output_dir: Optional[str] = None
+    status_callback: Callable[[str], None] | None = None,
+    output_dir: str | None = None
 ) -> Stage1Output:
     return Stage1Pipeline().run(jd_text, status_callback=status_callback, output_dir=output_dir)
