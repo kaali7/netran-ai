@@ -117,17 +117,24 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                 silence_frames_counter = 0
                 continue
 
+            # 2b. Apply DC offset + auto-gain to the raw frame so both the
+            #     mic_writer WAV file and the VAD/Whisper audio are boosted.
+            #     (Confirmed fix: demo_raw.wav sounds clear because of this pipeline.)
+            proc_frame = original_frame.copy()
+            if len(proc_frame) < CHUNK:
+                proc_frame = np.pad(proc_frame, (0, CHUNK - len(proc_frame)), 'constant')
+            proc_frame = proc_frame - np.mean(proc_frame)  # DC offset removal
+            frame_peak = float(np.max(np.abs(proc_frame)))
+            if frame_peak > 0.0005:
+                frame_gain = min(0.9 / frame_peak, 50.0)   # up to 50x, target 90% peak
+                proc_frame = proc_frame * frame_gain
+
             if mic_writer:
-                mic_writer.write_frame(original_frame)
+                # Write the gain-boosted frame so recording.wav sounds clear
+                mic_writer.write_frame(proc_frame)
 
-            # We already have float32 from sounddevice
-            audio_frame = original_frame.copy()
-            if len(audio_frame) < CHUNK:
-                # Pad to 512 if read was incomplete
-                audio_frame = np.pad(audio_frame, (0, CHUNK - len(audio_frame)), 'constant')
-
-            # Remove DC offset to keep audio centered for VAD
-            audio_frame = audio_frame - np.mean(audio_frame)
+            # Use the processed (DC + gain) frame for both VAD and accumulation
+            audio_frame = proc_frame.copy()
 
             # Prepare VAD inputs: input shape must be [1, 512]
             audio_input = np.expand_dims(audio_frame, axis=0)
@@ -169,9 +176,9 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                     "state": "Hearing you..." if has_spoken else "Waiting for speech..."
                 })
 
-            # Accumulate audio while speech is active
+            # Accumulate gain-boosted audio while speech is active
             if has_spoken:
-                audio_buffer.append(original_frame.copy())
+                audio_buffer.append(proc_frame.copy())
                 total_frames_counter += 1
 
             # Break loop when silence threshold (320ms) is reached after speech, or if hard timeout is hit
@@ -197,13 +204,18 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
     if not audio_buffer:
         return ""
 
-    # Combine list of arrays into one Whisper-compatible float32 array
+    # Combine accumulated (already DC-offset + auto-gain processed) frames
     audio_array = np.concatenate(audio_buffer)
+    # Final whole-utterance gain pass: ensures consistent level for Whisper
+    # (per-frame gain can vary; this normalizes the full utterance)
+    audio_array = audio_array - np.mean(audio_array)  # re-center
+    utterance_peak = float(np.max(np.abs(audio_array)))
+    if utterance_peak > 0.0005:
+        final_gain = min(0.9 / utterance_peak, 10.0)  # gentle 10x cap for utterance-level
+        audio_array = audio_array * final_gain
+    print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f})", flush=True)
 
     # Generate transcription using Faster-Whisper
-    # We specify language='en' and guide it with initial_prompt.
-    FRONTEND_PROMPT = "React.js, Next.js, TypeScript, JavaScript, Vite, Tailwind CSS, HTML, CSS, frontend developer, UI layout, coding framework, tech mock interview."
-    
     segments, _ = whisper_model.transcribe(
         audio_array,
         language="en",
@@ -211,7 +223,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
         beam_size=5,
         temperature=0.0,
         vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=500)
+        vad_parameters=dict(min_silence_duration_ms=300)
     )
     transcript_text = "".join([segment.text for segment in segments]).strip()
 
