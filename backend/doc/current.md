@@ -81,10 +81,10 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 - **Core Files**: `pipeline.py`, `jd_parser.py`, `search_engine.py`, `rubric_generator.py`, `cache.py`, `gemini_client.py`, `schemas.py`, `front.py`
 - **Functionality**: Extracts role requirements from JD text, performs Tavily web search filtered to trusted domains (`leetcode.com`, `glassdoor.com`, `github.com`, `geeksforgeeks.org`, `reddit.com`), synthesizes an assessment rubric using Gemini 3.6 Flash, and caches results in `cache.db` for instant re-runs (< 1s).
 
-### 2. Stage 2: Question Engine (`question_model`)
+### 2. Stage 2: Adaptive Question Engine (`question_model`)
 - **Location**: `backend/model/question_model/model/`
-- **Core Files**: `front.py`, `cache.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
-- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`, `.json`) and JD text. Performs skill gap analysis to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and builds a custom 1-2 sentence latency-constrained system prompt for Stage 3's voice interviewer (`Eva`). Caches generated results in SQLite `cache.db` for instant re-runs (<1ms). Outputs `interview_questions.json` and `interviewer_behavior.json` inside session folder `sess_<timestamp>/`.
+- **Core Files**: `front.py`, `cache.py`, `pipeline.py`, `question_generator.py`, `prompt_builder.py`, `resume_parser.py`, `schemas.py`, `config.py`, `test_pipeline.py`
+- **Functionality**: Ingests candidate resume (`.pdf`, `.docx`, `.txt`, `.json`) and JD text or Stage 1 Market Intelligence outputs (`stage1_output.json`). Synthesizes candidate skill match matrices (`matched_skills`, `missing_or_gap_skills`, `resume_red_flags`, `key_projects_to_probe`), constructs a 15-question branching tree with evaluation rubrics and 2-way follow-ups, and builds Eva's latency-constrained system prompt. Caches generated results in SQLite `cache.db` for instant re-runs. Outputs `resume_analysis.json`, `interview_questions.json`, `interviewer_behavior.json`, and `system_prompt.txt` inside session folder `sess_<timestamp>/`.
 
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`
