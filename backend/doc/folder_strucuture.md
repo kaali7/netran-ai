@@ -41,23 +41,23 @@ backend/
     │       ├── search_engine.py # Tavily Search API client with expanded domain whitelist
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 1
     │
-    ├── question_model/        # STAGE 2: Contextual Question & Behavioral Prompt Engine
+    ├── question_model/        # STAGE 2: Adaptive Contextual & Behavioral Intelligence Engine
     │   ├── doc/
     │   │   ├── current.md     # Stage 2 technical implementation status
     │   │   └── prd.md         # Stage 2 Product Requirements Document
     │   ├── test/              # Stage 2 test harness input/output directories
-    │   │   ├── input/         # Pre-saved dummy input JSON files (sample_job_detail.json & sample_resume.json)
-    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> interview_questions.json & interviewer_behavior.json )
+    │   │   ├── input/         # Pre-saved dummy input subdirectories (sample_backend/, sample_frontend/, sample_fullstack/)
+    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> resume_analysis.json, interview_questions.json, interviewer_behavior.json, system_prompt.txt )
     │   └── model/
-    │       ├── front.py       # Stage 2 Kivy Desktop GUI Client
-    │       ├── cache.py       # SQLite hash-based caching engine (cache.db)
+    │       ├── front.py       # Stage 2 Kivy Desktop GUI Client with Resume Matrix, Question Cards, Rubrics & Session History
+    │       ├── cache.py       # SQLite hash-based caching engine (cache.db) with schema recovery
     │       ├── config.py      # Stage 2 configuration loader (Stage2Config)
-    │       ├── pipeline.py    # Stage 2 master orchestrator pipeline (Stage2Pipeline)
-    │       ├── prompt_builder.py # Stage 3 latency-constrained system prompt instruction builder
+    │       ├── pipeline.py    # Stage 2 master orchestrator pipeline (Stage2Pipeline) generating 4 session artifacts
+    │       ├── prompt_builder.py # Stage2PromptBuilder with Stage 1 nested JSON extractor
     │       ├── prompts.py     # Centralized Stage 2 system prompt templates
     │       ├── question_generator.py # Backward compatibility alias for pipeline.py
     │       ├── resume_parser.py # PDF, DOCX, TXT, and JSON resume extractor
-    │       ├── schemas.py     # Pydantic schemas (QuestionItem, Stage2Output)
+    │       ├── schemas.py     # Pydantic v2 schemas (SkillMatch, SkillGap, ResumeAnalysis, AnswerRubric, QuestionItem, InterviewerBehavior, Stage2Output)
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
     ├── voice_to_voice_model/  # STAGE 3: Live Voice-to-Voice Streaming Loop

@@ -1,7 +1,7 @@
 """
 Netran AI — Stage 2: Contextual Question & Behavioral Prompt Engine
 Module: cache.py
-Description: Class-based SQLite caching subsystem (`cache.db`) for generated Stage 2 question trees.
+Description: Class-based SQLite caching subsystem (`cache.db`) for generated Stage 2 adaptive intelligence outputs.
 """
 
 import hashlib
@@ -66,12 +66,14 @@ class Stage2Cache:
                 cursor.execute("SELECT stage2_output_json FROM question_cache WHERE cache_key = ?", (cache_key,))
                 row = cursor.fetchone()
                 if row:
-                    logger.info("Retrieved Stage 2 question tree & system prompt from SQLite cache.")
                     output_dict = json.loads(row[0])
                     output_dict["session_id"] = session_id
-                    return Stage2Output.model_validate(output_dict)
+                    # Validate against current Pydantic schema
+                    validated = Stage2Output.model_validate(output_dict)
+                    logger.info("Retrieved Stage 2 question tree & system prompt from SQLite cache.")
+                    return validated
         except Exception as e:
-            logger.error(f"Stage 2 cache read error: {e}")
+            logger.warning(f"Stage 2 cache read error or stale schema invalidation: {e}. Bypassing cache.")
         return None
 
     def set(
@@ -94,6 +96,17 @@ class Stage2Cache:
                 logger.info("Saved Stage 2 output to SQLite cache.")
         except Exception as e:
             logger.error(f"Stage 2 cache write error: {e}")
+
+    def clear(self):
+        """Clears all cached entries from SQLite cache table."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM question_cache")
+                conn.commit()
+                logger.info("Cleared Stage 2 SQLite cache database.")
+        except Exception as e:
+            logger.error(f"Failed to clear Stage 2 SQLite cache: {e}")
 
 
 # Backward compatibility default instance and wrappers

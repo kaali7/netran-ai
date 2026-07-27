@@ -1,0 +1,15 @@
+{
+  "candidate_name": "Alex Rivera",
+  "target_role": "Senior Frontend Engineer",
+  "experience_years": 7,
+  "skills": [
+    "React (Hooks, Concurrent Mode, Context API)",
+    "TypeScript (Advanced Generics, Strict Type Safety)",
+    "Next.js 14 (App Router, Server Actions, SSR/ISR)",
+    "State Management (Zustand, Redux Toolkit, React Query)",
+    "Build Tools (Webpack 5, Vite, Module Federation)",
+    "Web Performance (Core Web Vitals, LCP/INP Optimization)",
+    "Web Security (CORS, XSS, CSRF, CSP)"
+  ],
+  "resume_text": "Alex Rivera\nSenior Frontend Architect & Engineer | San Francisco, CA\n\nExecutive Summary:\nSenior Frontend Engineer with 7+ years of experience crafting scalable, high-performance web applications using React, TypeScript, and Next.js. Specialist in client-side system design, micro-frontend architecture (Module Federation), Core Web Vitals optimization, and robust state management for complex enterprise platforms.\n\nTechnical Skills:\n- Frontend Core: JavaScript (ES2024+), TypeScript, React 18/19, Next.js 14, HTML5, CSS3/Sass, Tailwind CSS\n- State & Data: Redux Toolkit, Zustand, React Query (TanStack Query), GraphQL (Apollo Client)\n- Build & Tooling: Webpack 5, Vite, Babel, ESLint, Jest, React Testing Library, Playwright\n- Performance & Security: Core Web Vitals (LCP, INP, CLS), DOM Virtualization, CSP, XSS Sanitization, CORS\n\nWork Experience:\nStaff Frontend Engineer | PixelCraft Solutions (2022 - Present)\n- Led frontend architecture for an analytics platform processing 10M+ daily user events, achieving 99.9% uptime.\n- Reduced Largest Contentful Paint (LCP) from 4.2s to 1.4s across core landing pages through dynamic route-based code splitting, image optimization, and resource prefetching.\n- Architected a shared enterprise design system used by 45+ developers, decreasing feature delivery cycles by 30%.\n- Mentored 8 junior and mid-level developers, establishing strict TypeScript guidelines and automated PR checks.\n\nSenior Frontend Engineer | CloudMatrix Inc. (2019 - 2022)\n- Migrated a legacy monolithic React app to a micro-frontend setup using Webpack Module Federation, enabling independent team deployments.\n- Implemented client-side caching with React Query and Zustand, cutting redundant API fetch calls by 55%.\n- Configured strict Content Security Policies (CSP) and automated XSS sanitization layers for financial transaction flows."
+}
