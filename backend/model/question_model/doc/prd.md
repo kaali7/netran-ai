@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Project Name: Netran AI (SAMWINI) - Subsystem: Contextual Question & Behavioral Prompt Engine (Stage 2)
+## Project Name: Netran AI - Subsystem: Contextual Question & Behavioral Prompt Engine (Stage 2)
 
 **Document Type:** Technical & Functional Specifications for Dynamic Question Tree & System Prompt Synthesis
 

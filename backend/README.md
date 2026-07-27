@@ -1,4 +1,4 @@
-# Netran AI (SAMWINI) — Multi-Stage AI Technical Interviewer Backend
+# Netran AI — Multi-Stage AI Technical Interviewer Backend
 
 Netran AI is an intelligent, web-augmented, multimodal AI technical interviewer. The system simulates real-world corporate technical interview loops by combining web-extracted market intelligence, dynamic resume-to-JD cross-matching, continuous real-time voice activity detection (VAD), speech-to-text (STT), local streaming LLM reasoning, neural text-to-speech (TTS), and multimodal audio-grounded candidate evaluation.
 

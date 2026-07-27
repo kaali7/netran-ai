@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-## Project Name: Netran AI (SAMWINI)
+## Project Name: Netran AI
 **Document Type:** Technical & Functional Specifications for AI Voice-Based Mock Interview System  
 **Academic Year:** 2026-27  
 **Authors:** Samta Sakha & Ashwini Prajapati  

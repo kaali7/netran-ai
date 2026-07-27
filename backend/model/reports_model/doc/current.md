@@ -8,7 +8,7 @@
 
 ## 1. Subsystem Overview
 
-Stage 4 is the post-session analytics and synthesis subsystem of Netran AI (SAMWINI). It ingests:
+Stage 4 is the post-session analytics and synthesis subsystem of Netran AI. It ingests:
 - `continuous_mic_input.wav` / `recording.wav`: Raw continuous audio recording from Stage 3.
 - `session_manifest.json` / `transcript.json`: Per-turn millisecond timing telemetry from Stage 3.
 

@@ -1,10 +1,4 @@
-"""
-Netran AI — Stage 1: JD Research & Market Intelligence Engine
-Module: test_pipeline.py
-Description: Standalone Headless CLI test harness for verifying Stage 1 JD research,
-             market intelligence retrieval, and rubric synthesis.
-"""
-
+import json
 import logging
 import sys
 from datetime import datetime
@@ -58,7 +52,7 @@ if sys.platform == "win32":
 
 def run_test():
     print("===================================================================")
-    print("      NETRAN AI -- STAGE 1: RESEARCH MODEL TEST HARNESS (CLI)      ")
+    print("   NETRAN AI -- STAGE 1: MARKET & ROLE INTELLIGENCE HARNESS (CLI)   ")
     print("===================================================================\n")
     
     sample_files = list_sample_inputs()
@@ -136,31 +130,50 @@ def run_test():
         print("                 STAGE 1 PIPELINE EXECUTION SUCCESS                ")
         print("===================================================================")
         print(f"  • Session ID:       {session_id}")
-        print(f"  • Target Role:      {output.parsed_jd.role}")
+        print(f"  • Target Role:      {output.parsed_jd.role} ({getattr(output.parsed_jd, 'target_seniority', 'Senior')})")
         print(f"  • Company:          {output.parsed_jd.company}")
         print(f"  • Tech Stack:       {', '.join(output.parsed_jd.tech_stack)}")
-        print(f"  • Search Queries:   {output.parsed_jd.search_queries}")
-        print(f"  • Web Sources:      {len(output.search_context)} retrieved snippets")
-        print(f"  • Rubric Pillars:   {len(output.rubric.keyTechnicalPillars)} core pillars")
-        print(f"  • Topics Generated: {len(output.rubric.expectedInterviewTopics)} categories")
-        print(f"  • Output Directory: {session_output_dir}")
+        print(f"  • Search Queries:   {len(output.parsed_jd.search_queries)} vectors")
+        print(f"  • Web Snippets:     {len(output.search_context)} retrieved snippets")
+        print(f"  • Execution Time:   {output.execution_time_seconds}s (Cached: {output.cached})")
+        print(f"  • Output File:      {session_output_file}")
         print("-------------------------------------------------------------------")
         
-        if output.search_context:
-            print("\n🌐 RETRIEVED WEB INTELLIGENCE SOURCES:")
-            for idx, item in enumerate(output.search_context[:3], start=1):
-                print(f"  [{idx}] {item.get('title', 'N/A')}")
-                print(f"      URL:     {item.get('url', 'N/A')}")
-                snippet = item.get('content', '')[:120].replace('\n', ' ')
-                print(f"      Snippet: {snippet}...\n")
+        rubric = output.rubric
 
-        print("🎯 SYNTHESIZED ASSESSMENT RUBRIC OVERVIEW:")
-        print(f"  Overview: {output.rubric.roleOverview[:200]}...\n")
-        
-        print(f"✅ All artifacts saved to: {session_output_dir}")
+        if rubric.marketIntelligence:
+            mi = rubric.marketIntelligence
+            sb = mi.salary_benchmark
+            print("\n💰 MARKET & SALARY INTELLIGENCE:")
+            print(f"  • USD Salary Range: {sb.usd_range}")
+            print(f"  • INR CTC Range:    {sb.inr_range}")
+            print(f"  • Demand Level:     {mi.market_demand_level}")
+            print(f"  • Top Company Types:{', '.join(mi.top_hiring_company_types)}")
+
+        if rubric.hrRecruiterLens:
+            hr = rubric.hrRecruiterLens
+            print("\n🔍 HR RECRUITER SCREENING LENS:")
+            print("  🟢 Green Flags:")
+            for flag in hr.green_flags[:3]:
+                print(f"     + {flag}")
+            print("  🔴 Red Flags:")
+            for flag in hr.red_flags[:3]:
+                print(f"     - {flag}")
+
+        if rubric.skillRequirements and rubric.skillRequirements.critical_soft_skills:
+            print("\n🤝 CRITICAL SOFT SKILLS MATRIX:")
+            for ss in rubric.skillRequirements.critical_soft_skills[:3]:
+                print(f"  • {ss.skill}: {ss.why_it_matters} [Eval: {ss.evaluation_method}]")
+
+        print("\n🎯 TECHNICAL RUBRIC PILLARS:")
+        for pillar in rubric.keyTechnicalPillars:
+            print(f"  ⚡ {pillar}")
+
+        print(f"\n✅ All artifacts saved to: {session_output_file}")
         
     except Exception as e:
         logger.error(f"❌ Stage 1 Pipeline Test Failed: {e}", exc_info=True)
 
 if __name__ == "__main__":
     run_test()
+

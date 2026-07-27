@@ -59,8 +59,14 @@ class Stage1Cache:
                 cursor.execute("SELECT rubric_json FROM rubric_cache WHERE jd_hash = ?", (jd_hash,))
                 row = cursor.fetchone()
                 if row:
-                    logger.info("Retrieved rubric from Stage1Cache.")
-                    return InterviewRubric.model_validate_json(row[0])
+                    try:
+                        rubric = InterviewRubric.model_validate_json(row[0])
+                        logger.info("Retrieved valid rubric from Stage1Cache.")
+                        return rubric
+                    except Exception as val_err:
+                        logger.warning(f"Cached rubric validation failed ({val_err}). Invalidating stale entry.")
+                        cursor.execute("DELETE FROM rubric_cache WHERE jd_hash = ?", (jd_hash,))
+                        conn.commit()
         except Exception as e:
             logger.error(f"Cache read error: {e}")
         return None
@@ -80,6 +86,17 @@ class Stage1Cache:
         except Exception as e:
             logger.error(f"Cache write error: {e}")
 
+    def clear(self):
+        """Clears all cached entries from SQLite table."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM rubric_cache")
+                conn.commit()
+                logger.info("Stage1Cache cleared successfully.")
+        except Exception as e:
+            logger.error(f"Failed to clear cache: {e}")
+
 
 # Global default cache instance for module-level functions
 default_cache = Stage1Cache()
@@ -89,3 +106,4 @@ def get_cached_rubric(jd_text: str) -> InterviewRubric | None:
 
 def set_cached_rubric(jd_text: str, rubric: InterviewRubric):
     default_cache.set(jd_text, rubric)
+

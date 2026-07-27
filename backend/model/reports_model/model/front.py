@@ -51,7 +51,7 @@ class ReportEngineApp(App):
         # Header
         header = BoxLayout(orientation="vertical", size_hint_y=None, height=60, spacing=4)
         title_label = Label(
-            text="[b]Netran AI (SAMWINI) — Report Engine Test Desk[/b]",
+            text="[b]Netran AI — Report Engine Test Desk[/b]",
             markup=True,
             font_size="20sp",
             color=(0.12, 0.53, 0.90, 1)

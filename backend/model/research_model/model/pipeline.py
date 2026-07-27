@@ -1,11 +1,6 @@
-"""
-Netran AI — Stage 1: JD Research & Market Intelligence Engine
-Module: pipeline.py
-Description: Master class-based Stage1Pipeline orchestrator linking cache, parser, search, and rubric generator.
-"""
-
 import logging
 import os
+import time
 from collections.abc import Callable
 
 try:
@@ -52,66 +47,75 @@ class Stage1Pipeline:
         self,
         jd_text: str,
         status_callback: Callable[[str], None] | None = None,
-        output_dir: str | None = None
+        output_dir: str | None = None,
+        force_refresh: bool = False
     ) -> Stage1Output:
         """
         Executes the end-to-end Stage 1 pipeline.
 
         Steps:
-        1. Check SQLite Cache (hash-based)
-        2. Parse JD metadata & form search queries (Gemini)
-        3. Execute live web search on trusted engineering domains (Tavily API)
+        1. Check SQLite Cache (hash-based) unless force_refresh is True
+        2. Parse JD metadata & form 3 search queries (Gemini)
+        3. Execute multi-vector parallel web search on trusted domains (Tavily API)
         4. Synthesize context into structured JSON rubric (Gemini)
-        5. Cache result & return Stage1Output
+        5. Cache result & return Stage1Output with execution time telemetry
         """
+        start_time = time.time()
+
         def notify(msg: str):
             logger.info(msg)
             if status_callback:
                 status_callback(msg)
 
-        notify("Checking cache for existing rubric...")
-        cached_rubric = self.cache.get(jd_text)
-        if cached_rubric:
-            notify("Loaded existing rubric from cache!")
-            parsed_jd = ParsedJD(
-                role="Cached Target Profile",
-                company="Target Company",
-                tech_stack=cached_rubric.keyTechnicalPillars,
-                search_queries=[]
-            )
-            output_obj = Stage1Output(
-                rubric=cached_rubric,
-                parsed_jd=parsed_jd,
-                search_context=[],
-                cached=True
-            )
-            if output_dir:
-                self.save_artifacts(output_dir, output_obj)
-            return output_obj
+        if not force_refresh:
+            notify("Checking cache for existing rubric...")
+            cached_rubric = self.cache.get(jd_text)
+            if cached_rubric:
+                elapsed = round(time.time() - start_time, 3)
+                notify(f"Loaded existing rubric from cache in {elapsed}s!")
+                parsed_jd = ParsedJD(
+                    role="Cached Target Profile",
+                    company="Target Company",
+                    target_seniority="Senior",
+                    tech_stack=cached_rubric.keyTechnicalPillars,
+                    search_queries=[]
+                )
+                output_obj = Stage1Output(
+                    rubric=cached_rubric,
+                    parsed_jd=parsed_jd,
+                    search_context=[],
+                    cached=True,
+                    execution_time_seconds=elapsed
+                )
+                if output_dir:
+                    self.save_artifacts(output_dir, output_obj)
+                return output_obj
 
-        notify("Parsing Job Description with Gemini...")
+        notify("Parsing Job Description with Gemini (3-vector query formulation)...")
         parsed_jd = self.parser.parse(jd_text)
 
-        notify(f"Searching web (Tavily) for role: '{parsed_jd.role}' at '{parsed_jd.company}'...")
+        notify(f"Searching web (Tavily Multi-Vector) for role: '{parsed_jd.role}'...")
         search_context = self.search_engine.search(parsed_jd.search_queries)
 
-        notify(f"Found {len(search_context)} market intel sources. Generating assessment rubric...")
+        notify(f"Found {len(search_context)} market intel snippets. Synthesizing Market & Role Rubric...")
         rubric = self.rubric_generator.generate(jd_text, parsed_jd, search_context)
 
         notify("Caching results in database...")
         self.cache.set(jd_text, rubric)
 
+        elapsed = round(time.time() - start_time, 2)
         output_obj = Stage1Output(
             rubric=rubric,
             parsed_jd=parsed_jd,
             search_context=search_context,
-            cached=False
+            cached=False,
+            execution_time_seconds=elapsed
         )
 
         if output_dir:
             self.save_artifacts(output_dir, output_obj)
 
-        notify("Pipeline complete!")
+        notify(f"Pipeline complete in {elapsed}s!")
         return output_obj
 
     @staticmethod
@@ -139,6 +143,13 @@ class Stage1Pipeline:
 def run_pipeline(
     jd_text: str,
     status_callback: Callable[[str], None] | None = None,
-    output_dir: str | None = None
+    output_dir: str | None = None,
+    force_refresh: bool = False
 ) -> Stage1Output:
-    return Stage1Pipeline().run(jd_text, status_callback=status_callback, output_dir=output_dir)
+    return Stage1Pipeline().run(
+        jd_text=jd_text,
+        status_callback=status_callback,
+        output_dir=output_dir,
+        force_refresh=force_refresh
+    )
+

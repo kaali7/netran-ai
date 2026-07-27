@@ -17,7 +17,8 @@ Before modifying any source code in a model stage:
 * **Input**: JSON file (`sample_jd_*.json`) or raw JD text / URL.
 * **Output**: Single consolidated JSON file saved directly to:
   `model/research_model/test/output/sess_<timestamp>.json`
-* **Trusted Web Domains**: StackOverflow, GitHub, Medium, Dev.to, LeetCode, Glassdoor, Reddit, GeeksforGeeks, and **LinkedIn** (`linkedin.com`).
+* **Trusted Web Domains**: Categorized across Technical (LeetCode, GitHub, StackOverflow, GeeksforGeeks, Blind `teamblind.com`, CareerCup `careercup.com`, Exponent `tryexponent.com`, ByteByteGo `bytebytego.com`, Educative `educative.io`), Market & Compensation (Levels.fyi `levels.fyi`, AmbitionBox `ambitionbox.com`, Wellfound `wellfound.com`, Glassdoor, LinkedIn, Reddit), and HR Screening (Workable `resources.workable.com`, LinkedIn, Glassdoor).
+
 
 ---
 

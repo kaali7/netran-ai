@@ -179,19 +179,17 @@ goto menu
 
 :clean_test_outputs
 echo.
-echo [CLEANING] Deleting stage test output & workflow process directories...
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'process' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Stage test output & process directories removed.
+echo [CLEANING] Deleting stage test output ^& workflow process directories...
+powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*', 'model\*\model\test_output\*' -Recurse -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Stage test output ^& process directories removed.
 pause
 goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting deprecated session directories (model/sessions & sessions)...
-if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "sessions" powershell -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+echo [CLEANING] Deleting deprecated session directories (model\sessions ^& sessions)...
+if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Deprecated session directories deleted.
 pause
 goto menu
@@ -208,8 +206,8 @@ goto menu
 :clean_bytecode_trash
 echo.
 echo [CLEANING] Removing Python bytecode trash, __pycache__, logs, and benchmark files...
-powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Python bytecode and temporary logs removed.
 pause
 goto menu
@@ -219,15 +217,13 @@ echo.
 echo ===================================================================
 echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
 echo ===================================================================
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'output' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'process' | Where-Object { $_.Parent.Name -eq 'test' } | Get-ChildItem -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path 'model' -Recurse -Directory -Filter 'test_output' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "model\sessions" powershell -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
-if exist "sessions" powershell -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*', 'model\*\model\test_output\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
-powershell -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo.
 echo DEEP CLEAN COMPLETE: System returned to pristine condition!
 pause

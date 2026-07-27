@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Project Name: Netran AI (SAMWINI) - Subsystem: JD Research & Market Intelligence Engine
+## Project Name: Netran AI - Subsystem: JD Research & Market Intelligence Engine
 
 **Document Type:** Technical & Functional Specifications for Web-Augmented Interview Generation
 **Academic Year:** 2026-27

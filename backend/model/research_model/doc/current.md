@@ -1,97 +1,95 @@
-# Netran AI JD Research & Market Intelligence Engine: Current Implementation & System Architecture
+# Netran AI Stage 1 JD Research & Market Intelligence Engine: Current Implementation & System Architecture
 
 ## 📌 Executive Summary
-The Netran AI JD Research & Market Intelligence Engine is a standalone backend model and desktop application that converts raw Job Description (JD) text into structured, company-specific, and domain-accurate interview assessment rubrics. The system synthesizes live web intelligence from trusted engineering sources (via **Tavily Search API**) with **Gemini 3.6 Flash** reasoning via the official **`google-genai` Interactions API**, enforcing strict **Pydantic** JSON schemas and caching results in a local **SQLite** database, presented via a dark-themed **Kivy Desktop GUI**.
+The Netran AI Stage 1 Research Model is a **Market & Role Intelligence Engine** that converts raw Job Description (JD) text into structured, company-specific, and domain-accurate interview assessment rubrics. The system executes a parallel 3-vector web search (Technical, Market, HR) using the **Tavily Search API**, synthesizes live web context with **Gemini 3.6 Flash** reasoning via the official **`google-genai` Interactions API**, enforces strict **Pydantic v2** JSON schemas (including USD/INR salary benchmarks, recruiter green/red flags, and soft skill matrices), caches results in a local **SQLite** database, and provides execution timing telemetry.
 
 ---
 
 ## 🏗️ Core Architecture & Component Breakdown
 
 ```
- ┌────────────────┐     Raw Text Input                     ┌───────────────────────────┐
- │  Kivy Desktop  │ ─────────────────────────────────────> │  SQLite Cache (SHA-256)   │
- └───────▲────────┘                                        └─────────────┬─────────────┘
-         │                                                               │ Cache Miss
-         │                                                               ▼
- ┌───────┴────────┐     Structured JSON Rubric             ┌───────────────────────────┐
- │ Rubric Renderer│ <───────────────────────────────────── │  Gemini JD Parser         │
- └───────▲────────┘                                        └─────────────┬─────────────┘
-         │                                                               │ Search Queries
-         │                                                               ▼
- ┌───────┴────────┐     Context Snippets                   ┌───────────────────────────┐
- │ RubricGen LLM  │ <───────────────────────────────────── │ Tavily Search Engine      │
- └────────────────┘                                        │ (Domain Whitelisted)      │
-                                                           └───────────────────────────┘
+                        +----------------------------+
+                        |     Raw Job Description    |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |  1. JD Parser (Gemini LLM) |
+                        +----------------------------+
+                                      |
+                 +--------------------+--------------------+
+                 |                    |                    |
+                 v                    v                    v
+          [Vector A: Tech]    [Vector B: Market]     [Vector C: HR]
+          Interview Questions   Salary/Demand 2026   Green/Red Flags
+                 |                    |                    |
+                 +--------------------+--------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |  2. Parallel Tavily Search |
+                        |      (ThreadPoolExecutor)  |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |  3. Rubric Synthesis       |
+                        |    (Gemini 3.6 Flash)      |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |  4. SQLite Cache & JSON    |
+                        |     Single Artifact Save   |
+                        +----------------------------+
 ```
 
 ### 1. Configuration & Environment Loader ([config.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/config.py))
 * **Environment Management**: Utilizes `python-dotenv` to load environment configurations from `backend/model/.env`.
 * **API Credentials**: Manages `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.6-flash`), and `TAVILY_API_KEY`.
-* **Trusted Domains Whitelist**: Enforces search filtering to high-trust engineering and career platforms: `linkedin.com`, `leetcode.com`, `glassdoor.com`, `github.com`, `stackoverflow.com`, `geeksforgeeks.org`, `reddit.com`, `medium.com`, and `dev.to`.
+* **Categorized Vector Search Domains (`TRUSTED_DOMAINS_BY_VECTOR`)**:
+  - **`technical`**: `leetcode.com`, `github.com`, `geeksforgeeks.org`, `stackoverflow.com`, `teamblind.com`, `careercup.com`, `tryexponent.com`, `bytebytego.com`, `educative.io`, `dev.to`, `medium.com`
+  - **`market_salary`**: `levels.fyi`, `ambitionbox.com`, `wellfound.com`, `glassdoor.com`, `linkedin.com`, `reddit.com`
+  - **`hr_recruiter`**: `resources.workable.com`, `linkedin.com`, `glassdoor.com`, `teamblind.com`, `reddit.com`
+
+
 
 ### 2. Centralized System Prompts ([prompts.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/prompts.py))
-* **Central Prompt Registry**: Single file containing all Stage 1 system prompt templates (`JD_PARSER_PROMPT_TEMPLATE` and `RUBRIC_GENERATOR_PROMPT_TEMPLATE`). Allows instant system prompt modification for Stage 1.
+* **Central Prompt Registry**: Contains system prompt templates (`JD_PARSER_PROMPT_TEMPLATE` for 3-vector query formulation and `RUBRIC_GENERATOR_PROMPT_TEMPLATE` for market and role intelligence rubric synthesis).
 
-### 2. Schema Enforcement & Validation ([schemas.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/schemas.py))
-* **`ParsedJD`**: Represents extracted role title, target company, core tech stack list, and targeted search queries.
-* **`InterviewTopic`**: Represents a specific assessment category, string-based difficulty enum (`Junior`, `Mid`, `Senior`), and example interview questions.
-* **`InterviewRubric`**: The root JSON schema contract containing `roleOverview`, `keyTechnicalPillars` (list), and `expectedInterviewTopics` (list of `InterviewTopic`).
-* **`Stage1Output`**: Encapsulates `rubric`, `parsed_jd`, `search_context` (web search snippets), and `cached` status for UI/CLI callers.
+### 3. Schema Enforcement & Validation ([schemas.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/schemas.py))
+* **`ParsedJD`**: Extracted role title, target company, target seniority (`Junior`, `Mid`, `Senior`, `Lead`, `Staff`), tech stack list, and 3-vector search queries.
+* **`SalaryRange`**: Salary benchmark ranges (`usd_range`, `inr_range`, `compensation_notes`).
+* **`MarketIntelligence`**: Market demand level, hiring landscape trends, top hiring company types, and salary benchmarks.
+* **`HRRecruiterLens`**: Resume metrics, green screening flags, and red flags.
+* **`SoftSkillsBreakdown` & `SkillRequirements`**: Critical soft skills breakdown, evaluation methods, and must-have / nice-to-have hard skills.
+* **`InterviewTopic`**: Topic category, string difficulty level, and example interview questions.
+* **`InterviewRubric` / `EnhancedInterviewRubric`**: Root assessment schema containing `roleOverview`, `marketIntelligence`, `hrRecruiterLens`, `skillRequirements`, `keyTechnicalPillars`, and `expectedInterviewTopics`.
+* **`Stage1Output`**: Encapsulates `rubric`, `parsed_jd`, `search_context`, `cached` status, and `execution_time_seconds`.
 
-### 3. JD Parsing Engine ([jd_parser.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/jd_parser.py))
-* Evaluates raw unformatted JD text via Gemini to extract structured metadata.
-* Formulates 2-3 specific, domain-targeted search query strings (e.g., `"Senior Frontend Engineer Google interview questions glassdoor linkedin leetcode"`).
+### 4. JD Parsing Engine ([jd_parser.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/jd_parser.py))
+* Evaluates raw unformatted JD text via Gemini to extract structured metadata, target seniority, and formulation of 3 distinct search vector queries (Technical, Market & Salary, HR & Recruiter screening).
 
-### 4. Tavily Web Search Engine ([search_engine.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/search_engine.py))
-* Integrates `tavily-python` SDK (`TavilyClient`) to fetch live search snippets across `TRUSTED_DOMAINS`.
-* **Domain Whitelisting**: Passes `include_domains=TRUSTED_DOMAINS` to retrieve clean interview questions and rubrics without web scraping blockers.
-* **Fallback Resilience**: On search failure, empty result set, or missing Tavily API key, returns an empty list, allowing downstream pipeline synthesis using LLM baseline knowledge.
+### 5. Tavily Multi-Vector Search Engine ([search_engine.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/search_engine.py))
+* Integrates Tavily Search API with multi-threaded parallel execution (`ThreadPoolExecutor`) across search vectors.
+* Applies vector tag labeling (`Technical Interview Questions`, `Market & Salary Intelligence`, `HR & Recruiter Screening Signals`) and fallback handling.
 
-### 5. Gemini Client Engine ([gemini_client.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/gemini_client.py))
+### 6. Gemini Client Engine ([gemini_client.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/gemini_client.py))
 * **Interactions API Integration**: Uses official `google-genai` SDK (`from google import genai`) with `client.interactions.create(model="gemini-3.6-flash", input=prompt, store=False)`.
-* **Markdown Code Fence Stripper**: Includes clean regex/string processing (`_strip_fences`) to sanitize model responses into pure JSON strings before Pydantic parsing.
-* **REST Fallback**: Includes a fallback HTTP client to maintain complete operation even if SDK import encounters environment issues.
+* Includes Markdown code fence stripper and pure HTTP REST fallback.
 
-### 6. Rubric Synthesis Engine ([rubric_generator.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/rubric_generator.py))
-* Synthesizes raw JD text, extracted role metadata, and live market web context into a unified assessment prompt.
-* Enforces strict schema formatting, returning validated `InterviewRubric` Pydantic objects.
+### 7. Rubric Synthesis Engine ([rubric_generator.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/rubric_generator.py))
+* Synthesizes JD text, role metadata, and live 3-vector web search context into an enriched `InterviewRubric`.
 
-### 7. SQLite Caching Subsystem ([cache.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/cache.py))
-* **Hashed Caching**: Computes SHA-256 hash of input JD text to serve as primary key in local `cache.db` (`rubric_cache` table).
-* **Latency & Cost Reduction**: Instantaneously retrieves cached JSON for duplicate JD submissions, skipping redundant LLM calls and web search API usage.
+### 8. SQLite Caching Subsystem ([cache.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/cache.py))
+* **Hashed Caching**: Computes SHA-256 hash of input JD text to serve as primary key in local `cache.db` (`rubric_cache` table). Includes automatic stale schema invalidation and `clear()` method.
 
-### 8. Pipeline Orchestrator ([pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/pipeline.py))
-* Connects all stages: `Cache Check -> JD Parse -> Market Search -> Rubric Generation -> Cache Store -> Artifact Save -> Return Stage1Output`.
-* Supports optional `output_dir` parameter to automatically serialize and persist complete Stage 1 results into a single consolidated `stage1_output.json` file.
+### 9. Pipeline Orchestrator ([pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/pipeline.py))
+* Connects `Cache Check -> JD Parse -> Parallel Search -> Rubric Generation -> Cache Store -> Artifact Save -> Return Stage1Output`.
+* Supports `force_refresh` parameter, execution time measurement (`execution_time_seconds`), and single-file JSON artifact serialization (`sess_<timestamp>.json`).
 
-### 9. Kivy Desktop GUI Application ([app.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/app.py))
-* **Preset Dummy Selector**: Provides buttons to load pre-saved dummy JSON JDs (`sample_jd_google_frontend.json`, `sample_jd_backend_engineer.json`, `sample_jd_fullstack.json`) from `test/input/`.
-* **Custom JD Saving**: Allows saving pasted custom JDs as structured `.json` files directly into `test/input/`.
-* **Live Web Intelligence Visualizer**: Displays domain-badged source cards (`[LinkedIn]`, `[LeetCode]`, `[Glassdoor]`, `[GitHub]`, `[StackOverflow]`, `[Reddit]`, `[GeeksforGeeks]`, `[Medium]`) rendering web search titles, URLs, and context snippets.
-* **Interactive Results View**: Role Overview card, Technical Pillars chip list, and categorized interview topics with difficulty badges (🟢 Junior, 🟡 Mid, 🔴 Senior).
-
-### 10. Standalone CLI Test Harness ([test_pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/test_pipeline.py))
-* Headless CLI test harness allowing selection of pre-saved dummy inputs or custom pasting, saving outputs directly as `test/output/sess_<timestamp>.json`.
-
----
-
-## 🛠️ Resolved Issues & Bug Fixes
-
-1. **Windows AppLocker / gRPC DLL Block Fix**
-   - *Issue*: `google-generativeai` failed with `ImportError: DLL load failed while importing cygrpc: An Application Control policy has blocked this file`.
-   - *Fix*: Migrated to the modern `google-genai` SDK (`from google import genai`) and pure HTTP REST fallback, bypassing C-extension native DLL blocks.
-
-2. **Gemini Model Deprecation Migration**
-   - *Issue*: `gemini-2.5-flash` returned `404 Not Found` (deprecated for new project keys).
-   - *Fix*: Upgraded reasoning model to `gemini-3.6-flash` per official Gemini Interactions API specs.
-
-3. **Exa API to Tavily API Transition**
-   - *Issue*: Needed reliable, scraper-free search integration.
-   - *Fix*: Replaced Exa with Tavily Search API (`tavily-python`), updating `.env` key configuration (`TAVILY_API_KEY`) and PRD specs.
-
-4. **Batch Script Command Syntax Errors**
-   - *Issue*: `run.bat` failed on unescaped `&` characters in title strings (`&` interpreted as command separator by `cmd.exe`).
-   - *Fix*: Replaced unescaped `&` characters and updated pathing to run `model.app` cleanly.
+### 10. Desktop GUI & Standalone CLI Test Harness ([front.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/front.py) & [test_pipeline.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/test_pipeline.py))
+* Desktop app and Headless CLI test harness for verifying Market Intelligence output, salary ranges (USD/INR), green/red flags, soft skill matrices, and execution latency.
 
 ---
 
@@ -101,6 +99,7 @@ The Netran AI JD Research & Market Intelligence Engine is a standalone backend m
 | :--- | :--- | :--- | :--- |
 | **Cache Hit Latency** | SQLite DB Lookup | < 15 ms | Instantaneous (~5–10 ms) |
 | **JD Parsing Time** | Gemini 3.6 Flash | < 1.5 s | Operational (~800–1200 ms) |
-| **Web Search Time** | Tavily API (3 queries) | < 2.0 s | Operational (~1.2–1.8 s) |
+| **Parallel Web Search** | Tavily Multi-Vector | < 2.0 s | Operational (~1.2–1.8 s) |
 | **Rubric Synthesis** | Gemini 3.6 Flash | < 2.5 s | Operational (~1.5–2.2 s) |
-| **UI Frame Rate** | Kivy Render Loop | 60 FPS | Smooth (non-blocking thread) |
+| **End-to-End Latency** | Full Uncached Pipeline | < 7.0 s | Operational (~4.5–6.2 s) |
+

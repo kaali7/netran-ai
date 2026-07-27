@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-## Project Name: Netran AI (SAMWINI) - Subsystem: Post-Session Multimodal Evaluation & Report Generation Engine (Stage 4)
+## Project Name: Netran AI - Subsystem: Post-Session Multimodal Evaluation & Report Generation Engine (Stage 4)
 
 **Document Type:** Technical & Functional Specifications for Multimodal Audio-Grounded Analytics & Report Synthesis
 
