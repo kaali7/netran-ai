@@ -1,0 +1,55 @@
+{
+  "matched_skills": [
+    {
+      "skill": "React 18/19 & TypeScript",
+      "resume_evidence": "7+ years experience; used React 18/19 and TypeScript across PixelCraft Solutions and CloudMatrix Inc.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "State Management (Zustand, React Query, Redux Toolkit)",
+      "resume_evidence": "Implemented client-side caching with React Query and Zustand at CloudMatrix Inc, cutting API fetch calls by 55%.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Micro-Frontend Architecture (Webpack Module Federation)",
+      "resume_evidence": "Migrated legacy monolithic React app to micro-frontends using Webpack Module Federation at CloudMatrix Inc.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Core Web Vitals & Frontend Performance",
+      "resume_evidence": "Reduced LCP from 4.2s to 1.4s at PixelCraft Solutions through route-based code splitting and prefetching.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Web Security (CSP, XSS, CORS)",
+      "resume_evidence": "Configured strict Content Security Policies and automated XSS sanitization layers for financial transaction flows.",
+      "proficiency_tier": "Intermediate"
+    }
+  ],
+  "missing_or_gap_skills": [
+    {
+      "missing_skill": "DOM Virtualization at Scale",
+      "jd_importance": "Critical",
+      "probing_strategy": "Probe how candidate handles rendering 50,000+ tabular records efficiently without degrading frame rate."
+    },
+    {
+      "missing_skill": "React 19 Concurrent Primitives & Server Components",
+      "jd_importance": "Critical",
+      "probing_strategy": "Evaluate depth of knowledge around useTransition, useDeferredValue, and React Server Components (RSC) vs client hydration."
+    },
+    {
+      "missing_skill": "Real-time State Synchronization (WebSockets / SSE)",
+      "jd_importance": "Secondary",
+      "probing_strategy": "Ask how to handle real-time UI updates, stream backpressure, and offline synchronization in state managers."
+    }
+  ],
+  "resume_red_flags": [
+    "Mentions Next.js 14 on resume skills list but work experience details focus primarily on Webpack SPA dynamic dynamic imports and Module Federation without detailing Next.js App Router usage in production.",
+    "Claims 99.9% uptime for analytics frontend platform without explicitly defining client-side error telemetry or fallback mechanisms."
+  ],
+  "key_projects_to_probe": [
+    "PixelCraft Solutions Analytics Platform (Core Web Vitals LCP optimization from 4.2s to 1.4s)",
+    "CloudMatrix Micro-Frontend Migration via Webpack 5 Module Federation",
+    "Enterprise Design System adopted by 45+ developers"
+  ]
+}

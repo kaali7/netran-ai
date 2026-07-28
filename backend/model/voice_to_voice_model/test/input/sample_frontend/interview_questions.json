@@ -1,26 +1,461 @@
 [
   {
     "id": 1,
-    "topic": "React 18 Concurrent Rendering",
-    "difficulty": "Junior",
-    "question_text": "How do useTransition and useDeferredValue improve UI responsiveness in React 18?",
-    "expected_keywords": ["useTransition", "concurrent mode", "fiber architecture", "non-blocking"],
-    "resume_reference": "React 18 Migration"
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Core Web Vitals & Performance",
+    "difficulty": "Mid",
+    "question_text": "In your role at PixelCraft, you reduced LCP from 4.2s to 1.4s. What were the specific bottlenecks contributing to that initial 4.2s delay, and how did you profile them?",
+    "resume_context": "Resume highlights improving LCP from 4.2s to 1.4s at PixelCraft Solutions.",
+    "expected_keywords": [
+      "Chrome DevTools Performance Panel",
+      "Render-blocking resources",
+      "LCP candidate element",
+      "Resource Load Delay",
+      "Priority Hints"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Gives generic answers like 'we minified CSS and JS'",
+        "Fails to identify the exact LCP candidate image or hero element",
+        "Does not mention browser profiling tools"
+      ],
+      "good_answer_indicators": [
+        "Identifies render-blocking scripts and oversized unoptimized images as root causes",
+        "Explains using Performance Profiler and Lighthouse trace data",
+        "Mentions font-display swap and preload directives"
+      ],
+      "bar_raiser_indicators": [
+        "Breaks down LCP into TTFB, Resource Load Delay, Resource Load Duration, and Element Render Delay",
+        "Explains image decoding attributes andfetchpriority='high' mechanics in modern browser engines"
+      ]
+    },
+    "followup_if_strong": "How did your optimization strategy impact Interaction to Next Paint (INP) and Cumulative Layout Shift (CLS) during that same initiative?",
+    "followup_if_weak": "Which specific tool inside Chrome DevTools helped you confirm that LCP had improved?"
   },
   {
     "id": 2,
-    "topic": "Virtualization",
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Micro-Frontend Architecture",
     "difficulty": "Mid",
-    "question_text": "How do virtualized lists (e.g. react-window) handle rendering thousands of real-time data rows efficiently?",
-    "expected_keywords": ["virtualization", "viewport calculation", "DOM node recycling"],
-    "resume_reference": "Analytics Table Virtualization"
+    "question_text": "At CloudMatrix, you migrated a monolith to Webpack Module Federation. How did you manage shared dependencies like React and Zustand to avoid duplicate runtime loading?",
+    "resume_context": "Resume mentions migrating a monolithic React app to micro-frontends with Webpack Module Federation.",
+    "expected_keywords": [
+      "singleton",
+      "eager loading",
+      "shared configuration",
+      "semver resolution",
+      "runtime container"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Unaware of Webpack shared module configuration options",
+        "Suggests bundling React separately into every micro-frontend bundle",
+        "Does not address version mismatch conflicts"
+      ],
+      "good_answer_indicators": [
+        "Explains setting React and state libraries as shared singletons in ModuleFederationPlugin",
+        "Describes strict Version checking strategies across remotes and host"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses micro-frontend dependency fallbacks, eager vs dynamic async sharing, and cross-remote memory context leaks"
+      ]
+    },
+    "followup_if_strong": "How did you prevent a breaking runtime error in one remote micro-frontend from crashing the entire host application container?",
+    "followup_if_weak": "What happens in Module Federation if two remotes require different major versions of React?"
   },
   {
     "id": 3,
-    "topic": "Web Worker Offloading",
+    "tier": "Tier 2 (Core Production)",
+    "topic": "React Rendering & Fiber Mechanics",
     "difficulty": "Senior",
-    "question_text": "How would you design a Web Worker background thread layer to offload heavy JSON parsing and data transformation?",
-    "expected_keywords": ["Web Worker", "postMessage", "SharedArrayBuffer", "main thread"],
-    "resume_reference": "Web Worker Caching"
+    "question_text": "How does React's reconciliation engine determine whether to reuse, update, or unmount a Fiber node during parent state updates?",
+    "resume_context": "Deep understanding of React core internals required for Senior/Staff role.",
+    "expected_keywords": [
+      "Fiber node",
+      "reconciliation",
+      "element key",
+      "type equality",
+      "workInProgress tree",
+      "alternate pointer"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Confuses Fiber reconciliation with virtual DOM string diffing",
+        "Thinks keys are only used for rendering lists",
+        "Fails to explain component re-render cascading behavior"
+      ],
+      "good_answer_indicators": [
+        "Explains component type matching and key identity checks during diffing",
+        "Mentions double buffering with current and workInProgress Fiber trees"
+      ],
+      "bar_raiser_indicators": [
+        "Details the render phase versus commit phase, side-effect tags, and how React yields control to the main thread during concurrent work"
+      ]
+    },
+    "followup_if_strong": "If a parent component re-renders, how does React skip sub-tree reconciliation when using React.memo or constant props under the hood?",
+    "followup_if_weak": "Why is using array index as a React component key dangerous for dynamic lists?"
+  },
+  {
+    "id": 4,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "TypeScript Mechanics & Advanced Generics",
+    "difficulty": "Senior",
+    "question_text": "How would you design a strongly typed event emitter interface in TypeScript that enforces specific payload types mapped to specific string event names?",
+    "resume_context": "Evaluates advanced TypeScript mastery expected for L5 Frontend Engineer.",
+    "expected_keywords": [
+      "Generics",
+      "Mapped Types",
+      "keyof operator",
+      "Indexed Access Types",
+      "Conditional Types"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Uses 'any' or vague 'Record<string, generic>' types without type constraints",
+        "Cannot articulate how to bind event payload types to event keys dynamically"
+      ],
+      "good_answer_indicators": [
+        "Uses generic constraints like <T extends Record<string, any>> with on<K extends keyof T>(event: K, handler: (payload: T[K]) => void)",
+        "Demonstrates clean compile-time payload type safety"
+      ],
+      "bar_raiser_indicators": [
+        "Extends the abstraction with mapped conditional types for optional event payloads and template literal type event namespace filtering"
+      ]
+    },
+    "followup_if_strong": "How would you modify that type structure to support wildcards or namespaced events like 'user:login' using Template Literal Types?",
+    "followup_if_weak": "How does keyof work when applied to an interface in TypeScript?"
+  },
+  {
+    "id": 5,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "State Management & Caching",
+    "difficulty": "Senior",
+    "question_text": "Compare Zustand and TanStack Query in terms of state persistence, memory management, and lifecycle separation in enterprise apps.",
+    "resume_context": "Candidate lists both Zustand and React Query (TanStack Query) on resume.",
+    "expected_keywords": [
+      "Client State vs Server State",
+      "Cache Invalidation",
+      "staleTime vs gcTime",
+      "Selectors",
+      "Store Subscriptions"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Treats Zustand and React Query as interchangeable tools for the same purpose",
+        "Does not distinguish between client UI state and asynchronous server state"
+      ],
+      "good_answer_indicators": [
+        "Clearly separates transient client state (Zustand) from asynchronous server data caching (React Query)",
+        "Explains staleTime, query invalidation, and subscription mechanisms"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses memory garbage collection strategies (gcTime), selector optimization to prevent unnecessary component re-renders, and optimistic mutation rollback patterns"
+      ]
+    },
+    "followup_if_strong": "How would you structure normalized cache updates in TanStack Query when a single GraphQL mutation modifies multiple query caches simultaneously?",
+    "followup_if_weak": "What is the primary difference between client state and server state?"
+  },
+  {
+    "id": 6,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "React 19 & Concurrent Rendering",
+    "difficulty": "Senior",
+    "question_text": "How do `useTransition` and `useDeferredValue` prevent main thread blocking during CPU-heavy user input updates?",
+    "resume_context": "Resume claims React 18/19 skills; JD requires knowledge of concurrent rendering features.",
+    "expected_keywords": [
+      "Main Thread Blocking",
+      "Non-blocking transition",
+      "Time Slicing",
+      "Priority Levels",
+      "Scheduler"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Confuses useTransition with simple debounce/throttle functions",
+        "Thinks useTransition runs tasks on background web workers"
+      ],
+      "good_answer_indicators": [
+        "Explains that useTransition marks updates as non-urgent, allowing user input events to interrupt rendering",
+        "Contrasts useTransition (state updates) with useDeferredValue (derived value deferral)"
+      ],
+      "bar_raiser_indicators": [
+        "Explains React Scheduler's lane priorities, yield limits, and interaction with browser frame rates (16ms budget) during concurrent renders"
+      ]
+    },
+    "followup_if_strong": "What happens under the hood if a high-priority input event triggers while a low-priority transition render is mid-way through Fiber reconciliation?",
+    "followup_if_weak": "How is useTransition different from standard setTimeout?"
+  },
+  {
+    "id": 7,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Browser Performance & DOM Virtualization",
+    "difficulty": "Senior",
+    "question_text": "Explain how you would build a DOM Virtualization component from scratch to render 50,000 table rows at 60 FPS.",
+    "resume_context": "Resume lists DOM Virtualization; JD notes this as a critical evaluation area.",
+    "expected_keywords": [
+      "Viewport bounding box",
+      "scrollTop",
+      "startIndex / endIndex",
+      "Absolute positioning",
+      "Overscan padding",
+      "Transform translate"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests rendering all 50,000 DOM nodes with pagination or simple CSS overflow scroll",
+        "Does not calculate active DOM window indices dynamically"
+      ],
+      "good_answer_indicators": [
+        "Explains calculating visible index windows based on scroll position, container height, and item height",
+        "Describes recycling a fixed set of DOM nodes with CSS transforms"
+      ],
+      "bar_raiser_indicators": [
+        "Addresses dynamic dynamic row heights using ResizeObserver, sub-pixel scroll jitter prevention, and passive scroll event listeners with requestAnimationFrame"
+      ]
+    },
+    "followup_if_strong": "How would you handle dynamic item heights where row heights cannot be calculated prior to rendering?",
+    "followup_if_weak": "What is the main browser performance bottleneck when rendering thousands of DOM elements at once?"
+  },
+  {
+    "id": 8,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Web Security & Client Hardening",
+    "difficulty": "Senior",
+    "question_text": "Walk me through how you configure Content Security Policy (CSP) headers and DOM sanitization to mitigate XSS in applications rendering user-generated HTML.",
+    "resume_context": "Resume emphasizes CSP and XSS sanitization experience at CloudMatrix Inc.",
+    "expected_keywords": [
+      "Content Security Policy",
+      "Nonce / Hash",
+      "DOMPurify",
+      "Trusted Types API",
+      "script-src",
+      "XSS attack vectors"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Recommends using innerHTML without sanitization",
+        "Confuses CSP with CORS policies",
+        "Thinks React's dangerouslySetInnerHTML is inherently secure"
+      ],
+      "good_answer_indicators": [
+        "Explains setting restrictive script-src CSP directives with cryptographically secure nonces",
+        "Describes using DOMPurify or browser Trusted Types API before rendering external HTML"
+      ],
+      "bar_raiser_indicators": [
+        "Details enforcement of Trusted Types via CSP headers, handling inline script nonces in SSR pipelines, and strict reporting endpoints (report-uri / report-to)"
+      ]
+    },
+    "followup_if_strong": "How do you securely handle dynamic third-party script injection (e.g., analytics tags) without compromising a strict strict-dynamic CSP?",
+    "followup_if_weak": "What is the difference between Reflected XSS and Stored XSS?"
+  },
+  {
+    "id": 9,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Build Tooling & Code Splitting",
+    "difficulty": "Senior",
+    "question_text": "How does Webpack tree-shaking work under the hood, and what common code patterns prevent unused exports from being eliminated?",
+    "resume_context": "Resume lists Webpack 5, Vite, and bundle optimization experience.",
+    "expected_keywords": [
+      "ES Modules static analysis",
+      "sideEffects flag",
+      "Abstract Syntax Tree (AST)",
+      "Terser / Minifier",
+      "CommonJS vs ESM"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Thinks tree-shaking works on CommonJS require statements without transpilation",
+        "Does not understand static analysis of ES module imports/exports"
+      ],
+      "good_answer_indicators": [
+        "Explains that static ESM structure allows Webpack to detect unused exports and mark them for minifier removal",
+        "Identifies side-effect top-level code and re-exports as common tree-shaking breakers"
+      ],
+      "bar_raiser_indicators": [
+        "Analyzes package.json 'sideEffects: false' configuration, babel transform pitfalls (e.g., transpiling ESM to CommonJS before bundler), and scope hoisting mechanics"
+      ]
+    },
+    "followup_if_strong": "How would you debug a production bundle where a massive 3rd-party library isn't being tree-shaken despite ESM imports?",
+    "followup_if_weak": "Why is import statement order static in ES Modules compared to require() in CommonJS?"
+  },
+  {
+    "id": 10,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Memory Leaks & Debugging",
+    "difficulty": "Senior",
+    "question_text": "Describe a scenario where a client-side memory leak occurs in a single-page React app, and how you pin it down using Chrome DevTools Memory Profiler.",
+    "resume_context": "Evaluates candidate's hands-on production debugging and profiling capabilities.",
+    "expected_keywords": [
+      "Detached DOM nodes",
+      "Heap Snapshot",
+      "Retainers Tree",
+      "EventListener leak",
+      "Closure references"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Cannot explain how to read Heap Snapshots or Allocation Timelines",
+        "Attributes memory leaks solely to large JS objects without discussing garbage collection retainers"
+      ],
+      "good_answer_indicators": [
+        "Identifies uncleaned event listeners, uncleared setInterval timers, or detached DOM trees held by closures",
+        "Explains taking comparison Heap Snapshots before and after mounting/unmounting components"
+      ],
+      "bar_raiser_indicators": [
+        "Walks through analyzing Retainer graphs in Chrome DevTools to locate retaining paths, binding references in custom hooks, and WeakMap memory management strategies"
+      ]
+    },
+    "followup_if_strong": "How do WeakMap and WeakSet prevent memory retention in custom hook event listener maps?",
+    "followup_if_weak": "What cleanup step is required when adding a window addEventListener inside useEffect?"
+  },
+  {
+    "id": 11,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Design System Architecture",
+    "difficulty": "Senior",
+    "question_text": "You architected a design system used by 45+ engineers. How did you handle component versioning, semantic breaking changes, and style encapsulation?",
+    "resume_context": "Resume details building a shared enterprise design system for 45+ developers at PixelCraft.",
+    "expected_keywords": [
+      "Semantic Versioning",
+      "Design Tokens",
+      "CSS Modules / Tailwind / Vanilla Extract",
+      "Compound Components",
+      "Breaking Change Migration"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not address versioning or breaking change management across multiple consuming teams",
+        "Ignores accessibility (a11y) and CSS class collision risks"
+      ],
+      "good_answer_indicators": [
+        "Describes using semver, design tokens for consistent styling, and automated regression testing",
+        "Explains clean prop interface design using flexible Compound Component patterns"
+      ],
+      "bar_raiser_indicators": [
+        "Details automated codemods for seamless breaking change migrations, headless UI architecture (separating behavior from styles), and WCAG compliance automated testing pipelines"
+      ]
+    },
+    "followup_if_strong": "How would you implement an automated codemod using AST transformations (e.g., jscodeshift) to update deprecated component props across 50 repos?",
+    "followup_if_weak": "What are design tokens and why are they useful in component libraries?"
+  },
+  {
+    "id": 12,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Micro-Frontend State & Communication",
+    "difficulty": "Senior",
+    "question_text": "In a Webpack Module Federation environment, how do you manage shared application state and cross-micro-frontend communication without tightly coupling remotes?",
+    "resume_context": "Evaluates candidate's architectural patterns in micro-frontend communication.",
+    "expected_keywords": [
+      "Custom Events / Event Bus",
+      "Unidirectional Data Flow",
+      "Loose Coupling",
+      "Global Window Namespace isolation",
+      "Publish-Subscribe"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests sharing a monolithic global Redux store across all micro-frontends directly",
+        "Ignores domain boundary isolation between teams"
+      ],
+      "good_answer_indicators": [
+        "Recommends lightweight browser Event Targets, Custom Events, or isolated message buses",
+        "Keeps team domain stores autonomous and communicates strictly through typed contracts"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses micro-frontend contract testing, runtime event versioning schema validation, and handling micro-frontend asynchronous state synchronization failures gracefully"
+      ]
+    },
+    "followup_if_strong": "How do you prevent event looping or infinite reactive state updates when two independent micro-frontends publish and listen to related events?",
+    "followup_if_weak": "Why is sharing a single global state store across independent micro-frontends problematic?"
+  },
+  {
+    "id": 13,
+    "tier": "Tier 3 (System Design)",
+    "topic": "System Design: Real-Time Collaborative Canvas / Ticker",
+    "difficulty": "Senior",
+    "question_text": "Architect a high-performance client application processing 5,000 real-time updates/sec (e.g., live financial ticker or collaborative document editor). How do you ensure smooth UI rendering without locking the main thread?",
+    "resume_context": "Evaluates Staff-level System Design capabilities for high-throughput client systems.",
+    "expected_keywords": [
+      "Web Workers",
+      "OffscreenCanvas / Batching",
+      "WebSockets / Backpressure",
+      "requestAnimationFrame",
+      "Data Buffering / Throttling"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Directly triggers React state updates on every incoming WebSocket message payload",
+        "Fails to recognize main thread render blocking with high message throughput"
+      ],
+      "good_answer_indicators": [
+        "Offloads data parsing and delta computation to a Web Worker thread",
+        "Buffers incoming socket streams and syncs UI state at 60 FPS using requestAnimationFrame loops"
+      ],
+      "bar_raiser_indicators": [
+        "Designs SharedArrayBuffer / Transferable objects for zero-copy data transfer between Worker and UI threads, implements client backpressure controls, and optimistic conflict resolution (CRDTs / Operational Transformation)"
+      ]
+    },
+    "followup_if_strong": "How would you use Transferable Objects or SharedArrayBuffer to pass dynamic buffer data from Web Worker to UI thread without memory serialization overhead?",
+    "followup_if_weak": "What happens to the browser UI if state set functions are invoked 5,000 times a second?"
+  },
+  {
+    "id": 14,
+    "tier": "Tier 3 (System Design)",
+    "topic": "System Design: Enterprise SSR & Hydration Architecture",
+    "difficulty": "Senior",
+    "question_text": "Design an enterprise-scale SSR rendering pipeline using Next.js / React Server Components. How do you optimize for Time to First Byte (TTFB) while avoiding client-side hydration mismatches and waterfalls?",
+    "resume_context": "Resume lists Next.js 14; JD expects mastery of modern rendering trade-offs.",
+    "expected_keywords": [
+      "Streaming SSR",
+      "HTML Suspense Boundaries",
+      "Hydration Mismatch",
+      "Selective Hydration",
+      "Server Components (RSC)"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not understand the difference between build-time SSG, runtime SSR, and RSC streaming",
+        "Cannot explain what causes hydration mismatch warnings in React"
+      ],
+      "good_answer_indicators": [
+        "Explains streaming HTML with HTTP 1.1/2 chunking and React Suspense boundaries to lower TTFB",
+        "Isolates interactive client components from server-rendered static component trees"
+      ],
+      "bar_raiser_indicators": [
+        "Deep dives into Server-Driven UI architecture, edge worker execution (V8 isolates), speculative pre-rendering, and zero-bundle-size RSC payload mechanics"
+      ]
+    },
+    "followup_if_strong": "How would you handle user session authentication state in Edge Middleware while maintaining edge static caching for global users?",
+    "followup_if_weak": "What causes a React hydration error when server-rendered HTML arrives on the client browser?"
+  },
+  {
+    "id": 15,
+    "tier": "Tier 3 (System Design)",
+    "topic": "System Design: Resilient Client Storage & Offline First",
+    "difficulty": "Senior",
+    "question_text": "Design a client-side architecture supporting seamless offline editing and background data sync for an enterprise web application with unstable network connections.",
+    "resume_context": "Addresses client data management and resiliency at scale.",
+    "expected_keywords": [
+      "IndexedDB / Service Worker",
+      "Sync Queue",
+      "Optimistic UI Updates",
+      "Conflict Resolution Strategies",
+      "Background Sync API"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Relies exclusively on localStorage for complex offline relational data storage",
+        "Fails to address network failure recoveries or server synchronization conflicts"
+      ],
+      "good_answer_indicators": [
+        "Uses IndexedDB via wrapper libraries (e.g. Dexie) for persistent structured storage and Service Workers for asset/request intercept",
+        "Implements an outbound mutation queue with exponential backoff retry policies"
+      ],
+      "bar_raiser_indicators": [
+        "Architects Conflict-free Replicated Data Types (CRDTs) or vector clocks for background multi-tab sync, handling storage quota limits, and secure data encryption at rest in IndexedDB"
+      ]
+    },
+    "followup_if_strong": "How do you guarantee atomic multi-tab state synchronization when multiple browser tabs write to IndexedDB concurrently while offline?",
+    "followup_if_weak": "Why is IndexedDB preferred over localStorage for offline enterprise applications?"
   }
 ]

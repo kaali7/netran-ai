@@ -1,42 +1,449 @@
 [
   {
     "id": 1,
-    "topic": "Asynchronous Concurrency",
-    "difficulty": "Junior",
-    "question_text": "Can you explain the event loop mechanism in Python asyncio and how it handles non-blocking I/O?",
-    "expected_keywords": ["event loop", "async", "await", "coroutine", "non-blocking"],
-    "resume_reference": "FastAPI Microservices Migration"
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Asynchronous Python & Microservices Architecture",
+    "difficulty": "Mid",
+    "question_text": "In Python's asyncio event loop, how are synchronous blocking I/O calls handled when executing within a FastAPI endpoint, and what happens if a synchronous time.sleep or blocking DB query is executed directly inside an async def path?",
+    "resume_context": "Candidate claims expertise in high-concurrency AsyncIO frameworks and FastAPI microservices.",
+    "expected_keywords": [
+      "event loop thread",
+      "blocking execution",
+      "run_in_executor",
+      "ThreadPoolExecutor",
+      "asyncio.sleep",
+      "event loop starvation"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Claims asyncio automatically multi-threads Python code",
+        "Does not recognize that blocking calls freeze the entire single-threaded event loop"
+      ],
+      "good_answer_indicators": [
+        "Explains that blocking calls stall the event loop for all concurrent requests",
+        "Suggests offloading synchronous blocking calls to run_in_executor or thread pools"
+      ],
+      "bar_raiser_indicators": [
+        "Explains internal mechanics of run_in_executor and thread pool limits in FastAPI synchronous def worker pools versus async def event loops"
+      ]
+    },
+    "followup_if_strong": "How does FastAPI internally handle normal synchronous 'def' endpoints versus 'async def' endpoints with respect to thread pools?",
+    "followup_if_weak": "What is the key functional difference between time.sleep(1) and asyncio.sleep(1) inside an async function?"
   },
   {
     "id": 2,
-    "topic": "PostgreSQL Indexing",
-    "difficulty": "Junior",
-    "question_text": "How do B-Tree indexes work in PostgreSQL, and under what conditions will the query planner choose a sequential scan?",
-    "expected_keywords": ["B-Tree", "cardinality", "sequential scan", "query planner"],
-    "resume_reference": "Database Optimization"
+    "tier": "Tier 1 (Warmup)",
+    "topic": "High-Concurrency Python & Microservices Architecture",
+    "difficulty": "Mid",
+    "question_text": "What are the primary operational trade-offs between using gRPC over HTTP/2 versus traditional REST over HTTP/1.1 for high-throughput internal microservice communication?",
+    "resume_context": "Candidate integrated gRPC services over HTTP/2 for internal service-to-service communication at StreamLine Technologies.",
+    "expected_keywords": [
+      "multiplexing",
+      "Protobuf binary serialization",
+      "HTTP/2 connection reuse",
+      "head-of-line blocking",
+      "payload size"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Focuses only on JSON syntax differences",
+        "Unaware of HTTP/2 multiplexing or Protobuf binary framing"
+      ],
+      "good_answer_indicators": [
+        "Mentions Protobuf efficiency, smaller payload size, and HTTP/2 multiplexing eliminating TCP handshake overhead"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses streaming capabilities, dynamic client stubs, gRPC load balancing nuances, and debugging complexity via Wireshark/gRPCurl"
+      ]
+    },
+    "followup_if_strong": "How do you handle client-side load balancing in gRPC across Kubernetes pods given long-lived persistent HTTP/2 connections?",
+    "followup_if_weak": "Why is binary serialization like Protobuf faster than JSON serialization for microservice communication?"
   },
   {
     "id": 3,
-    "topic": "gRPC vs REST",
-    "difficulty": "Mid",
-    "question_text": "What are the architectural trade-offs between gRPC with Protocol Buffers and REST over HTTP/1.1?",
-    "expected_keywords": ["gRPC", "Protobuf", "HTTP/2", "binary serialization"],
-    "resume_reference": null
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Database Performance, Query Optimization & Caching Strategies",
+    "difficulty": "Senior",
+    "question_text": "When using EXPLAIN ANALYZE on PostgreSQL to optimize a slow query on a 50M row table, what specific metric differences between execution time and planning time indicate index degradation versus disk I/O bottlenecks?",
+    "resume_context": "Candidate used EXPLAIN ANALYZE to optimize high-impact queries at DataScale Systems.",
+    "expected_keywords": [
+      "Sequential Scan",
+      "Index Scan",
+      "Bitmap Index Scan",
+      "Buffer Hits",
+      "Disk I/O",
+      "Execution Time",
+      "Shared Dirtied"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Thinks EXPLAIN and EXPLAIN ANALYZE are identical",
+        "Cannot differentiate between Sequential Scan and Index Scan"
+      ],
+      "good_answer_indicators": [
+        "Identifies disk read bottlenecks through shared read buffers and differentiates Sequential vs Index Scans"
+      ],
+      "bar_raiser_indicators": [
+        "Explains B-Tree depth impact, random page cost vs sequential page cost settings, and auto-vacuum bloat degradation"
+      ]
+    },
+    "followup_if_strong": "How does PostgreSQL work_mem tuning impact external merge sorts on disk during large ORDER BY queries?",
+    "followup_if_weak": "What is the fundamental difference in execution between EXPLAIN and EXPLAIN ANALYZE?"
   },
   {
     "id": 4,
-    "topic": "Distributed Caching",
-    "difficulty": "Mid",
-    "question_text": "How do you handle cache stampede and cache invalidation strategies in Redis for high-throughput backend services?",
-    "expected_keywords": ["Redis", "cache-aside", "TTL", "mutex lock"],
-    "resume_reference": "Redis Caching Layer"
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Database Performance, Query Optimization & Caching Strategies",
+    "difficulty": "Senior",
+    "question_text": "When configuring PgBouncer to resolve database connection starvation, what are the precise trade-offs between Session, Transaction, and Statement pooling modes, and why might Transaction mode break prepared statements?",
+    "resume_context": "Candidate resolved database connection starvation by implementing PgBouncer connection pooling.",
+    "expected_keywords": [
+      "Transaction pooling",
+      "Session pooling",
+      "Prepared statements",
+      "SET session parameters",
+      "PgBouncer pool_mode",
+      "DISCARD ALL"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Unaware of PgBouncer pool modes",
+        "Does not understand how pooled connections are shared across clients"
+      ],
+      "good_answer_indicators": [
+        "Explains Session vs Transaction mode and notes that prepared statements tied to backend session states fail in Transaction mode"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses protocol-level prepared statement support in PgBouncer 1.21+, connection overhead per backend process, and max_client_conn ratios"
+      ]
+    },
+    "followup_if_strong": "How do you work around prepared statement limitations in PostgreSQL when using SQLAlchemy in combination with PgBouncer in Transaction mode?",
+    "followup_if_weak": "Why is establishing new PostgreSQL database connections expensive compared to reusing existing connections?"
   },
   {
     "id": 5,
-    "topic": "System Architecture",
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Database Performance, Query Optimization & Caching Strategies",
     "difficulty": "Senior",
-    "question_text": "How would you design a distributed rate-limiting pipeline capable of scaling to 100,000 requests per second?",
-    "expected_keywords": ["token bucket", "sliding window", "Redis cluster", "rate limiting"],
-    "resume_reference": "High Throughput API Gateway"
+    "question_text": "In a cache-aside Redis implementation, how exactly does introducing TTL jitter mitigate cache stampedes and thundering herd problems during traffic spikes?",
+    "resume_context": "Candidate designed a Redis cache-aside system with TTL jitter at DataScale Systems.",
+    "expected_keywords": [
+      "Cache stampede",
+      "Thundering herd",
+      "TTL jitter",
+      "Probabilistic early expiration",
+      "Mutex lock / Distributed lock"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Confuses cache stampede with database connection timeout",
+        "Thinks TTL jitter completely prevents cache miss latency"
+      ],
+      "good_answer_indicators": [
+        "Explains that randomizing expiration times prevents simultaneous cache invalidation and simultaneous backend DB surges"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses XFetch algorithm, probabilistic early recomputation, and distributed locking strategies via Redlock for critical keys"
+      ]
+    },
+    "followup_if_strong": "How would you implement probabilistic early expiration (XFetch) in Python to update cache keys before they actually expire under heavy traffic?",
+    "followup_if_weak": "What happens to the backend database if 10,000 requests query the same expired cache key at the exact same millisecond?"
+  },
+  {
+    "id": 6,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Distributed Messaging & Event-Driven Systems",
+    "difficulty": "Senior",
+    "question_text": "In Apache Kafka, how do partition keys guarantee message ordering, and what happens to partition assignment and consumer processing when a consumer in a consumer group crashes during rebalance?",
+    "resume_context": "Candidate built distributed event ingestion pipelines using Apache Kafka processing 500k messages/min.",
+    "expected_keywords": [
+      "Partition key",
+      "Consumer Group",
+      "Rebalance protocol",
+      "Cooperative Sticky Assignor",
+      "Offset commit",
+      "Partition skew"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Claims Kafka guarantees global ordering across all partitions",
+        "Unaware of partition rebalancing or offset tracking"
+      ],
+      "good_answer_indicators": [
+        "Explains message key hashing to specific partitions for per-key ordering and describes offset management during consumer failure"
+      ],
+      "bar_raiser_indicators": [
+        "Explains Eager vs Cooperative Sticky Rebalance protocols, consumer heartbeat timeouts, and max.poll.interval.ms configuration details"
+      ]
+    },
+    "followup_if_strong": "How do you prevent processing duplicate messages during consumer rebalancing when auto-commit is enabled?",
+    "followup_if_weak": "If you have 5 partitions in a Kafka topic, what is the maximum number of active parallel consumers you can have in a single consumer group?"
+  },
+  {
+    "id": 7,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Distributed Messaging & Event-Driven Systems",
+    "difficulty": "Senior",
+    "question_text": "How do you guarantee task idempotency in Celery workers when processing retryable financial transaction messages that might be delivered at-least-once?",
+    "resume_context": "Candidate used Celery with event processing handling high-throughput messaging without data loss.",
+    "expected_keywords": [
+      "At-least-once delivery",
+      "Idempotency key",
+      "Unique constraint",
+      "Atomic database transaction",
+      "Redis SETNX",
+      "Deduplication"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Assumes Celery guarantees exactly-once execution natively",
+        "Suggests simple in-memory checks for deduplication across distributed workers"
+      ],
+      "good_answer_indicators": [
+        "Proposes using unique idempotency keys stored in PostgreSQL or Redis with atomic lock checks before worker execution"
+      ],
+      "bar_raiser_indicators": [
+        "Details two-phase commits, optimistic concurrency control with database constraints, and state machine lock patterns"
+      ]
+    },
+    "followup_if_strong": "What happens if a Celery worker crashes halfway through processing after mutating state but before committing the task result?",
+    "followup_if_weak": "What does the term 'at-least-once message delivery' mean in a distributed queue?"
+  },
+  {
+    "id": 8,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Asynchronous Python & Microservices Architecture",
+    "difficulty": "Senior",
+    "question_text": "How does FastAPI leverage Pydantic v2 and Python typing for request payload validation, and how do dependency scopes with yield manage context managers like database transactions?",
+    "resume_context": "Candidate relies on FastAPI, Pydantic, and SQLAlchemy in high-concurrency microservices.",
+    "expected_keywords": [
+      "Dependency Injection",
+      "Depends",
+      "Yield dependency",
+      "Context manager",
+      "Rust core (Pydantic v2)",
+      "Session rollback"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not know how yield works in FastAPI dependencies",
+        "Unaware of automatic exception handling/rollback flow in scope teardown"
+      ],
+      "good_answer_indicators": [
+        "Explains yield-based dependency injection for managing open/close lifecycle of database connections and exception rollbacks"
+      ],
+      "bar_raiser_indicators": [
+        "Detail Pydantic v2 Rust engine serialization improvements and sub-dependency graph resolution order in FastAPI"
+      ]
+    },
+    "followup_if_strong": "How would you handle global transaction rollback across nested yield dependencies in FastAPI if a downstream dependency fails?",
+    "followup_if_weak": "What is the purpose of using `yield` instead of `return` in a FastAPI database session dependency?"
+  },
+  {
+    "id": 9,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "High-Availability System Design & Resilience",
+    "difficulty": "Senior",
+    "question_text": "How do Kubernetes Horizontal Pod Autoscaler (HPA) and Prometheus custom metrics interact to trigger pod scale-outs before CPU/Memory starvation occurs during predictable traffic surges?",
+    "resume_context": "Candidate maintained deployment pipelines on AWS EKS with Kubernetes HPA and Prometheus.",
+    "expected_keywords": [
+      "HPA",
+      "Prometheus Adapter",
+      "Custom metrics",
+      "Kube-state-metrics",
+      "Scale-out cooldown",
+      "Request rate metric"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Thinks HPA only scales on CPU/Memory and cannot use custom application metrics",
+        "Unaware of scaling delay/cooldown periods"
+      ],
+      "good_answer_indicators": [
+        "Explains Prometheus Adapter exporting custom metrics (e.g. HTTP req/sec or queue length) to Kube metrics server for HPA thresholds"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses target utilization math, scale-down stabilization windows, and predictive pod autoscaling using KEDA"
+      ]
+    },
+    "followup_if_strong": "How do you configure Kubernetes liveness and readiness probes to prevent traffic from routing to a pod during heavy cold-start initialization?",
+    "followup_if_weak": "What is the difference between CPU utilization metrics and application request metrics for scaling?"
+  },
+  {
+    "id": 10,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "High-Availability System Design & Resilience",
+    "difficulty": "Senior",
+    "question_text": "When diagnosing live database lock contention or deadlocks in PostgreSQL under heavy load, what system views do you inspect and how do you resolve the blockage without dropping active user connections?",
+    "resume_context": "Candidate diagnosed and resolved high-impact database incidents at DataScale Systems.",
+    "expected_keywords": [
+      "pg_stat_activity",
+      "pg_locks",
+      "pg_cancel_backend",
+      "pg_terminate_backend",
+      "deadlock_timeout",
+      "statement_timeout"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests restarting PostgreSQL service immediately",
+        "Cannot name PostgreSQL system diagnostic tables"
+      ],
+      "good_answer_indicators": [
+        "Identifies pg_stat_activity and pg_locks to locate blocking query PIDs and uses pg_cancel_backend prior to terminate_backend"
+      ],
+      "bar_raiser_indicators": [
+        "Explains application-side lock acquisition ordering, statement_timeout/lock_timeout safeguards, and deadlock detection tree parsing"
+      ]
+    },
+    "followup_if_strong": "Why is `pg_cancel_backend` preferred over `pg_terminate_backend`, and what happens at the connection pool level when a backend is terminated?",
+    "followup_if_weak": "What is a database deadlock and how does PostgreSQL detect it?"
+  },
+  {
+    "id": 11,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Distributed Messaging & Event-Driven Systems",
+    "difficulty": "Senior",
+    "question_text": "How do you guarantee atomic consistency between a local PostgreSQL database transaction write and an outbound Apache Kafka message publishing event using the Transactional Outbox Pattern?",
+    "resume_context": "Skill gap strategy: Testing candidate's knowledge of distributed consistency patterns lacking explicit resume evidence.",
+    "expected_keywords": [
+      "Transactional Outbox Pattern",
+      "Debezium",
+      "Change Data Capture (CDC)",
+      "Outbox Table",
+      "WAL (Write-Ahead Log)",
+      "At-least-once"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests publishing to Kafka inside the database transaction block without considering network failures after DB commit"
+      ],
+      "good_answer_indicators": [
+        "Explains writing event records to an outbox table within the same DB transaction and polling or CDC streaming outbox records to Kafka"
+      ],
+      "bar_raiser_indicators": [
+        "Details Debezium Postgres WAL logical decoding, idempotency key propagation, and cleanup policies for processed outbox entries"
+      ]
+    },
+    "followup_if_strong": "What are the trade-offs between polling an Outbox table vs using Change Data Capture (CDC) via Debezium and Postgres WAL?",
+    "followup_if_weak": "Why is it unsafe to send a Kafka message right after `db.commit()` in your code?"
+  },
+  {
+    "id": 12,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "High-Availability System Design & Resilience",
+    "difficulty": "Senior",
+    "question_text": "How does a Circuit Breaker pattern state machine operate (Closed, Open, Half-Open), and how would you implement custom FastAPI middleware to prevent cascading downstream gRPC failures?",
+    "resume_context": "Probing candidate capability regarding resilience patterns in microservice environments.",
+    "expected_keywords": [
+      "Closed state",
+      "Open state",
+      "Half-Open state",
+      "Failure threshold",
+      "Fallback response",
+      "Timeout threshold"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Confuses Circuit Breaker with simple retry logic with exponential backoff"
+      ],
+      "good_answer_indicators": [
+        "Accurately describes state transitions based on error rate thresholds and immediate failure return during Open state"
+      ],
+      "bar_raiser_indicators": [
+        "Explains sliding window metrics evaluation, graceful fallback degradation strategies, and distributed state sharing for circuit breakers via Redis"
+      ]
+    },
+    "followup_if_strong": "When a circuit breaker is in Half-Open state, how do you decide what percentage of probe traffic to allow through?",
+    "followup_if_weak": "What is the primary danger of continuously retrying requests against a failing downstream service?"
+  },
+  {
+    "id": 13,
+    "tier": "Tier 3 (System Design)",
+    "topic": "High-Availability System Design & Resilience",
+    "difficulty": "Lead",
+    "question_text": "Architect a multi-region distributed rate-limiting API Gateway for 100,000 requests/sec using Redis and FastAPI. How do you handle clock skew, synchronization latency between regions, and Redis key eviction?",
+    "resume_context": "Candidate built 35M+ request/day microservice architectures at DataScale Systems.",
+    "expected_keywords": [
+      "Sliding Window Log / Counter",
+      "Redis Lua Scripting",
+      "CRDT",
+      "Local in-memory cache",
+      "Token Bucket",
+      "Redis Cluster"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Proposes centralized single-Redis instance for global multi-region traffic",
+        "Uses naive GET/SET commands prone to race conditions"
+      ],
+      "good_answer_indicators": [
+        "Uses atomic Lua scripts in Redis for sliding window counter and local rate limiting fallbacks"
+      ],
+      "bar_raiser_indicators": [
+        "Designs a multi-tier local leaky bucket combined with asynchronous batch synchronization to Redis using CRDTs to minimize cross-region latency"
+      ]
+    },
+    "followup_if_strong": "If the global Redis cluster becomes completely unreachable, how should the API Gateway degrade rate-limiting policy without causing total outage?",
+    "followup_if_weak": "How does Lua scripting in Redis ensure atomic execution of check-and-set operations?"
+  },
+  {
+    "id": 14,
+    "tier": "Tier 3 (System Design)",
+    "topic": "Distributed Messaging & Event-Driven Systems",
+    "difficulty": "Lead",
+    "question_text": "Design an event-driven analytical processing pipeline that ingests 1 Million events per second from IoT devices into Kafka, processes aggregates using Python workers, and writes to PostgreSQL/TimescaleDB. How do you prevent backpressure, handle out-of-order events, and maintain zero data loss?",
+    "resume_context": "Candidate built distributed pipelines processing 500k msg/min at DataScale Systems; evaluating scaling capability to 1M msg/sec.",
+    "expected_keywords": [
+      "Kafka Partitions",
+      "Watermarking",
+      "Dead Letter Queue (DLQ)",
+      "Batch ingestion",
+      "TimescaleDB hypertable",
+      "Backpressure"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Proposes row-by-row single inserts into PostgreSQL for 1M events/sec",
+        "Ignores backpressure and consumer memory limits"
+      ],
+      "good_answer_indicators": [
+        "Utilizes Kafka partitioning, consumer stream buffering, and bulk COPY/UNNEST operations into PostgreSQL hypertables with DLQ for malformed events"
+      ],
+      "bar_raiser_indicators": [
+        "Details sliding window aggregates with event-time watermarking, backpressure pause/resume consumer APIs, and WAL write tuning for time-series DBs"
+      ]
+    },
+    "followup_if_strong": "How do you handle late-arriving events that fall outside your sliding time window cutoff during stream aggregation?",
+    "followup_if_weak": "Why is bulk inserting data into PostgreSQL faster than executing individual INSERT statements in a loop?"
+  },
+  {
+    "id": 15,
+    "tier": "Tier 3 (System Design)",
+    "topic": "High-Availability System Design & Resilience",
+    "difficulty": "Lead",
+    "question_text": "Design a zero-downtime blue-green deployment strategy on AWS EKS for an asynchronous event-driven system with schema-breaking database migrations in PostgreSQL. How do you ensure backward compatibility and prevent data loss during rollback?",
+    "resume_context": "Candidate maintains EKS deployments and database query optimizations.",
+    "expected_keywords": [
+      "Expand-Contract Pattern (Parallel Run)",
+      "Backward compatibility",
+      "Read/Write dual schema",
+      "Kubernetes readiness probes",
+      "Logical replication"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests taking database offline for schema migrations during live traffic",
+        "Does not account for old application code reading modified DB columns"
+      ],
+      "good_answer_indicators": [
+        "Applies Expand-Contract (Parallel Change) migration pattern: add column -> dual write -> migrate data -> switch read -> drop old column"
+      ],
+      "bar_raiser_indicators": [
+        "Details complete multi-phase deployment pipeline with database triggers/views for backward compatibility and automated rollback trigger conditions via SLO error budgets"
+      ]
+    },
+    "followup_if_strong": "If the deployment rolls back during Phase 2 after new records were written in the updated format, how do you repair data consistency?",
+    "followup_if_weak": "What is the Expand-Contract pattern for database migrations?"
   }
 ]

@@ -1,0 +1,429 @@
+[
+  {
+    "id": 1,
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Real-time Streaming Protocols",
+    "difficulty": "Mid",
+    "question_text": "Why did you choose Server-Sent Events over WebSockets for your Next.js 14 and FastAPI token streaming architecture at Synthetix AI Labs?",
+    "resume_context": "Resume mentions implementing SSE token streaming from FastAPI backend to Next.js frontend.",
+    "expected_keywords": [
+      "unidirectional",
+      "HTTP/2 multiplexing",
+      "reconnection handles",
+      "overhead",
+      "text/event-stream"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "States WebSockets are always slower without explaining protocols",
+        "Confuses SSE with long polling"
+      ],
+      "good_answer_indicators": [
+        "Explains SSE is unidirectional and simpler over HTTP",
+        "Notes automatic client reconnection"
+      ],
+      "bar_raiser_indicators": [
+        "Analyzes HTTP/2 multiplexing advantages, browser connections per domain, and binary vs text transport efficiency"
+      ]
+    },
+    "followup_if_strong": "How do you handle client network connection interruptions mid-stream without losing partial generated token context?",
+    "followup_if_weak": "What HTTP header does FastAPI need to set to establish a persistent Server-Sent Events stream?"
+  },
+  {
+    "id": 2,
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Async Python Concurrency",
+    "difficulty": "Mid",
+    "question_text": "In your FastAPI backend, what happens to the AsyncIO event loop if a developer accidentally calls synchronous requests.post instead of an async HTTP client?",
+    "resume_context": "Resume highlights Python AsyncIO and FastAPI experience for high-scale backend services.",
+    "expected_keywords": [
+      "event loop blocking",
+      "thread pool",
+      "run_in_executor",
+      "httpx",
+      "concurrency bottleneck"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Claims AsyncIO handles sync calls in background automatically",
+        "Does not recognize blocking nature"
+      ],
+      "good_answer_indicators": [
+        "Identifies that sync blocking calls freeze the entire event loop for concurrent requests"
+      ],
+      "bar_raiser_indicators": [
+        "Explains using httpx/aiohttp or offloading sync CPU/IO tasks to loop.run_in_executor or asyncio.to_thread"
+      ]
+    },
+    "followup_if_strong": "How would you instrument automated linting or runtime detection to catch event loop blocking in CI/CD pipelines?",
+    "followup_if_weak": "How does an async def endpoint in FastAPI differ from a standard def endpoint under the hood?"
+  },
+  {
+    "id": 3,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Hybrid RAG & Evaluation",
+    "difficulty": "Senior",
+    "question_text": "You noted a 38% retrieval precision improvement using Pinecone and Cohere semantic reranking. What exact evaluation dataset and metrics did you use to benchmark this?",
+    "resume_context": "Resume cites a 38% precision improvement via Pinecone and Cohere semantic reranking.",
+    "expected_keywords": [
+      "Hit Rate@K",
+      "MRR",
+      "NDCG",
+      "ground truth dataset",
+      "sparse-dense fusion",
+      "reciprocal rank fusion"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Gives vague hand-waving answers about testing manually with a few queries",
+        "Cannot define precision metrics"
+      ],
+      "good_answer_indicators": [
+        "Mentions specific metrics like MRR or Precision@K and ground truth query-document pairs"
+      ],
+      "bar_raiser_indicators": [
+        "Details Reciprocal Rank Fusion math, trade-offs between dense/sparse search, and cost-latency impact of reranking models"
+      ]
+    },
+    "followup_if_strong": "How did Cohere reranking impact overall tail latency, and how did you cache reranked context outputs?",
+    "followup_if_weak": "What is the key difference between dense vector retrieval and sparse keyword search like BM25?"
+  },
+  {
+    "id": 4,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Next.js 14 & UI Rendering",
+    "difficulty": "Mid",
+    "question_text": "How did you structure React Server Components and Client Components in Next.js 14 to maintain 60fps UI rendering during active token streams?",
+    "resume_context": "Resume mentions Next.js 14 App Router and maintaining 60fps UI rendering during active SSE generation.",
+    "expected_keywords": [
+      "component boundary",
+      "useTransition",
+      "layout thrashing",
+      "requestAnimationFrame",
+      "local state scope"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Puts SSE state listener at the root layout forcing entire tree re-renders",
+        "Unaware of RSC boundaries"
+      ],
+      "good_answer_indicators": [
+        "Isolates streaming token state to leaf Client Components while keeping outer shell as RSC"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses preventing DOM layout thrashing, virtualized message lists, and custom requestAnimationFrame frame batching"
+      ]
+    },
+    "followup_if_strong": "How do you handle smooth autoscroll when a user manually scrolls up while tokens are actively streaming in?",
+    "followup_if_weak": "Why can React Server Components not directly consume SSE event listener hooks?"
+  },
+  {
+    "id": 5,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Model Fault Tolerance & Circuit Breakers",
+    "difficulty": "Senior",
+    "question_text": "How did you design the fallback routing between Gemini and OpenAI in FastAPI to prevent cascading timeouts when an upstream provider degrades?",
+    "resume_context": "Resume highlights fallback model routing across Gemini and OpenAI APIs with exponential backoff.",
+    "expected_keywords": [
+      "circuit breaker",
+      "jitter",
+      "fallback threshold",
+      "rate-limit status codes",
+      "health checks"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Relies on basic try-except blocks without timeout limits or exponential backoff strategy"
+      ],
+      "good_answer_indicators": [
+        "Describes exponential backoff with full jitter and switching to alternative provider on specific status codes"
+      ],
+      "bar_raiser_indicators": [
+        "Designs a stateful Circuit Breaker pattern with sliding window error rates and automated recovery probes"
+      ]
+    },
+    "followup_if_strong": "How do you normalize structured output schemas (e.g. JSON mode/tool calls) across Gemini and OpenAI during dynamic fallback?",
+    "followup_if_weak": "What is the purpose of adding random 'jitter' to an exponential backoff retry algorithm?"
+  },
+  {
+    "id": 6,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Chunking & Vector Indexing Strategy",
+    "difficulty": "Senior",
+    "question_text": "When indexing multi-page enterprise documents into Pinecone, how do you determine optimal chunk sizes and overlap boundaries?",
+    "resume_context": "Resume features building production Knowledge RAG assistant with vector databases.",
+    "expected_keywords": [
+      "recursive character splitter",
+      "semantic chunking",
+      "token limits",
+      "overlap ratio",
+      "header-aware splitting"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests fixed character slicing without considering sentence boundaries or document structure"
+      ],
+      "good_answer_indicators": [
+        "Explains recursive structural splitting and balancing context preservation against embedding dilution"
+      ],
+      "bar_raiser_indicators": [
+        "Proposes semantic chunking based on embedding distance shifts or parent-child hierarchical chunk retrieval"
+      ]
+    },
+    "followup_if_strong": "How do you prevent duplicate chunks from flooding top-K retrieval when documents contain redundant boilerplate text?",
+    "followup_if_weak": "Why is token count a better chunk boundary metric than raw character count?"
+  },
+  {
+    "id": 7,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Tailwind & Real-time UX Design",
+    "difficulty": "Mid",
+    "question_text": "How do you style dynamic streaming text elements in Tailwind CSS to avoid layout shifts as tokens render byte-by-byte?",
+    "resume_context": "Resume mentions Tailwind CSS and responsive state management under token streaming conditions.",
+    "expected_keywords": [
+      "cumulative layout shift",
+      "min-height containment",
+      "whitespace pre-wrap",
+      "font monospacing",
+      "overflow anchor"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not account for cumulative layout shift or text container resizing glitches"
+      ],
+      "good_answer_indicators": [
+        "Uses CSS whitespace-pre-wrap, flex/grid containment, and minimum height constraints"
+      ],
+      "bar_raiser_indicators": [
+        "Utilizes CSS containment properties, custom scroll anchoring, and hardware-accelerated streaming cursor animations"
+      ]
+    },
+    "followup_if_strong": "How do you animate markdown code-blocks as syntax-highlighted code streams in in real-time?",
+    "followup_if_weak": "What Tailwind utility class prevents text from collapsing when empty spaces stream in?"
+  },
+  {
+    "id": 8,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Token Budget & Context Window Management",
+    "difficulty": "Senior",
+    "question_text": "How do you calculate and dynamically truncate prompt context in Python when retrieved chunks exceed the target model's context window?",
+    "resume_context": "Resume cites working with OpenAI and Gemini APIs in FastAPI.",
+    "expected_keywords": [
+      "tiktoken",
+      "token counting",
+      "priority sliding window",
+      "system prompt reserve",
+      "summarization fallback"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Estimates tokens using string length splitting (e.g. char count / 4) in production"
+      ],
+      "good_answer_indicators": [
+        "Uses tokenizer libraries like tiktoken to calculate exact prompt overhead and prune lowest-rank context"
+      ],
+      "bar_raiser_indicators": [
+        "Architects token budgeting queues allocating distinct token headroom for system prompts, history, context, and output response safety"
+      ]
+    },
+    "followup_if_strong": "How do you preserve crucial historical chat instructions when truncating older chat messages in multi-turn sessions?",
+    "followup_if_weak": "Why can string character count be inaccurate for measuring token limits across different languages?"
+  },
+  {
+    "id": 9,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Vector Database Optimization",
+    "difficulty": "Senior",
+    "question_text": "When configuring Qdrant or Pinecone for low-latency retrieval, what parameters do you tune to balance vector recall accuracy versus search latency?",
+    "resume_context": "Resume lists Pinecone, Qdrant, and pgvector expertise.",
+    "expected_keywords": [
+      "HNSW",
+      "ef_search",
+      "m parameter",
+      "cosine vs dot product",
+      "quantization",
+      "payload indexing"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Treats vector database as a black box without knowledge of index types or distance metrics"
+      ],
+      "good_answer_indicators": [
+        "Explains HNSW parameters like ef_search and M, or vector scalar/product quantization"
+      ],
+      "bar_raiser_indicators": [
+        "Deeply analyzes trade-offs between memory footprint, scalar vs product quantization, and payload filtering performance impact"
+      ]
+    },
+    "followup_if_strong": "How do metadata filters affect HNSW graph traversal efficiency during vector search queries?",
+    "followup_if_weak": "What metric do you use to measure similarity between two normalized embedding vectors?"
+  },
+  {
+    "id": 10,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "LLM System Reliability & Evals",
+    "difficulty": "Senior",
+    "question_text": "How would you implement an automated 'LLM-as-a-judge' pipeline in Python to monitor production output hallucination rates without human intervention?",
+    "resume_context": "Identified gap skill in LLM evaluation and benchmarking.",
+    "expected_keywords": [
+      "faithfulness metric",
+      "context recall",
+      "structured evaluation output",
+      "groundedness",
+      "sample logging"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests relying solely on user thumbs-up/down ratings to measure accuracy"
+      ],
+      "good_answer_indicators": [
+        "Describes using a stronger model to evaluate claims in generated answers against retrieved context chunks"
+      ],
+      "bar_raiser_indicators": [
+        "Details multi-dimensional evaluation (faithfulness, answer relevance, context precision), asynchronous eval queues, and cost controls"
+      ]
+    },
+    "followup_if_strong": "How do you prevent evaluation bias and non-determinism when using an LLM to judge another LLM's outputs?",
+    "followup_if_weak": "What is the definition of 'hallucination' in the context of Retrieval-Augmented Generation?"
+  },
+  {
+    "id": 11,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Frontend State Management",
+    "difficulty": "Mid",
+    "question_text": "How do you synchronize streaming chat state with Zustand in Next.js to prevent UI state desynchronization across multiple components?",
+    "resume_context": "Resume lists Next.js 14, React 18, and Zustand.",
+    "expected_keywords": [
+      "slice pattern",
+      "transient updates",
+      "immutability",
+      "selectors",
+      "state hydration"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Triggers full global re-renders on every token chunk arrival"
+      ],
+      "good_answer_indicators": [
+        "Uses Zustand selectors to scope re-renders exclusively to active message components during token ingestion"
+      ],
+      "bar_raiser_indicators": [
+        "Demonstrates transient state updates bypasses React render loops for raw canvas/DOM manipulation when necessary"
+      ]
+    },
+    "followup_if_strong": "How do you handle optimistic UI updates when a user sends a new message before backend server confirmation?",
+    "followup_if_weak": "Why is Zustand preferred over standard React Context for high-frequency streaming updates?"
+  },
+  {
+    "id": 12,
+    "tier": "Tier 2 (Core Production)",
+    "topic": "Edge Runtime vs Node Infrastructure",
+    "difficulty": "Senior",
+    "question_text": "What architectural limitations did you encounter when running streaming LLM proxy routes on Vercel Edge Runtime compared to AWS Lambda?",
+    "resume_context": "Resume lists Vercel Edge Runtime and AWS Lambda in cloud infrastructure.",
+    "expected_keywords": [
+      "cold starts",
+      "execution duration limits",
+      "V8 isolates",
+      "Node package compatibility",
+      "streaming response headers"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Assumes Vercel Edge Runtime and AWS Lambda have identical Node API compatibility and execution limits"
+      ],
+      "good_answer_indicators": [
+        "Explains V8 isolate startup advantages vs execution time/package dependency constraints on the edge"
+      ],
+      "bar_raiser_indicators": [
+        "Compares connection pooling, TCP socket persistence, and streaming payload payload limits between Vercel Edge and Lambda Web Adapter"
+      ]
+    },
+    "followup_if_strong": "How do you bypass connection pooling limits to PostgreSQL/pgvector from serverless edge functions?",
+    "followup_if_weak": "What is a 'cold start' in serverless computing?"
+  },
+  {
+    "id": 13,
+    "tier": "Tier 3 (System Design)",
+    "topic": "Enterprise Scalable RAG Architecture",
+    "difficulty": "Senior",
+    "question_text": "Design a multi-tenant RAG system serving 500k daily users where each enterprise client has isolated document indexes and strict SLA latency budgets.",
+    "resume_context": "Evaluates candidate's full-stack system architecture depth.",
+    "expected_keywords": [
+      "tenant isolation",
+      "namespace partitioning",
+      "redis semantic cache",
+      "async ingestion pipeline",
+      "rate limiting"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Proposes single shared vector index without namespace isolation or latency controls"
+      ],
+      "good_answer_indicators": [
+        "Architects clear tenant data isolation, semantic caching tier, and asynchronous doc parsing workers"
+      ],
+      "bar_raiser_indicators": [
+        "Includes multi-region vector routing, tier-based token bucket rate limiters, fallback models, and complete cost observability"
+      ]
+    },
+    "followup_if_strong": "How would you design a real-time semantic caching layer to bypass LLM calls for identical query intent across users?",
+    "followup_if_weak": "How do vector databases partition data between different corporate clients?"
+  },
+  {
+    "id": 14,
+    "tier": "Tier 3 (System Design)",
+    "topic": "Distributed Rate-Limiting & Cost Optimization",
+    "difficulty": "Lead",
+    "question_text": "How would you design a token-aware global rate-limiter in Redis to prevent rogue enterprise users from consuming your API budget limits?",
+    "resume_context": "Resume highlights Redis, FastAPI, and model routing at scale.",
+    "expected_keywords": [
+      "sliding window counter",
+      "token bucket algorithm",
+      "Redis Lua scripts",
+      "estimated token usage",
+      "HTTP 429 response"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Suggests naive memory counting inside a single app server instance"
+      ],
+      "good_answer_indicators": [
+        "Uses Redis sliding window or token bucket algorithm executed via atomic Lua scripts"
+      ],
+      "bar_raiser_indicators": [
+        "Designs dynamic token estimation based on prompt input length before upstream dispatch with asynchronous post-generation reconciliation"
+      ]
+    },
+    "followup_if_strong": "How do you ensure atomic Redis token deduction when handling tens of thousands of concurrent requests across microservices?",
+    "followup_if_weak": "What standard HTTP status code should your API return when a user exceeds their rate limit?"
+  },
+  {
+    "id": 15,
+    "tier": "Tier 3 (System Design)",
+    "topic": "Resilient Real-time Stream Orchestration",
+    "difficulty": "Lead",
+    "question_text": "If an upstream LLM provider stalls mid-stream after sending 200 tokens, how does your system detect the stalled stream and recover gracefully without degrading UX?",
+    "resume_context": "Resume focuses on enterprise reliability, SSE streaming, and fallbacks.",
+    "expected_keywords": [
+      "heartbeat timeout",
+      "chunk gap monitoring",
+      "client-side append recovery",
+      "stream continuation prompt",
+      "graceful failover"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Leaves the user UI frozen endlessly waiting for the connection to terminate natively"
+      ],
+      "good_answer_indicators": [
+        "Implements backend chunk timeout monitors that emit stream error events or fallback continuation signals"
+      ],
+      "bar_raiser_indicators": [
+        "Architects a dynamic stream rescue strategy that passes generated prefix tokens to a fallback model to seamlessly resume generation"
+      ]
+    },
+    "followup_if_strong": "How do you construct the prompt context when resuming generation mid-sentence on a secondary model provider?",
+    "followup_if_weak": "How can the frontend detect if an SSE streaming stream has stopped sending data without closing the connection?"
+  }
+]

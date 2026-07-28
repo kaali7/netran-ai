@@ -1,0 +1,60 @@
+{
+  "matched_skills": [
+    {
+      "skill": "FastAPI & AsyncIO",
+      "resume_evidence": "Architected high-throughput FastAPI microservices serving 35M+ daily API requests with median response latency of sub-35ms.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "PostgreSQL Performance Optimization",
+      "resume_evidence": "Diagnosed and resolved PostgreSQL database connection starvation by implementing PgBouncer connection pooling and optimizing high-impact queries using EXPLAIN ANALYZE.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Redis Caching Strategies",
+      "resume_evidence": "Designed a resilient Redis cache-aside system with TTL jitter to eliminate thundering herd problems during peak traffic surges.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Apache Kafka & Event Streaming",
+      "resume_evidence": "Built distributed event ingestion pipeline using Apache Kafka and Celery, processing 500k messages/minute with zero message loss.",
+      "proficiency_tier": "Intermediate"
+    },
+    {
+      "skill": "gRPC & HTTP/2 Microservices",
+      "resume_evidence": "Developed microservices with Django and FastAPI, integrating gRPC services over HTTP/2 for internal service-to-service communication.",
+      "proficiency_tier": "Intermediate"
+    },
+    {
+      "skill": "AWS & Kubernetes Deployment",
+      "resume_evidence": "Maintained CI/CD deployment pipelines on AWS EKS with Kubernetes Horizontal Pod Autoscaling (HPA) and Prometheus monitoring.",
+      "proficiency_tier": "Intermediate"
+    }
+  ],
+  "missing_or_gap_skills": [
+    {
+      "missing_skill": "Distributed Transaction Patterns (Saga / Outbox Pattern)",
+      "jd_importance": "Critical",
+      "probing_strategy": "Ask candidate how event publishing to Kafka is kept atomic with PostgreSQL database mutations to avoid lost events."
+    },
+    {
+      "missing_skill": "Circuit Breaker & Resilience Middleware",
+      "jd_importance": "Secondary",
+      "probing_strategy": "Probe how service-to-service gRPC dependencies handle partial failures and downstream outages without cascading backpressure."
+    },
+    {
+      "missing_skill": "Distributed Rate Limiting at API Gateway Layer",
+      "jd_importance": "Secondary",
+      "probing_strategy": "Inquire about implementing Redis sliding window rate limiters in FastAPI/API Gateways to protect backend services."
+    }
+  ],
+  "resume_red_flags": [
+    "Claims sub-35ms median response latency across 35M daily requests without specifying cache hit ratio or database read/write workload breakdown.",
+    "Lists RabbitMQ in skills list but only provides professional project evidence for Apache Kafka and Celery."
+  ],
+  "key_projects_to_probe": [
+    "High-throughput FastAPI microservice processing 35M+ daily requests at DataScale Systems.",
+    "PgBouncer connection pooling deployment and EXPLAIN ANALYZE query optimization incident resolution.",
+    "Distributed event ingestion pipeline using Apache Kafka and Celery handling 500k msg/min."
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "matched_skills": [
+    {
+      "skill": "Next.js 14 & SSE Streaming",
+      "resume_evidence": "Architected enterprise Knowledge RAG Assistant using Next.js 14 App Router and implemented Server-Sent Events (SSE) token streaming maintaining 60fps rendering.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Python AsyncIO & FastAPI",
+      "resume_evidence": "Built Python backend REST and streaming services with FastAPI, serving 100k+ active monthly users at Synthetix AI Labs.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Vector Search & Hybrid Retrieval",
+      "resume_evidence": "Built hybrid vector search pipeline with Pinecone and Cohere semantic reranking, boosting retrieval precision by 38%.",
+      "proficiency_tier": "Production Master"
+    },
+    {
+      "skill": "Model Resilience & Fallback Routing",
+      "resume_evidence": "Configured fallback routing across Gemini and OpenAI APIs with exponential backoff retries, ensuring 99.95% availability.",
+      "proficiency_tier": "Intermediate"
+    }
+  ],
+  "missing_or_gap_skills": [
+    {
+      "missing_skill": "LLM Evaluation & Benchmarking Frameworks",
+      "jd_importance": "Critical",
+      "probing_strategy": "Probe how output accuracy and retrieval precision were measured (e.g., Ragas, TruLens, or custom LLM-as-a-judge pipelines) beyond unverified metrics."
+    },
+    {
+      "missing_skill": "Dynamic Context Window & Token Budget Management",
+      "jd_importance": "Secondary",
+      "probing_strategy": "Ask candidate to explain strategies for handling context window overflow during multi-turn chats with large retrieved document payloads."
+    }
+  ],
+  "resume_red_flags": [
+    "Unverified metric claim of 'improving retrieval precision by 38%' without mentioning baseline datasets, evaluation metrics (e.g., Hit Rate@K, MRR), or testing methodology.",
+    "Absence of explicit LLM evaluation tooling (e.g., LangSmith, Ragas, Phoenix) despite leading production enterprise RAG systems."
+  ],
+  "key_projects_to_probe": [
+    "Knowledge RAG Assistant with Next.js 14, FastAPI SSE streaming, and Cohere reranking at Synthetix AI Labs.",
+    "Fallback Model Routing System across Gemini and OpenAI APIs with exponential backoff at Synthetix AI Labs."
+  ]
+}
