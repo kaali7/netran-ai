@@ -98,7 +98,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Kivy Multi-Screen Architecture (`ScreenManager`)**:
   - **`InterviewScreen`**:
     - Top Action Bar with prominent `📜 View Session Output History` button.
-    - Preset Selector, LLM/Calibration mode toggles, and Pause Tolerance spinner (1.0s, 1.6s, 2.2s).
+    - Preset Selector, LLM/Calibration mode toggles (utilizing `interview_scripts.json` for deterministic pre-scripted tracks), and Pause Tolerance spinner (1.0s, 1.6s, 2.2s).
     - Selectable Question Limit Spinner (5, 10, 15, All Available Questions) with auto-end and graceful closing statement.
     - Live VAD visualizer & volume diagnostics bar.
     - Non-overlapping, clean 3-button control bar (`Start Interview`, `Final Stop & Output`, `Restart Session`).
