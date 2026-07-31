@@ -26,6 +26,10 @@ class QuestionManager:
     def __init__(self, questions: List[InterviewQuestionInput]):
         self.questions = questions
         self.current_index = 0
+        # State phases: 'ICEBREAKER' -> 'TECHNICAL' -> 'LAST_QUESTION' -> 'COMPLETED'
+        self.phase = "ICEBREAKER"
+        self.icebreaker_turn_count = 0
+        self.retries_on_current_q = 0
 
     def get_current_question(self) -> Optional[InterviewQuestionInput]:
         """Returns the current active question object or None if sequence is complete."""
@@ -33,9 +37,36 @@ class QuestionManager:
             return self.questions[self.current_index]
         return None
 
+    def get_next_question(self) -> Optional[InterviewQuestionInput]:
+        """Returns the next question object in sequence or None if at the end."""
+        if self.current_index + 1 < len(self.questions):
+            return self.questions[self.current_index + 1]
+        return None
+
+    def is_on_last_question(self) -> bool:
+        """Returns True if pointer is currently on the final question in sequence."""
+        return self.current_index == len(self.questions) - 1
+
     def is_finished(self) -> bool:
-        """Returns True if all questions in the sequence have been processed."""
-        return self.current_index >= len(self.questions)
+        """Returns True if all questions in the sequence have been processed or phase is COMPLETED."""
+        return self.current_index >= len(self.questions) or self.phase == "COMPLETED"
+
+    def advance_question(self) -> str:
+        """
+        Advances question index safely and updates phase state.
+        Returns status: 'advanced', 'reached_last', or 'completed'
+        """
+        self.retries_on_current_q = 0
+
+        if self.current_index < len(self.questions) - 1:
+            self.current_index += 1
+            if self.is_on_last_question():
+                self.phase = "LAST_QUESTION"
+                return "reached_last"
+            return "advanced"
+        else:
+            self.phase = "COMPLETED"
+            return "completed"
 
     def is_candidate_requesting_skip(self, transcript: str) -> bool:
         """Detects if candidate is asking to skip or move to the next question."""
@@ -46,105 +77,190 @@ class QuestionManager:
             r"\bdon'?t\s+know\b",
             r"\bpass\b"
         ]
-        clean_text = transcript.lower().strip()
+        clean_text = (transcript or "").lower().strip()
         return any(re.search(pat, clean_text) for pat in skip_patterns)
+
+    def classify_turn_intent(self, transcript: str) -> str:
+        """
+        Classifies candidate turns into specific conversational, technical, or meta intents.
+        """
+        clean = (transcript or "").lower().strip()
+
+        # 1. Candidate meta questions about Eva / Role / Location / Origin / Process
+        eva_meta_patterns = [
+            r"\btell\s+me\s+about\s+yourself\b",
+            r"\bwho\s+are\s+you\b",
+            r"\bwhere\s+are\s+you\s+(from|based)\b",
+            r"\bwhere\s+do\s+you\s+live\b",
+            r"\bwhat\s+is\s+your\s+role\b",
+            r"\bare\s+you\s+(an?\s+)?ai\b",
+            r"\bis\s+this\s+right\b",
+            r"\bchecking\s+my\s+knowledge\b",
+            r"\bwho\s+created\s+you\b",
+            r"\babout\s+backend\b"
+        ]
+        if any(re.search(pat, clean) for pat in eva_meta_patterns):
+            return "interviewer_meta"
+
+        # 2. Audio / Connectivity checks
+        audio_check_patterns = [
+            r"\bcan\s+you\s+hear\s+me\b",
+            r"\bam\s+i\s+audible\b",
+            r"\bmic\s+check\b",
+            r"\bare\s+you\s+there\b",
+            r"\bcan\s+you\s+listen\b"
+        ]
+        if any(re.search(pat, clean) for pat in audio_check_patterns):
+            return "audio_check"
+
+        # 3. Thinking pauses / Filler remarks
+        pause_patterns = [
+            r"\bgive\s+me\s+a\s+(second|moment|min|minute)\b",
+            r"\blet\s+me\s+think\b",
+            r"\bhold\s+on\b",
+            r"\bgood\s+question\b",
+            r"\bthat'?s\s+a\s+tough\s+one\b",
+            r"\bjust\s+a\s+sec\b"
+        ]
+        if any(re.search(pat, clean) for pat in pause_patterns):
+            return "thinking_pause"
+
+        # 4. Explicit Skip / Advancement request
+        if self.is_candidate_requesting_skip(clean):
+            return "next_topic"
+
+        return "technical_answer"
+
+    def calculate_keyword_density(self, transcript: str, keywords: List[str]) -> float:
+        """Calculates match density of expected keywords in candidate transcript."""
+        if not keywords:
+            return 0.0
+        clean_tx = (transcript or "").lower()
+        matches = sum(1 for kw in keywords if kw.lower() in clean_tx)
+        return matches / len(keywords)
 
     def evaluate_transcript(self, transcript: str) -> str:
         """
-        Evaluates candidate STT transcript against current question's expected keywords.
-
-        Rules:
-        - Score >= 50% keyword match & followup_if_strong exists -> "strong_followup"
-        - Score < 20% keyword match & followup_if_weak exists   -> "weak_followup"
-        - Otherwise                                             -> "next_topic"
-
-        :param transcript: Candidate's spoken transcript text.
-        :return: Branch identifier ("strong_followup" | "weak_followup" | "next_topic").
+        Evaluates turn intent and determines branching without losing question context.
+        Meta intents (interviewer_meta, audio_check, thinking_pause) return immediately without advancing questions.
         """
-        q = self.get_current_question()
-        if not q:
-            return "next_topic"
+        if self.phase == "COMPLETED":
+            return "interview_completed"
 
-        if self.is_candidate_requesting_skip(transcript):
-            return "next_topic"
+        intent = self.classify_turn_intent(transcript)
 
-        normalized_transcript = (transcript or "").strip().lower()
+        # Meta questions never advance the question index or phase
+        if intent in ("interviewer_meta", "audio_check", "thinking_pause"):
+            return intent
 
-        keywords = q.expected_keywords or []
-        if not keywords:
-            return "next_topic"
+        # Handle Icebreaker Phase Transition
+        if self.phase == "ICEBREAKER":
+            self.icebreaker_turn_count += 1
+            if self.icebreaker_turn_count >= 1:
+                self.phase = "LAST_QUESTION" if len(self.questions) == 1 else "TECHNICAL"
+            return "icebreaker_response"
 
-        matched_count = 0
-        for kw in keywords:
-            kw_clean = kw.strip().lower()
-            if not kw_clean:
-                continue
-            # Regex word-boundary or simple substring match
-            pattern = re.escape(kw_clean)
-            if re.search(pattern, normalized_transcript):
-                matched_count += 1
+        # Explicit Candidate Skip
+        if intent == "next_topic":
+            status = self.advance_question()
+            return "interview_completed" if status == "completed" else "next_topic"
 
-        match_ratio = matched_count / len(keywords)
+        current_q = self.get_current_question()
+        if not current_q:
+            self.phase = "COMPLETED"
+            return "interview_completed"
 
-        if match_ratio >= 0.50 and q.followup_if_strong:
+        match_score = self.calculate_keyword_density(transcript, current_q.expected_keywords or [])
+
+        if match_score >= 0.50 and current_q.followup_if_strong:
             return "strong_followup"
-        elif match_ratio < 0.20 and q.followup_if_weak:
-            return "weak_followup"
+        elif match_score < 0.20:
+            self.retries_on_current_q += 1
+            # Auto-advance after 2 weak attempts to prevent repetition loops
+            if self.retries_on_current_q >= 2:
+                status = self.advance_question()
+                return "interview_completed" if status == "completed" else "next_topic"
+            
+            return "weak_followup" if current_q.followup_if_weak else "next_topic"
         else:
-            return "next_topic"
+            status = self.advance_question()
+            return "interview_completed" if status == "completed" else "next_topic"
 
-    def format_prompt_context(self, branch: str, transcript: str) -> Tuple[str, str]:
+    def format_prompt_context(self, branch_taken: str, candidate_transcript: str) -> Tuple[str, str]:
         """
-        Formats instructions and context for Ollama LLM prompt generation
-        based on evaluation branch outcome, and returns the target question text.
-
-        :param branch: Branch outcome ("strong_followup", "weak_followup", "next_topic").
-        :param transcript: Candidate transcript text.
-        :return: Tuple containing (LLM instruction string, Target question text).
+        Constructs natural LLM instructions for Qwen 2.5 3B and returns:
+        (llm_prompt_string, logged_target_question_text)
         """
-        q = self.get_current_question()
-        if not q:
-            return (f"Candidate transcript: '{transcript}'. Session is concluding.", "Session Complete")
+        current_q = self.get_current_question()
 
-        if branch == "strong_followup" and q.followup_if_strong:
-            target_question = q.followup_if_strong
-            instruction = (
-                f"The candidate answered well. Briefly acknowledge (1 short sentence only), "
-                f"then ask this EXACT follow-up question word-for-word: '{target_question}'"
+        # 1. FINAL INTERVIEW CONCLUSION
+        if branch_taken == "interview_completed":
+            closing_text = (
+                "That concludes our technical evaluation for today! "
+                "Thank you so much for your time, and we will follow up with detailed feedback shortly."
             )
-        elif branch == "weak_followup" and q.followup_if_weak:
-            target_question = q.followup_if_weak
             instruction = (
-                f"The candidate struggled. Offer a brief encouraging sentence, "
-                f"then ask this EXACT simplifying question word-for-word: '{target_question}'"
+                f"1. React warmly in 1 sentence to the candidate's last response: '{candidate_transcript}'.\n"
+                f"2. Conclude the interview smoothly by saying: '{closing_text}'"
             )
-        else:
-            # Next topic branch
-            next_idx = self.current_index + 1
-            if next_idx < len(self.questions):
-                next_q = self.questions[next_idx]
-                target_question = next_q.question_text
-                instruction = (
-                    f"Move to the next topic. Say one short transition sentence, "
-                    f"then ask this EXACT question word-for-word: '{target_question}'"
-                )
-            else:
-                target_question = "That wraps up our interview."
-                instruction = "The interview is complete. Wrap up professionally in exactly 1-2 sentences."
+            return f"Candidate Final Answer: '{candidate_transcript}'\nInstruction: {instruction}", closing_text
+
+        target_logged_q = current_q.question_text if current_q else ""
+
+        # 2. ICEBREAKER PHASE
+        if branch_taken == "icebreaker_response":
+            instruction = (
+                "React warmly to the candidate's introduction in 1 short sentence. "
+                f"Then smoothly introduce the first technical topic and ask: '{target_logged_q}'"
+            )
+            return f"Candidate Intro: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+
+        # 3. INTERVIEWER META QUESTIONS (Role, Location, Identity)
+        if branch_taken == "interviewer_meta":
+            instruction = (
+                "1. Answer the candidate's question about you, your role, or where you live in 1 short sentence "
+                "(e.g., 'I'm Eva, an AI assistant built to evaluate technical concepts, living right here in your application!').\n"
+                f"2. You MUST immediately guide them back by asking: '{target_logged_q}'"
+            )
+            return f"Candidate Meta Question: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+
+        # 4. AUDIO & PAUSE CHECKS
+        if branch_taken == "audio_check":
+            instruction = "Reassure the candidate warmly in 1 short sentence (e.g., 'Loud and clear! Go right ahead.')"
+            return f"Candidate: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+
+        if branch_taken == "thinking_pause":
+            instruction = "Acknowledge empathetically (e.g., 'Take your time, no rush at all!') and wait."
+            return f"Candidate: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+
+        # 5. TECHNICAL EVALUATION BRANCHES
+        if branch_taken == "strong_followup":
+            target_q = current_q.followup_if_strong if (current_q and current_q.followup_if_strong) else target_logged_q
+            instruction = (
+                f"1. Give a warm 3-5 word positive reaction acknowledging '{candidate_transcript}'.\n"
+                f"2. Ask this follow-up question: '{target_q}'"
+            )
+        elif branch_taken == "weak_followup":
+            target_q = current_q.followup_if_weak if (current_q and current_q.followup_if_weak) else target_logged_q
+            instruction = (
+                f"1. Acknowledge sympathetically in 3-4 words that this topic is tricky.\n"
+                f"2. Ask this simplifying follow-up: '{target_q}'"
+            )
+        else:  # next_topic
+            next_q = self.get_current_question()
+            target_q = next_q.question_text if next_q else target_logged_q
+            instruction = (
+                f"1. Give a brief, natural 1-sentence pivot connecting to their last answer.\n"
+                f"2. Ask the next question: '{target_q}'"
+            )
 
         llm_prompt = (
-            f"CANDIDATE SAID: '{transcript}'\n\n"
-            f"YOUR INSTRUCTION: {instruction}\n\n"
-            f"CRITICAL RULE: You MUST say the EXACT question text above in your <speak> block. "
-            f"Do NOT replace it with a summary or paraphrase. "
-            f"Do NOT just say 'Thank you' or similar filler without asking the question."
+            f"Candidate Answer: '{candidate_transcript}'\n"
+            f"Instruction: {instruction}\n"
+            f"Constraint: Sound natural and concise. Keep <speak> under 35 words."
         )
 
-        return (llm_prompt, target_question)
-
-    def advance_question(self):
-        """Advances question index pointer to the next topic in sequence."""
-        self.current_index += 1
+        return llm_prompt, target_q
 
 
 if __name__ == "__main__":

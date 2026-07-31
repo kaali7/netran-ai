@@ -220,7 +220,6 @@ def run_test():
 
         current_sec = end_sec + 1.0
         turn_counter += 1
-        qm.advance_question()
 
     # Generate continuous mic audio recording file (recording.wav)
     wav_path = session_output_dir / "recording.wav"

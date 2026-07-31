@@ -124,12 +124,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             except Exception:
                 continue
 
-            # 2. Check Echo Gate: If agent is speaking, drop input to prevent feedback
-            if state and state.is_agent_speaking.is_set():
-                silence_frames_counter = 0
-                continue
-
-            # 2b. Apply DC offset + auto-gain + Noise Gate to the raw frame
+            # 2. Apply DC offset + auto-gain + Noise Gate to the raw frame
             proc_frame = original_frame.copy()
             if len(proc_frame) < CHUNK:
                 proc_frame = np.pad(proc_frame, (0, CHUNK - len(proc_frame)), 'constant')
@@ -165,6 +160,23 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             out   = ort_outputs[0]   # shape [1, 1]
             vad_state = ort_outputs[1]   # updated hidden state
             speech_prob = out[0, 0]
+
+            # 3b. Echo Gate & Real-time User Barge-In Interruption
+            if state and state.is_agent_speaking.is_set():
+                if speech_prob > 0.65:
+                    print("⚡ User barge-in detected! Stopping Eva speech output immediately.", flush=True)
+                    try:
+                        from .speaker import force_stop_all
+                    except ImportError:
+                        try:
+                            from model.voice_to_voice_model.model.speaker import force_stop_all
+                        except ImportError:
+                            from speaker import force_stop_all
+                    force_stop_all()
+                    state.is_agent_speaking.clear()
+                else:
+                    silence_frames_counter = 0
+                    continue
 
             # 4. Speech Start/End Decision Logic
             rms = np.sqrt(np.mean(audio_frame ** 2))

@@ -63,7 +63,16 @@ class TurnManifest(BaseModel):
     silence_duration_before_answer_sec: float = 0.0
     stt_latency_ms: float = 0.0
     ttft_ms: float = 0.0
-    evaluation_branch_taken: Literal["strong_followup", "weak_followup", "next_topic"] = "next_topic"
+    evaluation_branch_taken: Literal[
+        "strong_followup",
+        "weak_followup",
+        "next_topic",
+        "icebreaker_response",
+        "interviewer_meta",
+        "audio_check",
+        "thinking_pause",
+        "interview_completed"
+    ] = "next_topic"
     eva_reasoning: Optional[str] = None
     eva_reply: Optional[str] = None
 

@@ -17,11 +17,14 @@ from kokoro import KPipeline
 
 try:
     from .session_state import SessionState
+    from .brain import TextSanitizer
 except ImportError:
     try:
         from model.voice_to_voice_model.model.session_state import SessionState
+        from model.voice_to_voice_model.model.brain import TextSanitizer
     except ImportError:
         from session_state import SessionState
+        from brain import TextSanitizer
 
 
 # Lazy-init sentinel: the heavy Kokoro model is only loaded on the FIRST call.
@@ -59,179 +62,114 @@ def normalize_technical_text_for_tts(text: str) -> str:
     return text
 
 
-class StreamingTTSPlayer:
+class PersistentSpeaker:
     """
-    ISSUE-4/SUG-2 Fix: Producer-Consumer audio queue eliminating inter-chunk gaps.
-    Uses a persistent sd.OutputStream consumer thread to play audio chunks
-    continuously while a background producer generates Kokoro numpy arrays.
-    Supports immediate stop via should_stop event draining and sd.stop().
+    Persistent PyAudio streaming TTS player.
+    Keeps a background output stream open to eliminate TTFA latency.
     """
     def __init__(self):
-        self.audio_queue: queue.Queue = queue.Queue(maxsize=8)
+        import pyaudio
+        self.audio_queue = queue.Queue(maxsize=32)
+        self.interrupt_event = threading.Event()
+        self.p = pyaudio.PyAudio()
+        
+        self.stream = self.p.open(
+            format=pyaudio.paFloat32,
+            channels=1,
+            rate=24000,
+            output=True,
+            frames_per_buffer=2048
+        )
+        self.is_running = True
+        self.worker_thread = threading.Thread(target=self._play_loop, daemon=True)
+        self.worker_thread.start()
+
+    def _play_loop(self):
+        while self.is_running:
+            try:
+                chunk = self.audio_queue.get(timeout=0.05)
+                if chunk is not None:
+                    self.stream.write(chunk.tobytes())
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"[PersistentSpeaker Consumer Error] {e}", flush=True)
 
     def _drain_queue(self):
-        """Empties the audio queue to unblock any waiting producers and stop playback."""
         while not self.audio_queue.empty():
             try:
                 self.audio_queue.get_nowait()
             except queue.Empty:
                 break
 
-    def speak_text(self, text_to_say: str, state: SessionState, voice_preset: str = "af_bella"):
-        """Generates and plays TTS audio for a single text string via queue."""
-        if not text_to_say.strip():
-            return
-
-        state.is_agent_speaking.set()
-
+    def stop_immediately(self, state: Optional[SessionState] = None):
+        """Instantly flush queue. Stream remains open."""
+        self.interrupt_event.set()
+        self._drain_queue()
+        
         try:
-            clean_text = normalize_technical_text_for_tts(text_to_say)
-            if not clean_text.strip():
-                return
+            self.stream.stop_stream()
+            self.stream.start_stream()
+        except Exception:
+            pass
+            
+        if state:
+            state.is_agent_speaking.clear()
+        elif _default_state:
+            _default_state.is_agent_speaking.clear()
 
+    def speak_clause(self, clause: str, state: SessionState, voice_preset: str = "af_bella"):
+        if not clause.strip() or self.interrupt_event.is_set() or state.should_stop.is_set():
+            return
+            
+        clean_text = TextSanitizer.clean_for_tts(clause)
+        clean_text = normalize_technical_text_for_tts(clean_text)
+        if not clean_text.strip():
+            return
+            
+        try:
             generator = _get_pipeline()(clean_text, voice=voice_preset, speed=state.tts_speed)
-
-            # Consumer thread: plays audio continuously, checks should_stop every chunk
-            def _consumer():
-                try:
-                    with sd.OutputStream(samplerate=24000, channels=1, dtype='float32') as stream:
-                        while True:
-                            if state.should_stop.is_set():
-                                break
-                            chunk = None
-                            while not state.should_stop.is_set():
-                                try:
-                                    chunk = self.audio_queue.get(timeout=0.2)
-                                    break
-                                except queue.Empty:
-                                    pass
-                            if chunk is None:
-                                break
-                            if state.should_stop.is_set():
-                                break
-                            if hasattr(chunk, "cpu"):
-                                chunk = chunk.cpu().numpy()
-                            audio_data = chunk.reshape(-1, 1).astype(np.float32)
-                            stream.write(audio_data)
-                except Exception as e:
-                    print(f"[StreamingTTSPlayer Consumer Error] {e}", flush=True)
-                finally:
-                    if state.should_stop.is_set():
-                        sd.stop()
-
-            consumer = threading.Thread(target=_consumer, daemon=True)
-            consumer.start()
-
-            # Producer: generate Kokoro chunks and push to queue
+            
             for _, _, audio_array in generator:
-                if audio_array is None or state.should_stop.is_set():
+                if audio_array is None or self.interrupt_event.is_set() or state.should_stop.is_set():
                     break
-                while not state.should_stop.is_set():
+                
+                if hasattr(audio_array, "cpu"):
+                    audio_array = audio_array.cpu().numpy()
+                
+                audio_data = audio_array.astype(np.float32)
+                
+                while not (self.interrupt_event.is_set() or state.should_stop.is_set()):
                     try:
-                        self.audio_queue.put(audio_array, timeout=0.2)
+                        self.audio_queue.put(audio_data, timeout=0.1)
                         break
                     except queue.Full:
                         pass
-
-            # If stopped mid-speech, drain remaining chunks to unblock consumer
-            if state.should_stop.is_set():
-                self._drain_queue()
-                sd.stop()
-
-            self.audio_queue.put(None)  # Sentinel to signal completion
-            consumer.join()
-
         except Exception as e:
-            print(f"\n[StreamingTTSPlayer Error: {e!s}]", flush=True)
+            print(f"\n[PersistentSpeaker Error: {e!s}]", flush=True)
 
-        finally:
-            state.is_agent_speaking.clear()
-
-    def play_stream(self, sentence_generator: Generator[str, None, None], state: SessionState, voice_preset: str = "af_bella"):
-        """
-        Plays a stream of sentences from an LLM token accumulator.
-        Each sentence is normalized, synthesized, and queued for continuous playback.
-        """
-        if state.should_stop.is_set():
-            return
-
+    def speak_text(self, text_to_say: str, state: SessionState, voice_preset: str = "af_bella"):
+        """Maintains backward compatibility for full phrases."""
+        self.interrupt_event.clear()
         state.is_agent_speaking.set()
-
-        try:
-            def _consumer():
-                try:
-                    with sd.OutputStream(samplerate=24000, channels=1, dtype='float32') as stream:
-                        while True:
-                            if state.should_stop.is_set():
-                                break
-                            chunk = None
-                            while not state.should_stop.is_set():
-                                try:
-                                    chunk = self.audio_queue.get(timeout=0.2)
-                                    break
-                                except queue.Empty:
-                                    pass
-                            if chunk is None:
-                                break
-                            if state.should_stop.is_set():
-                                break
-                            if hasattr(chunk, "cpu"):
-                                chunk = chunk.cpu().numpy()
-                            audio_data = chunk.reshape(-1, 1).astype(np.float32)
-                            stream.write(audio_data)
-                except Exception as e:
-                    print(f"[StreamingTTSPlayer Consumer Error] {e}", flush=True)
-                finally:
-                    if state.should_stop.is_set():
-                        sd.stop()
-
-            consumer = threading.Thread(target=_consumer, daemon=True)
-            consumer.start()
-
-            for sentence in sentence_generator:
-                if state.should_stop.is_set():
-                    break
-                clean_text = normalize_technical_text_for_tts(sentence)
-                if not clean_text.strip():
-                    continue
-                for _, _, audio_array in _get_pipeline()(clean_text, voice=voice_preset, speed=state.tts_speed):
-                    if audio_array is not None and not state.should_stop.is_set():
-                        while not state.should_stop.is_set():
-                            try:
-                                self.audio_queue.put(audio_array, timeout=0.2)
-                                break
-                            except queue.Full:
-                                pass
-                    if state.should_stop.is_set():
-                        break
-
-            # If stopped mid-speech, drain remaining chunks to unblock consumer
-            if state.should_stop.is_set():
-                self._drain_queue()
-                sd.stop()
-
-            self.audio_queue.put(None)
-            consumer.join()
-
-        except Exception as e:
-            print(f"\n[StreamingTTSPlayer Error: {e!s}]", flush=True)
-
-        finally:
-            state.is_agent_speaking.clear()
-
+        self.speak_clause(text_to_say, state, voice_preset)
+        state.is_agent_speaking.clear()
 
 # ---- Backward-compatible wrapper for existing front.py code ----
-_default_player: Optional[StreamingTTSPlayer] = None
+_default_player: Optional[PersistentSpeaker] = None
 _default_state: Optional[SessionState] = None
 
 def init_speaker_compat(state: SessionState):
     """Initialize backward-compatible speaker with shared SessionState."""
     global _default_player, _default_state
-    _default_player = StreamingTTSPlayer()
+    _default_player = PersistentSpeaker()
     _default_state = state
 
+def get_default_player():
+    return _default_player
+
 def speak_text(text_to_say, voice_preset="af_bella"):
-    """Backward-compatible speak_text() using StreamingTTSPlayer internally."""
+    """Backward-compatible speak_text() using PersistentSpeaker internally."""
     if _default_player and _default_state:
         _default_player.speak_text(text_to_say, _default_state, voice_preset)
     else:
@@ -252,11 +190,12 @@ class DummyEvent:
 IS_AGENT_SPEAKING = DummyEvent()
 
 def force_stop_all():
-    """Immediately stops all TTS playback by draining the active player's queue."""
+    """Immediately stops all TTS playback by draining the active player's queue and halting output."""
     if _default_player:
-        _default_player._drain_queue()
-    try:
-        import sounddevice as sd
-        sd.stop()
-    except Exception:
-        pass
+        _default_player.stop_immediately(_default_state)
+    else:
+        try:
+            import sounddevice as sd
+            sd.stop()
+        except Exception:
+            pass

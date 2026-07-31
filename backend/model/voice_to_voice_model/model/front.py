@@ -39,7 +39,7 @@ try:
     from .schemas import load_stage2_bundle
     from .session_logger import SessionLogger
     from .speaker import preload_models as preload_speaker
-    from .speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+    from .speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
     from .session_state import SessionState
 except ImportError:
     try:
@@ -59,7 +59,7 @@ except ImportError:
         from model.voice_to_voice_model.model.speaker import (
             preload_models as preload_speaker,
         )
-        from model.voice_to_voice_model.model.speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+        from model.voice_to_voice_model.model.speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
@@ -70,7 +70,7 @@ except ImportError:
         from schemas import load_stage2_bundle
         from session_logger import SessionLogger
         from speaker import preload_models as preload_speaker
-        from speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+        from speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
         from session_state import SessionState
 
 
@@ -79,11 +79,11 @@ KV = """
 <InterviewScreen>:
     name: 'interview_screen'
     orientation: 'vertical'
-    padding: 12
-    spacing: 10
+    padding: 16
+    spacing: 12
     canvas.before:
         Color:
-            rgba: 0.08, 0.08, 0.1, 1
+            rgba: 0.07, 0.07, 0.08, 1
         Rectangle:
             pos: self.pos
             size: self.size
@@ -91,46 +91,49 @@ KV = """
     # MAIN SPLIT CONTENT AREA
     BoxLayout:
         orientation: 'horizontal'
-        spacing: 12
+        spacing: 16
         size_hint_y: 1.0
 
         # LEFT PANE: CONFIGURATION & STAGE 2 PRESETS
         BoxLayout:
             orientation: 'vertical'
             size_hint_x: 0.36
-            spacing: 8
-            padding: 8
+            spacing: 12
+            padding: 16
             canvas.before:
                 Color:
-                    rgba: 0.11, 0.11, 0.14, 1
+                    rgba: 0.12, 0.12, 0.14, 1
                 RoundedRectangle:
                     pos: self.pos
                     size: self.size
-                    radius: [8]
+                    radius: [12]
 
             Label:
                 text: "Session & Input Controls"
-                font_size: '15sp'
+                font_size: '16sp'
                 bold: True
                 size_hint_y: None
-                height: '24dp'
-                color: 0.3, 0.6, 0.8, 1
+                height: '28dp'
+                color: 0.2, 0.6, 1, 1
 
             Label:
                 text: "Stage 2 Preset Bundle:"
-                font_size: '12sp'
+                font_size: '13sp'
                 size_hint_y: None
                 height: '18dp'
                 halign: 'left'
-                color: 0.7, 0.7, 0.7, 1
+                color: 0.6, 0.6, 0.65, 1
 
             Spinner:
                 id: preset_selector
                 text: 'Preset: sample_backend'
                 values: ('Preset: sample_backend', 'Preset: sample_frontend', 'Preset: sample_fullstack')
                 size_hint_y: None
-                height: '34dp'
-                font_size: '12sp'
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
+                color: 0.9, 0.9, 0.9, 1
                 on_text: root.on_preset_select(self.text)
 
             ToggleButton:
@@ -138,9 +141,10 @@ KV = """
                 text: 'LLM Engine: ACTIVE'
                 state: 'down'
                 size_hint_y: None
-                height: '34dp'
-                font_size: '12sp'
-                background_color: 0.2, 0.4, 0.6, 1
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.15, 0.45, 0.75, 1
                 on_press: root.toggle_llm_mode(self)
 
             Spinner:
@@ -148,8 +152,10 @@ KV = """
                 text: '5 Questions (Fast Test)'
                 values: ('5 Questions (Fast Test)', '10 Questions (Standard)', '15 Questions (Full Tree)', 'All Available Questions')
                 size_hint_y: None
-                height: '34dp'
-                font_size: '12sp'
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
                 on_text: root.on_limit_select(self.text)
 
             Spinner:
@@ -157,8 +163,10 @@ KV = """
                 text: '⚖️ Balanced (1.6s)'
                 values: ('⚡ Fast Response (1.0s)', '⚖️ Balanced (1.6s)', '🧠 Deep Thinker (2.2s)')
                 size_hint_y: None
-                height: '34dp'
-                font_size: '12sp'
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
                 on_text: root.on_pause_select(self.text)
 
             Spinner:
@@ -166,46 +174,49 @@ KV = """
                 text: 'Select Calibration Track'
                 values: ('React.js Core', 'Next.js & Server Architecture', 'TypeScript Essentials', 'Frontend Build Tools', 'CSS & Tailwind UI')
                 size_hint_y: None
-                height: '34dp'
-                font_size: '12sp'
+                height: '40dp'
+                font_size: '13sp'
                 disabled: True
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
                 on_text: root.on_track_select(self.text)
 
             ScrollView:
                 size_hint_y: 1.0
                 canvas.before:
                     Color:
-                        rgba: 0.07, 0.07, 0.09, 1
+                        rgba: 0.08, 0.08, 0.1, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [6]
+                        radius: [8]
 
                 Label:
                     id: target_script_label
                     text: "[Loaded Stage 2 Input Bundle details will appear here.]"
-                    font_size: '12sp'
-                    text_size: self.width - 16, None
+                    font_size: '13sp'
+                    color: 0.8, 0.8, 0.8, 1
+                    text_size: self.width - 24, None
                     size_hint_y: None
                     height: max(self.texture_size[1], self.parent.height)
                     halign: 'left'
                     valign: 'top'
-                    padding: [8, 8]
+                    padding: [12, 12]
                     markup: True
 
         # RIGHT PANE: LIVE INTERVIEW PANEL, TOP HISTORY BAR & AUDIO VISUALIZER
         BoxLayout:
             orientation: 'vertical'
             size_hint_x: 0.64
-            spacing: 8
+            spacing: 12
 
             # TOP ACTION BAR IN RIGHT PANE: PROMINENT HISTORY BUTTON & STATUS BADGE
             BoxLayout:
                 orientation: 'horizontal'
                 size_hint_y: None
-                height: '38dp'
-                spacing: 10
-                padding: [2, 0]
+                height: '42dp'
+                spacing: 12
+                padding: [0, 0]
 
                 Button:
                     id: history_btn
@@ -213,27 +224,27 @@ KV = """
                     font_size: '13sp'
                     bold: True
                     background_normal: ''
-                    background_color: 0.22, 0.45, 0.75, 1
+                    background_color: 0.2, 0.45, 0.7, 1
                     on_press: root.open_history_screen()
 
                 Label:
                     id: header_status_badge
                     text: "System Ready"
-                    font_size: '13sp'
+                    font_size: '14sp'
                     bold: True
                     size_hint_x: 0.35
                     halign: 'right'
                     valign: 'middle'
-                    color: 0.3, 0.9, 0.5, 1
+                    color: 0.2, 0.8, 0.5, 1
 
             Label:
                 id: status_label
                 text: "System Online"
-                font_size: '15sp'
+                font_size: '16sp'
                 bold: True
                 size_hint_y: None
-                height: '22dp'
-                color: 0.6, 0.4, 0.9, 1
+                height: '24dp'
+                color: 0.5, 0.4, 0.9, 1
 
             Label:
                 id: question_label
@@ -241,28 +252,28 @@ KV = """
                 font_size: '14sp'
                 bold: True
                 size_hint_y: None
-                height: '22dp'
-                color: 0.8, 0.8, 0.8, 1
+                height: '24dp'
+                color: 0.9, 0.9, 0.9, 1
 
             # VAD DIAGNOSTICS & VOLUME BAR
             BoxLayout:
                 orientation: 'vertical'
                 size_hint_y: None
-                height: '46dp'
+                height: '52dp'
                 canvas.before:
                     Color:
-                        rgba: 0.14, 0.14, 0.18, 1
+                        rgba: 0.12, 0.12, 0.14, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [6]
-                padding: 4
+                        radius: [10]
+                padding: 8
 
                 Label:
                     id: vad_state_label
                     text: "Mic: Offline"
                     font_size: '12sp'
-                    color: 0.8, 0.8, 0.8, 1
+                    color: 0.6, 0.6, 0.65, 1
                     size_hint_y: 0.5
 
                 ProgressBar:
@@ -276,71 +287,72 @@ KV = """
                 size_hint_y: 1.0
                 canvas.before:
                     Color:
-                        rgba: 0.12, 0.12, 0.15, 1
+                        rgba: 0.12, 0.12, 0.14, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [8]
+                        radius: [12]
 
                 Label:
                     id: transcript_display
                     text: "--- Netran AI Live Voice Panel ---\\n"
                     markup: True
                     font_size: '14sp'
+                    color: 0.9, 0.9, 0.9, 1
                     size_hint_y: None
                     height: max(self.texture_size[1], self.parent.height)
-                    text_size: self.width - 20, None
+                    text_size: self.width - 32, None
                     halign: 'left'
                     valign: 'top'
-                    padding: [10, 10]
+                    padding: [16, 16]
 
             # CONTROL BUTTONS BAR (CLEAN 3 BUTTONS ONLY)
             BoxLayout:
                 orientation: 'horizontal'
-                spacing: 8
+                spacing: 12
                 size_hint_y: None
-                height: '44dp'
+                height: '46dp'
 
                 Button:
                     id: start_btn
                     text: "Start Interview"
-                    font_size: '12sp'
+                    font_size: '13sp'
                     bold: True
                     size_hint_x: 0.33
                     background_normal: ''
-                    background_color: 0.15, 0.6, 0.3, 1
+                    background_color: 0.15, 0.65, 0.45, 1
                     on_press: root.start_interview()
 
                 Button:
                     id: stop_btn
                     text: "Final Stop & Output"
-                    font_size: '12sp'
+                    font_size: '13sp'
                     bold: True
                     size_hint_x: 0.33
                     background_normal: ''
-                    background_color: 0.8, 0.25, 0.25, 1
+                    background_color: 0.8, 0.25, 0.3, 1
                     disabled: True
                     on_press: root.stop_interview()
 
                 Button:
                     id: restart_btn
                     text: "Restart Session"
-                    font_size: '12sp'
+                    font_size: '13sp'
                     bold: True
                     size_hint_x: 0.33
                     background_normal: ''
-                    background_color: 0.25, 0.45, 0.75, 1
+                    background_color: 0.2, 0.5, 0.8, 1
                     on_press: root.restart_interview()
 
 
 <SessionHistoryScreen>:
     name: 'history_screen'
     orientation: 'vertical'
-    padding: 12
-    spacing: 10
+    padding: 16
+    spacing: 12
     canvas.before:
         Color:
-            rgba: 0.08, 0.08, 0.1, 1
+            rgba: 0.07, 0.07, 0.08, 1
         Rectangle:
             pos: self.pos
             size: self.size
@@ -349,16 +361,16 @@ KV = """
     BoxLayout:
         orientation: 'horizontal'
         size_hint_y: None
-        height: '46dp'
-        padding: [10, 4]
-        spacing: 10
+        height: '52dp'
+        padding: [12, 6]
+        spacing: 12
         canvas.before:
             Color:
-                rgba: 0.12, 0.12, 0.16, 1
+                rgba: 0.12, 0.12, 0.14, 1
             RoundedRectangle:
                 pos: self.pos
                 size: self.size
-                radius: [6]
+                radius: [10]
 
         Button:
             text: "⬅️ Back to Live Interview"
@@ -366,7 +378,7 @@ KV = """
             bold: True
             size_hint_x: 0.35
             background_normal: ''
-            background_color: 0.15, 0.55, 0.45, 1
+            background_color: 0.2, 0.5, 0.8, 1
             on_press: root.go_back_to_interview()
 
         Label:
@@ -376,43 +388,43 @@ KV = """
             halign: 'left'
             valign: 'middle'
             size_hint_x: 0.45
-            color: 0.4, 0.8, 1, 1
+            color: 0.3, 0.75, 1, 1
 
         Label:
             text: "Stage 3 Output Data"
-            font_size: '13sp'
+            font_size: '14sp'
             bold: True
             halign: 'right'
             valign: 'middle'
             size_hint_x: 0.2
-            color: 0.3, 0.9, 0.5, 1
+            color: 0.2, 0.8, 0.5, 1
 
     # MAIN SPLIT CONTENT AREA
     BoxLayout:
         orientation: 'horizontal'
-        spacing: 12
+        spacing: 16
         size_hint_y: 1.0
 
         # LEFT PANE: PAST SESSIONS LIST WITH HEADER BACK BUTTON
         BoxLayout:
             orientation: 'vertical'
             size_hint_x: 0.34
-            spacing: 8
-            padding: 8
+            spacing: 12
+            padding: 12
             canvas.before:
                 Color:
-                    rgba: 0.11, 0.11, 0.14, 1
+                    rgba: 0.12, 0.12, 0.14, 1
                 RoundedRectangle:
                     pos: self.pos
                     size: self.size
-                    radius: [8]
+                    radius: [12]
 
             # LEFT PANE HEADER: COMPACT BACK BUTTON & TITLE
             BoxLayout:
                 orientation: 'horizontal'
                 size_hint_y: None
-                height: '32dp'
-                spacing: 6
+                height: '36dp'
+                spacing: 8
 
                 Button:
                     text: "⬅️ Back"
@@ -420,78 +432,79 @@ KV = """
                     bold: True
                     size_hint_x: 0.38
                     background_normal: ''
-                    background_color: 0.15, 0.55, 0.45, 1
+                    background_color: 0.3, 0.35, 0.4, 1
                     on_press: root.go_back_to_interview()
 
                 Label:
                     text: "Past Sessions:"
-                    font_size: "13sp"
+                    font_size: "14sp"
                     bold: True
                     size_hint_x: 0.62
                     halign: "left"
                     valign: "middle"
-                    color: 0.8, 0.8, 0.8, 1
+                    color: 0.9, 0.9, 0.9, 1
 
             ScrollView:
                 size_hint_y: 1.0
                 BoxLayout:
                     id: sessions_list_layout
                     orientation: 'vertical'
-                    spacing: 5
+                    spacing: 8
                     size_hint_y: None
+                    padding: [0, 4]
 
         # RIGHT PANE: SELECTED SESSION DETAIL & AUDIO PLAYER
         BoxLayout:
             orientation: 'vertical'
             size_hint_x: 0.66
-            spacing: 8
+            spacing: 12
 
             # AUDIO PLAYER BAR WITH PROGRESS & TIME TRACKING
             BoxLayout:
                 orientation: 'vertical'
                 size_hint_y: None
-                height: '70dp'
-                padding: 6
-                spacing: 4
+                height: '80dp'
+                padding: 10
+                spacing: 6
                 canvas.before:
                     Color:
-                        rgba: 0.13, 0.15, 0.2, 1
+                        rgba: 0.12, 0.12, 0.14, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [6]
+                        radius: [10]
 
                 BoxLayout:
                     orientation: 'horizontal'
-                    spacing: 8
-                    size_hint_y: 0.5
+                    spacing: 12
+                    size_hint_y: 0.6
 
                     Button:
                         id: play_audio_btn
                         text: "Play Audio Recording"
-                        font_size: "12sp"
+                        font_size: "13sp"
                         bold: True
                         disabled: True
                         size_hint_x: 0.5
                         background_normal: ""
-                        background_color: 0.15, 0.6, 0.35, 1
+                        background_color: 0.15, 0.65, 0.45, 1
                         on_press: root.play_selected_audio()
 
                     Button:
                         id: stop_audio_btn
                         text: "Stop Audio"
-                        font_size: "12sp"
+                        font_size: "13sp"
                         bold: True
                         disabled: True
                         size_hint_x: 0.3
                         background_normal: ""
-                        background_color: 0.8, 0.25, 0.25, 1
+                        background_color: 0.8, 0.25, 0.3, 1
                         on_press: root.stop_selected_audio()
 
                     Label:
                         id: audio_time_label
                         text: "0:00 / 0:00"
-                        font_size: "12sp"
+                        font_size: "13sp"
                         bold: True
                         size_hint_x: 0.2
                         color: 0.4, 0.8, 1, 1
@@ -500,30 +513,31 @@ KV = """
                     id: audio_progress_bar
                     max: 1.0
                     value: 0.0
-                    size_hint_y: 0.5
+                    size_hint_y: 0.4
 
             # DETAIL TRANSCRIPT SCROLLVIEW
             ScrollView:
                 size_hint_y: 1.0
                 canvas.before:
                     Color:
-                        rgba: 0.12, 0.12, 0.15, 1
+                        rgba: 0.12, 0.12, 0.14, 1
                     RoundedRectangle:
                         pos: self.pos
                         size: self.size
-                        radius: [8]
+                        radius: [12]
 
                 Label:
                     id: detail_label
                     text: "[Select a session folder from the left pane to inspect generated outputs.]"
                     markup: True
-                    font_size: "13sp"
-                    text_size: self.width - 32, None
+                    font_size: "14sp"
+                    color: 0.9, 0.9, 0.9, 1
+                    text_size: self.width - 40, None
                     size_hint_y: None
-                    height: max(self.texture_size[1] + 30, self.parent.height)
+                    height: max(self.texture_size[1] + 40, self.parent.height)
                     halign: "left"
                     valign: "top"
-                    padding: [14, 14]
+                    padding: [20, 20]
 """
 
 
@@ -691,7 +705,8 @@ class InterviewScreen(Screen):
     def update_question_label(self, count):
         def _update(dt):
             if "question_label" in self.ids:
-                self.ids.question_label.text = f"Question Progress: {count} / {self.MAX_QUESTIONS}"
+                clamped_count = min(count, self.MAX_QUESTIONS)
+                self.ids.question_label.text = f"Question Progress: {clamped_count} / {self.MAX_QUESTIONS}"
         Clock.schedule_once(_update)
 
     def start_interview(self):
@@ -705,7 +720,8 @@ class InterviewScreen(Screen):
         self.update_question_label(0)
 
         if self.stage2_bundle:
-            self.question_manager = QuestionManager(self.stage2_bundle.questions)
+            selected_qs = self.stage2_bundle.questions[:self.MAX_QUESTIONS] if self.MAX_QUESTIONS > 0 else self.stage2_bundle.questions
+            self.question_manager = QuestionManager(selected_qs)
 
         session_id = f"sess_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         model_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -804,11 +820,11 @@ class InterviewScreen(Screen):
         formatted_log = f"[{timestamp}] {speaker}: {text}"
         
         if speaker == "Eva":
-            formatted_ui = f"[color=00ccff][b]🎙️ {speaker}:[/b][/color] {text}"
+            formatted_ui = f"[color=3399ff][b]🎙️ {speaker}:[/b][/color] {text}"
         elif speaker == "You":
-            formatted_ui = f"[color=66ff66]🗣️ {speaker}:[/color] {text}"
+            formatted_ui = f"[color=20c997]🗣️ {speaker}:[/color] {text}"
         else:
-            formatted_ui = f"[color=ffcc00]⚙️ [{speaker}]:[/color] {text}"
+            formatted_ui = f"[color=ffc107]⚙️ [{speaker}]:[/color] {text}"
 
         with open(self.log_filename, "a", encoding="utf-8") as f:
             f.write(formatted_log + "\n")
@@ -831,18 +847,20 @@ class InterviewScreen(Screen):
 
             # --- TURN 1: INITIATE CONVERSATION ---
             if self.llm_enabled:
+                initial_greeting = (
+                    "Hello! I am Eva, your technical interviewer today. "
+                    "Before we dive into technical questions, could you briefly introduce yourself and tell me what you've been working on recently?"
+                )
                 if self.question_manager and self.question_manager.get_current_question():
                     q1 = self.question_manager.get_current_question()
-                    initial_greeting = f"Hello! I am Eva. Let us begin your technical evaluation. Here is your first question: {q1.question_text}"
                     self.current_question_text = q1.question_text
                 else:
-                    initial_greeting = "Hello! Welcome to your technical interview today. Could you please start by describing your core backend stack?"
                     self.current_question_text = initial_greeting
 
                 self.log_and_display_turn("Eva", initial_greeting)
-                turn1_history = f"<think>\nStarting the interview and asking the first question.\n</think>\n<speak>\n{initial_greeting}\n</speak>"
+                turn1_history = f"<think>\nStarting the interview with a warm background introduction request.\n</think>\n<speak>\n{initial_greeting}\n</speak>"
                 self.conversation_history.append({"role": "assistant", "content": turn1_history})
-                self.question_count = 1
+                self.question_count = 0
                 self.update_question_label(self.question_count)
                 self.update_status("Eva is speaking...")
                 speak_text(initial_greeting)
@@ -888,12 +906,10 @@ class InterviewScreen(Screen):
                 if self.llm_enabled:
                     branch_taken = "next_topic"
                     prompt_ctx = clean_transcript
-                    if self.question_manager and not self.question_manager.is_finished():
+                    if self.question_manager:
                         branch_taken = self.question_manager.evaluate_transcript(clean_transcript)
                         llm_prompt, target_question = self.question_manager.format_prompt_context(branch_taken, clean_transcript)
                         prompt_ctx = llm_prompt
-                        if branch_taken == "next_topic":
-                            self.question_manager.advance_question()
 
                     self.log_and_display_turn("You", clean_transcript)
                     self.append_ui_text(f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}")
@@ -916,7 +932,12 @@ class InterviewScreen(Screen):
                     else:
                         trimmed_history = self.conversation_history
 
-                    think_text, speak_content = generate_eva_response(trimmed_history, custom_system_prompt=sys_prompt)
+                    think_text, speak_content = generate_eva_response(
+                        trimmed_history, 
+                        custom_system_prompt=sys_prompt,
+                        speaker_player=get_default_player(),
+                        session_state=self.session_state
+                    )
 
                     Benchmark.end("ttft")
                     ttft_logged = True
@@ -938,12 +959,8 @@ class InterviewScreen(Screen):
 
                     if speak_content.strip() and self.is_running:
                         Benchmark.start("ttfa")
-                        clean_speak = TextSanitizer.clean_for_tts(speak_content)
-                        if clean_speak:
-                            self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
-                            speak_text(clean_speak)
-                            if not self.is_running:
-                                break
+                        # Audio was already streamed during generation. We just update the UI status.
+                        self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
                         current_ttfa = Benchmark.end("ttfa")
                         ttfa_logged = True
 
@@ -976,22 +993,28 @@ class InterviewScreen(Screen):
                             eva_reply=speak_content if 'speak_content' in locals() else full_eva_reply
                         )
 
-                    # Fix: Ensure the NEXT turn logs the actual question template text,
-                    # not Eva's conversational generation.
+                    # Fix: Ensure the NEXT turn logs the actual question template text, not Eva's conversational generation.
                     self.current_question_text = target_question if 'target_question' in locals() else full_eva_reply
-                    self.question_count += 1
-                    self.update_question_label(self.question_count)
 
-                    if self.question_count >= self.MAX_QUESTIONS:
+                    # Synchronize question counter from QuestionManager index so follow-ups don't trigger premature exit
+                    if self.question_manager:
+                        displayed_q = min(self.question_manager.current_index + 1, self.MAX_QUESTIONS)
+                        self.question_count = displayed_q
+                        self.update_question_label(self.question_count)
+
+                    # Interview completes ONLY when QuestionManager reaches completion after evaluating the last answer
+                    if branch_taken == "interview_completed" or (self.question_manager and self.question_manager.is_finished()):
                         self.update_status("Interview Complete — Wrapping Up")
-                        closing = (
-                            "That concludes our technical evaluation for today. "
-                            "Thank you for your time, and we will follow up with detailed feedback shortly."
-                        )
-                        self.log_and_display_turn("Eva", closing)
-                        self.conversation_history.append({"role": "assistant", "content": closing})
-                        speak_text(closing)
-                        self.append_ui_text(f"\n[System]: Session complete. {self.MAX_QUESTIONS} questions covered.")
+                        if branch_taken != "interview_completed":
+                            closing = (
+                                "That concludes our technical evaluation for today. "
+                                "Thank you for your time, and we will follow up with detailed feedback shortly."
+                            )
+                            self.log_and_display_turn("Eva", closing)
+                            self.conversation_history.append({"role": "assistant", "content": closing})
+                            speak_text(closing)
+                        total_qs = len(self.question_manager.questions) if self.question_manager else self.MAX_QUESTIONS
+                        self.append_ui_text(f"\n[System]: Session complete. All {total_qs} questions covered.")
                         self.stop_interview()
                         break
 
