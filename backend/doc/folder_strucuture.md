@@ -80,9 +80,11 @@ backend/
     │       ├── question_manager.py # State machine & keyword density adaptive branching engine
     │       ├── schemas.py     # Pydantic v2 schemas (InterviewQuestionInput, InterviewerBehaviorInput, Stage2SessionBundle, TurnManifest, SessionManifest)
     │       ├── session_logger.py # Monotonic timer & session_manifest.json logger
+    │       ├── session_state.py  # Thread-safe cross-module state/event tracker (Echo Gate)
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
     │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
-    │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
+    │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
+    │       └── run.bat        # Local Windows launcher menu for testing Stage 3 standalone scripts
     │
     ├── reports_model/         # STAGE 4: Post-Session Multimodal Evaluation Engine
     │   ├── doc/

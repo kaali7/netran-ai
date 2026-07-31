@@ -47,7 +47,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * **Model**: `gemini-3.6-flash`
   * **Stage 1 (JD Research & Intelligence Engine)**: Deep structural breakdown of Job Descriptions, tech stack requirement extraction, and trusted web domain scraping synthesis.
   * **Stage 2 (Question & Prompt Engine)**: Generates 15-question stratified interview trees paired with custom latency-tuned system prompts for the **Eva** interviewer persona.
-* **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (7B / 14B)**
+* **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (1.5B)**
   * Low-latency streaming response generation during live interview conversations.
   * Zero external API cost and full privacy compliance.
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper)**
