@@ -39,14 +39,58 @@ class TextSanitizer:
 def parse_think_speak(raw: str) -> Tuple[str, str]:
     """
     Splits LLM raw output into (think_text, speak_text).
-    Falls back to ('', raw) if no tags found.
+    Uses fuzzy matching and positional inference to handle heavily malformed LLM outputs.
     """
-    think_match = re.search(r'<think>(.*?)</think>', raw, re.DOTALL | re.IGNORECASE)
-    speak_match = re.search(r'<speak>(.*?)</speak>', raw, re.DOTALL | re.IGNORECASE)
+    raw = raw.strip()
+    think_text = ""
+    speak_text = ""
+    
+    # 1. Fuzzy match speak tag (catches <speak>, speak:, [speak], and typos like peak>)
+    speak_pattern = r'(?:<speak>|speak:|\[speak\]|peak>)(.*?)(?:</speak>|$)'
+    speak_match = re.search(speak_pattern, raw, re.DOTALL | re.IGNORECASE)
+    
+    # 2. Fuzzy match think tag
+    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|<speak>|speak:|\[speak\]|peak>|$)'
+    think_match = re.search(think_pattern, raw, re.DOTALL | re.IGNORECASE)
+    
+    if think_match:
+        think_text = think_match.group(1).strip()
+    if speak_match:
+        speak_text = speak_match.group(1).strip()
+        
+    # 3. Positional Inference (The Safety Net)
+    if speak_text and not think_text:
+        # Everything before the speak tag is reasoning
+        parts = re.split(r'(?:<speak>|speak:|\[speak\]|peak>)', raw, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            think_text = re.sub(r'^(?:<think>|think:|\[think\])', '', parts[0], flags=re.IGNORECASE).strip()
+            
+    elif think_text and not speak_text:
+        # Everything outside the think tag is speech
+        parts = re.split(r'</think>', raw, maxsplit=1, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            speak_text = parts[1].strip()
+        else:
+            # If no closing tag, try paragraphs
+            parts = re.split(r'\n\s*\n', think_text)
+            if len(parts) > 1:
+                speak_text = parts[-1].strip()
+                think_text = "\n\n".join(parts[:-1]).strip()
 
-    think_text = think_match.group(1).strip() if think_match else ""
-    speak_text = speak_match.group(1).strip() if speak_match else raw.strip()
+    # 4. Paragraph Inference (Complete failure of tags)
+    if not think_text and not speak_text:
+        parts = re.split(r'\n\s*\n', raw)
+        if len(parts) > 1:
+            speak_text = parts[-1].strip()
+            think_text = "\n\n".join(parts[:-1]).strip()
+        else:
+            speak_text = raw
 
+    # Cleanup and fallback
+    speak_text = re.sub(r'^(?:speak:\s*)', '', speak_text, flags=re.IGNORECASE).strip()
+    if not speak_text:
+        speak_text = "Got it, let's continue."
+        
     return think_text, speak_text
 
 
@@ -75,7 +119,7 @@ def stream_llm_response(
     full_messages = [sys_msg] + conversation_history
 
     options = {
-        "num_predict": 250,        # Extended for <think> and <speak> blocks
+        "num_predict": 512,        # Extended for <think> and <speak> blocks
         "temperature": 0.7,        # ISSUE-7: Natural phrasing variation
         "top_p": 0.9,
         "repeat_penalty": 1.15,    # Prevent "Great, let's move on..." loops
@@ -91,16 +135,19 @@ def stream_llm_response(
             )
 
             raw_output = ""
-            token_count = 0
+            print("\n[Brain] Live LLM Output: ", end="", flush=True)
             for chunk in stream:
                 token = chunk.get("message", {}).get("content", "")
                 if token:
-                    token_count += 1
-                    if token_count > 150:   # Extended safety cap for think+speak
-                        break
                     raw_output += token
+                    print(token, end="", flush=True)
 
-            return parse_think_speak(raw_output)
+            print("\n") # Newline after streaming finishes
+            
+            think_text, speak_text = parse_think_speak(raw_output)
+            print(f"[Brain] Extracted THINK: {repr(think_text[:100])}...")
+            print(f"[Brain] Extracted SPEAK: {repr(speak_text[:100])}...\n", flush=True)
+            return think_text, speak_text
 
         except Exception as e:
             if attempt < max_retries - 1:

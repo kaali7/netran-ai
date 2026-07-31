@@ -66,7 +66,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - **Match $\ge$ 50% & `followup_if_strong`**: Triggers `"strong_followup"` branch (escalates to architectural trade-offs and edge cases).
   - **Match $<$ 20% & `followup_if_weak`**: Triggers `"weak_followup"` branch (asks simplifying diagnostic probes).
   - **Otherwise**: Triggers `"next_topic"` branch and advances question pointer (`current_index += 1`).
-* **Explicit Question Context & Manifest Alignment**: `format_prompt_context()` returns `(llm_prompt, target_question)`, injecting explicit instructions into the LLM prompt to speak the question clearly while ensuring clean schema question text is logged into `session_manifest.json`.
+* **Explicit Question Context & Manifest Alignment**: `format_prompt_context()` explicitly commands the LLM to speak the target question word-for-word and forbids generic filler responses, ensuring clean question progression and alignment with `session_manifest.json`.
 
 ### 3. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
 * **Audio Capture Engine**: Built using `sounddevice` running at 16kHz single-channel `float32`.
@@ -76,18 +76,18 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Hallucination Filter**: Uses `is_valid_transcript()` to reject common Whisper empty room hallucinations ("Thank you.", "Subscribe", etc.).
 
 ### 4. LLM Engine & Text Sanitizer ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/brain.py))
-* **Model**: Local Ollama execution of `qwen2.5:1.5b`. Includes 3x exponential backoff retry.
-* **Tuned Params**: `num_predict: 250` (to accommodate think+speak), `temperature: 0.7`, `top_p: 0.9`, `repeat_penalty: 1.15`.
+* **Model**: Local Ollama execution of `qwen2.5:1.5b`. Includes 3x exponential backoff retry and streams raw output live to console.
+* **Tuned Params**: Unbounded token generation (`num_predict: 512`) accommodates long `<think>` blocks. `temperature: 0.7`, `top_p: 0.9`, `repeat_penalty: 1.15`.
 * **Think/Speak Split Architecture**: 
-  - System prompt rigorously enforces `<think>` and `<speak>` tags.
-  - Responses are fully buffered (instead of streamed) to correctly parse XML blocks.
-  - `parse_think_speak()` extracts reasoning from spoken output, providing graceful fallbacks.
+  - System prompt rigorously enforces `<think>` and `<speak>` XML tags, forbidding filler responses and colon-based artifacts.
+  - Responses are fully buffered to correctly parse XML blocks.
+  - **Bulletproof Parsing (`parse_think_speak`)**: Robustly extracts reasoning from spoken output using fuzzy regex matching for tags (catching typos like `peak>`) and positional/paragraph inference when tags are entirely omitted, ensuring the LLM never speaks its thoughts aloud.
 * **Regex TextSanitizer (`TextSanitizer.clean_for_tts`)**:
   - Strips bracketed tokens like `[Clears Throat]`, `(Sighs)`.
   - Normalizes whitespace before passing text to Kokoro TTS.
 
 ### 5. Text-to-Speech Playback ([speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/speaker.py))
-* **StreamingTTSPlayer**: Employs a Producer-Consumer `queue.Queue` alongside a persistent `sd.OutputStream` to eliminate inter-chunk delay gaps, resulting in natural, continuous playback.
+* **StreamingTTSPlayer**: Employs a Producer-Consumer `queue.Queue` alongside a persistent `sd.OutputStream` to eliminate inter-chunk delay gaps, resulting in natural, continuous playback. Uses active timeout loops (`queue.get(timeout=0.2)`) and `force_stop_all()` to completely eliminate thread deadlocks when aborting speech.
 * **Technical Text Normalization**: Prevents odd pausing on strings like "Python 3.11", "Next.js", and "HTTP/1.1".
 * **Kokoro-82M Engine**: Neural TTS initialized using `KPipeline(lang_code="a")` with `af_bella` voice.
 
@@ -101,14 +101,14 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
     - Preset Selector, LLM/Calibration mode toggles, and Pause Tolerance spinner (1.0s, 1.6s, 2.2s).
     - Selectable Question Limit Spinner (5, 10, 15, All Available Questions) with auto-end and graceful closing statement.
     - Live VAD visualizer & volume diagnostics bar.
-    - Non-overlapping, clean 4-button control bar (`Start Interview`, `Done Speaking`, `Final Stop & Output`, `Restart Session`).
+    - Non-overlapping, clean 3-button control bar (`Start Interview`, `Final Stop & Output`, `Restart Session`).
   - **`SessionHistoryScreen`**:
     - Full-page output inspector displaying past `sess_<timestamp>` output folders.
     - Left-pane header `⬅️ Back` button for returning to the live interview panel.
     - Interactive WAV audio player with real-time `ProgressBar` and time tracking (`0:15 / 1:30`).
     - Pixel-perfect text wrapping, zero clipping, and color-coded telemetry and dialogue transcripts.
 * **SessionState Management**: Thread-safe `session_state.py` orchestrating cross-module events (e.g., Echo Gate).
-* **Think/Speak UI Rendering**: Displays LLM internal reasoning instantly in the UI as greyed italic text (`[Eva thinking...]`) while ensuring only the `<speak>` block is sent to the Kokoro TTS and fed back into the LLM `conversation_history` context to prevent compounding errors.
+* **Think/Speak UI Rendering**: Safely escapes Kivy markup from LLM reasoning, then displays LLM internal reasoning and dialog using color-coded markup labels (grey for reasoning, cyan for Eva, green for Candidate). Ensures only the `<speak>` block is sent to Kokoro TTS and fed back into `conversation_history` context to prevent compounding errors.
 * **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time.
 
 ---

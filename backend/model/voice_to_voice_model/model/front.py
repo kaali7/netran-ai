@@ -282,18 +282,19 @@ KV = """
                         size: self.size
                         radius: [8]
 
-                TextInput:
+                Label:
                     id: transcript_display
                     text: "--- Netran AI Live Voice Panel ---\\n"
-                    readonly: True
-                    background_color: 0, 0, 0, 0
-                    foreground_color: 1, 1, 1, 1
+                    markup: True
                     font_size: '14sp'
                     size_hint_y: None
-                    height: max(self.minimum_height, self.parent.height)
+                    height: max(self.texture_size[1], self.parent.height)
+                    text_size: self.width - 20, None
+                    halign: 'left'
+                    valign: 'top'
                     padding: [10, 10]
 
-            # CONTROL BUTTONS BAR (CLEAN 4 BUTTONS ONLY)
+            # CONTROL BUTTONS BAR (CLEAN 3 BUTTONS ONLY)
             BoxLayout:
                 orientation: 'horizontal'
                 spacing: 8
@@ -305,27 +306,17 @@ KV = """
                     text: "Start Interview"
                     font_size: '12sp'
                     bold: True
-                    size_hint_x: 0.25
+                    size_hint_x: 0.33
                     background_normal: ''
                     background_color: 0.15, 0.6, 0.3, 1
                     on_press: root.start_interview()
-
-                Button:
-                    id: send_btn
-                    text: "Done Speaking"
-                    font_size: '12sp'
-                    bold: True
-                    size_hint_x: 0.25
-                    background_normal: ''
-                    background_color: 0.5, 0.3, 0.8, 1
-                    on_press: root.submit_answer_now()
 
                 Button:
                     id: stop_btn
                     text: "Final Stop & Output"
                     font_size: '12sp'
                     bold: True
-                    size_hint_x: 0.25
+                    size_hint_x: 0.33
                     background_normal: ''
                     background_color: 0.8, 0.25, 0.25, 1
                     disabled: True
@@ -336,7 +327,7 @@ KV = """
                     text: "Restart Session"
                     font_size: '12sp'
                     bold: True
-                    size_hint_x: 0.25
+                    size_hint_x: 0.33
                     background_normal: ''
                     background_color: 0.25, 0.45, 0.75, 1
                     on_press: root.restart_interview()
@@ -749,6 +740,13 @@ class InterviewScreen(Screen):
         """Finalizes audio recording, writes session_manifest.json, and transitions to history screen."""
         self.is_running = False
         self.session_state.should_stop.set()
+
+        # Immediately halt any in-progress TTS audio playback
+        try:
+            from model.voice_to_voice_model.model.speaker import force_stop_all
+            force_stop_all()
+        except Exception:
+            pass
         if self.mic_writer:
             self.mic_writer.stop()
             self.mic_writer = None
@@ -803,12 +801,19 @@ class InterviewScreen(Screen):
 
     def log_and_display_turn(self, speaker, text):
         timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
-        formatted_line = f"[{timestamp}] {speaker}: {text}"
+        formatted_log = f"[{timestamp}] {speaker}: {text}"
+        
+        if speaker == "Eva":
+            formatted_ui = f"[color=00ccff][b]🎙️ {speaker}:[/b][/color] {text}"
+        elif speaker == "You":
+            formatted_ui = f"[color=66ff66]🗣️ {speaker}:[/color] {text}"
+        else:
+            formatted_ui = f"[color=ffcc00]⚙️ [{speaker}]:[/color] {text}"
 
         with open(self.log_filename, "a", encoding="utf-8") as f:
-            f.write(formatted_line + "\n")
+            f.write(formatted_log + "\n")
 
-        self.append_ui_text(formatted_line)
+        self.append_ui_text(formatted_ui)
 
     def _run_interview_pipeline(self):
         """Main automated hardware pipeline loop linking components."""
@@ -818,12 +823,11 @@ class InterviewScreen(Screen):
                 preload_brain(custom_system_prompt=self.stage2_bundle.system_prompt if self.stage2_bundle else None)
             
             init_speaker_compat(self.session_state)
-            self.tts_player = StreamingTTSPlayer()
             self.session_state.should_stop.clear()
             self.session_state.force_speech_done.clear()
 
             self.update_status("Eva is initializing speech channels...")
-            self.append_ui_text("[System]: Voice pipeline connected.\n")
+            self.append_ui_text("[color=ffcc00]⚙️ [System]:[/color] Voice pipeline connected.\n")
 
             # --- TURN 1: INITIATE CONVERSATION ---
             if self.llm_enabled:
@@ -836,7 +840,8 @@ class InterviewScreen(Screen):
                     self.current_question_text = initial_greeting
 
                 self.log_and_display_turn("Eva", initial_greeting)
-                self.conversation_history.append({"role": "assistant", "content": initial_greeting})
+                turn1_history = f"<think>\nStarting the interview and asking the first question.\n</think>\n<speak>\n{initial_greeting}\n</speak>"
+                self.conversation_history.append({"role": "assistant", "content": turn1_history})
                 self.question_count = 1
                 self.update_question_label(self.question_count)
                 self.update_status("Eva is speaking...")
@@ -891,7 +896,7 @@ class InterviewScreen(Screen):
                             self.question_manager.advance_question()
 
                     self.log_and_display_turn("You", clean_transcript)
-                    self.append_ui_text(f"[Branch Taken]: {branch_taken}")
+                    self.append_ui_text(f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}")
                     self.conversation_history.append({"role": "user", "content": prompt_ctx})
                     
                     import random
@@ -918,8 +923,12 @@ class InterviewScreen(Screen):
                     current_ttft = Benchmark.last_ttft_ms if hasattr(Benchmark, 'last_ttft_ms') else 0.0
 
                     if think_text:
-                        grey_italic = f"[i][color=888888][Eva thinking...]: {think_text}[/color][/i]"
+                        safe_think = think_text.replace("[", "&#91;").replace("]", "&#93;").replace("&", "&amp;")
+                        grey_italic = f"[i][color=888888]🧠 [Eva thinking...]: {safe_think}[/color][/i]"
                         self.append_ui_text(grey_italic)
+                        timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+                        with open(self.log_filename, "a", encoding="utf-8") as f:
+                            f.write(f"[{timestamp}] [Eva thinking...]: {think_text}\n")
 
                     full_eva_reply = speak_content
                     self.log_and_display_turn("Eva", speak_content)
@@ -933,13 +942,19 @@ class InterviewScreen(Screen):
                         if clean_speak:
                             self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
                             speak_text(clean_speak)
+                            if not self.is_running:
+                                break
                         current_ttfa = Benchmark.end("ttfa")
                         ttfa_logged = True
 
                     if self.session_logger:
                         self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
 
-                    self.conversation_history.append({"role": "assistant", "content": speak_content})
+                    if think_text:
+                        history_content = f"<think>\n{think_text}\n</think>\n<speak>\n{speak_content}\n</speak>"
+                    else:
+                        history_content = f"<speak>\n{speak_content}\n</speak>"
+                    self.conversation_history.append({"role": "assistant", "content": history_content})
 
                     stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
                     if ttft_logged and ttfa_logged:

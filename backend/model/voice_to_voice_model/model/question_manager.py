@@ -108,25 +108,36 @@ class QuestionManager:
 
         if branch == "strong_followup" and q.followup_if_strong:
             target_question = q.followup_if_strong
-            instruction = f"The candidate gave a strong answer. Briefly acknowledge it (1 short sentence) and ask this specific follow-up question: '{target_question}'"
+            instruction = (
+                f"The candidate answered well. Briefly acknowledge (1 short sentence only), "
+                f"then ask this EXACT follow-up question word-for-word: '{target_question}'"
+            )
         elif branch == "weak_followup" and q.followup_if_weak:
             target_question = q.followup_if_weak
-            instruction = f"The candidate struggled. Briefly acknowledge it (1 short sentence) and ask this simplifying follow-up question: '{target_question}'"
+            instruction = (
+                f"The candidate struggled. Offer a brief encouraging sentence, "
+                f"then ask this EXACT simplifying question word-for-word: '{target_question}'"
+            )
         else:
             # Next topic branch
             next_idx = self.current_index + 1
             if next_idx < len(self.questions):
                 next_q = self.questions[next_idx]
                 target_question = next_q.question_text
-                instruction = f"Briefly transition (1 short sentence) and ask the next question: '{target_question}'"
+                instruction = (
+                    f"Move to the next topic. Say one short transition sentence, "
+                    f"then ask this EXACT question word-for-word: '{target_question}'"
+                )
             else:
                 target_question = "That wraps up our interview."
-                instruction = f"Final topic complete. Wrap up the interview professionally in 1 short sentence."
+                instruction = "The interview is complete. Wrap up professionally in exactly 1-2 sentences."
 
         llm_prompt = (
-            f"Candidate said: '{transcript}'\n"
-            f"Instruction: {instruction}\n"
-            f"Constraint: You MUST speak the question text clearly."
+            f"CANDIDATE SAID: '{transcript}'\n\n"
+            f"YOUR INSTRUCTION: {instruction}\n\n"
+            f"CRITICAL RULE: You MUST say the EXACT question text above in your <speak> block. "
+            f"Do NOT replace it with a summary or paraphrase. "
+            f"Do NOT just say 'Thank you' or similar filler without asking the question."
         )
 
         return (llm_prompt, target_question)
