@@ -64,6 +64,8 @@ class TurnManifest(BaseModel):
     stt_latency_ms: float = 0.0
     ttft_ms: float = 0.0
     evaluation_branch_taken: Literal["strong_followup", "weak_followup", "next_topic"] = "next_topic"
+    eva_reasoning: Optional[str] = None
+    eva_reply: Optional[str] = None
 
 
 class SessionManifest(BaseModel):

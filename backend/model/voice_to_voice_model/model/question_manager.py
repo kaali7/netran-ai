@@ -7,7 +7,7 @@ Description: State machine and dynamic branching engine tracking question progre
 """
 
 import re
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 try:
     from .schemas import InterviewQuestionInput
@@ -37,6 +37,18 @@ class QuestionManager:
         """Returns True if all questions in the sequence have been processed."""
         return self.current_index >= len(self.questions)
 
+    def is_candidate_requesting_skip(self, transcript: str) -> bool:
+        """Detects if candidate is asking to skip or move to the next question."""
+        skip_patterns = [
+            r"\b(move|go)\s+(to\s+)?(the\s+)?next\b",
+            r"\bskip(\s+this)?\b",
+            r"\bnext\s+question\b",
+            r"\bdon'?t\s+know\b",
+            r"\bpass\b"
+        ]
+        clean_text = transcript.lower().strip()
+        return any(re.search(pat, clean_text) for pat in skip_patterns)
+
     def evaluate_transcript(self, transcript: str) -> str:
         """
         Evaluates candidate STT transcript against current question's expected keywords.
@@ -51,6 +63,9 @@ class QuestionManager:
         """
         q = self.get_current_question()
         if not q:
+            return "next_topic"
+
+        if self.is_candidate_requesting_skip(transcript):
             return "next_topic"
 
         normalized_transcript = (transcript or "").strip().lower()
@@ -78,45 +93,43 @@ class QuestionManager:
         else:
             return "next_topic"
 
-    def format_prompt_context(self, branch: str, transcript: str) -> str:
+    def format_prompt_context(self, branch: str, transcript: str) -> Tuple[str, str]:
         """
         Formats instructions and context for Ollama LLM prompt generation
-        based on evaluation branch outcome.
+        based on evaluation branch outcome, and returns the target question text.
 
         :param branch: Branch outcome ("strong_followup", "weak_followup", "next_topic").
         :param transcript: Candidate transcript text.
-        :return: Context instruction string for LLM.
+        :return: Tuple containing (LLM instruction string, Target question text).
         """
         q = self.get_current_question()
         if not q:
-            return f"Candidate transcript: '{transcript}'. Session is concluding."
+            return (f"Candidate transcript: '{transcript}'. Session is concluding.", "Session Complete")
 
         if branch == "strong_followup" and q.followup_if_strong:
-            return (
-                f"Candidate answer to '{q.question_text}': '{transcript}'.\n"
-                f"Evaluation: Strong answer (high keyword coverage).\n"
-                f"Follow-up instruction: Ask this escalating probe next: \"{q.followup_if_strong}\""
-            )
+            target_question = q.followup_if_strong
+            instruction = f"The candidate gave a strong answer. Briefly acknowledge it (1 short sentence) and ask this specific follow-up question: '{target_question}'"
         elif branch == "weak_followup" and q.followup_if_weak:
-            return (
-                f"Candidate answer to '{q.question_text}': '{transcript}'.\n"
-                f"Evaluation: Weak or vague answer (low keyword coverage).\n"
-                f"Follow-up instruction: Ask this simplifying clarifying question next: \"{q.followup_if_weak}\""
-            )
+            target_question = q.followup_if_weak
+            instruction = f"The candidate struggled. Briefly acknowledge it (1 short sentence) and ask this simplifying follow-up question: '{target_question}'"
         else:
             # Next topic branch
             next_idx = self.current_index + 1
             if next_idx < len(self.questions):
                 next_q = self.questions[next_idx]
-                return (
-                    f"Candidate answer: '{transcript}'.\n"
-                    f"Evaluation: Topic complete. Transition concisely and ask the next question: \"{next_q.question_text}\""
-                )
+                target_question = next_q.question_text
+                instruction = f"Briefly transition (1 short sentence) and ask the next question: '{target_question}'"
             else:
-                return (
-                    f"Candidate answer: '{transcript}'.\n"
-                    f"Evaluation: Final topic complete. Wrap up the interview professionally in 1 short sentence."
-                )
+                target_question = "That wraps up our interview."
+                instruction = f"Final topic complete. Wrap up the interview professionally in 1 short sentence."
+
+        llm_prompt = (
+            f"Candidate said: '{transcript}'\n"
+            f"Instruction: {instruction}\n"
+            f"Constraint: You MUST speak the question text clearly."
+        )
+
+        return (llm_prompt, target_question)
 
     def advance_question(self):
         """Advances question index pointer to the next topic in sequence."""

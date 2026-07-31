@@ -3,15 +3,15 @@ Netran AI — Stage 3: Live Voice-to-Voice Loop
 Module: listener.py
 Description: Audio capture engine utilizing sounddevice, Silero VAD ONNX inference,
              dynamic peak auto-gain normalization, Faster-Whisper int8 STT,
-             and asynchronous continuous PCM mic WAV streaming.
+             asynchronous continuous PCM mic WAV streaming, and Whisper hallucination filtering.
 """
 
 import atexit
-import importlib
 import os
 import queue
 import threading
 import wave
+import sys
 
 import numpy as np
 import onnxruntime as ort
@@ -21,18 +21,19 @@ from faster_whisper import WhisperModel
 try:
     from .benchmark import Benchmark
     from .prompts import WHISPER_INITIAL_PROMPT
+    from .session_state import SessionState
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
+        from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
         from prompts import WHISPER_INITIAL_PROMPT
+        from session_state import SessionState
 
 # Global setup
 VAD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")
-
-import sys
 
 print("Loading Silero VAD model...", flush=True)
 # Disable logging/profiling in onnxruntime to keep output clean
@@ -45,28 +46,36 @@ print("Loading Faster-Whisper model (small)...", flush=True)
 whisper_model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
 print("Models loaded successfully!", flush=True)
 
-# Global manual speech endpointing flag
-FORCE_SPEECH_DONE = False
+# Known Whisper hallucinations on silence or background static
+WHISPER_HALLUCINATION_PATTERNS = {
+    "thank you.", "thanks for watching.", "subscribe to my channel.",
+    "you", "thank you very much.", "bye.", "so", "am",
+    "thanks.", "bye bye.", "see you next time.", "please subscribe.",
+    "like and subscribe.", "thank you for watching."
+}
 
-def trigger_speech_done():
-    """Triggers immediate speech endpointing to skip waiting for silence."""
-    global FORCE_SPEECH_DONE
-    FORCE_SPEECH_DONE = True
+def is_valid_transcript(text: str) -> bool:
+    """Filters empty strings, single filler letters, and Whisper silent hallucinations."""
+    clean = text.strip().lower()
+    if not clean or clean in WHISPER_HALLUCINATION_PATTERNS:
+        return False
+    words = clean.split()
+    if len(words) < 2 and clean not in {"yes", "no", "sure", "ok", "correct", "yeah", "nope"}:
+        return False
+    return True
 
-def listen_and_transcribe(ui_callback=None, mic_writer=None):
+
+def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None):
     """
     Opens the microphone, uses Silero VAD to detect speech start and end,
-    respects the echo gate, transcribes the speech using Faster-Whisper,
+    respects the echo gate via SessionState, transcribes the speech using Faster-Whisper,
     and optionally streams raw frames to continuous mic writer.
     """
-    global FORCE_SPEECH_DONE
-    FORCE_SPEECH_DONE = False
-
     # Audio hardware recording constraints
     CHANNELS = 1
     RATE = 16000     # 16kHz for VAD and Whisper
     CHUNK = 512      # Silero VAD v4 requires EXACTLY 512 samples at 16kHz
-    assert CHUNK == 512, f"[VAD Guard] Silero VAD requires exactly 512 samples at 16kHz, got {CHUNK}"  # Fix Bug #4
+    assert CHUNK == 512, f"[VAD Guard] Silero VAD requires exactly 512 samples at 16kHz, got {CHUNK}"
 
     stream = sd.InputStream(
         samplerate=RATE,
@@ -82,21 +91,31 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
     has_spoken = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
-    max_silence_frames = 28  # 28 * 32ms = ~900ms (natural interview pause window)
-    MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
-    total_frames_counter = 0 # 12-second hard timeout for the recording
+    
+    # Defaults if state isn't provided (for standalone tests)
+    max_silence_frames = 50 if state is None else max(10, state.pause_tolerance_ms // 32)
+    MIN_SPEECH_FRAMES = 20   # Must accumulate at least 20 frames (~640ms) before endpointing is allowed
+    total_frames_counter = 0 
+    MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms)
+
+    if state:
+        state.is_candidate_speaking.clear()
+        state.force_speech_done.clear()
 
     # Initialize VAD state tensors (Silero VAD v3 ONNX: only state is required, no context)
-    state = np.zeros((2, 1, 128), dtype=np.float32)
+    vad_state = np.zeros((2, 1, 128), dtype=np.float32)
     sr_scalar = np.array(RATE, dtype=np.int64)
 
     try:
         while True:
-            # Check manual force submit flag
-            if FORCE_SPEECH_DONE:
-                print("[Manual Done Speaking Triggered! Processing speech...]", flush=True)
-                FORCE_SPEECH_DONE = False
-                break
+            # Check external stop or manual submit flags
+            if state:
+                if state.should_stop.is_set():
+                    break
+                if state.force_speech_done.is_set():
+                    print("[Manual Done Speaking Triggered! Processing speech...]", flush=True)
+                    state.force_speech_done.clear()
+                    break
 
             # 1. Read raw PCM data from the microphone
             try:
@@ -106,27 +125,23 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                 continue
 
             # 2. Check Echo Gate: If agent is speaking, drop input to prevent feedback
-            try:
-                _speaker_mod = importlib.import_module("speaker")
-                _agent_speaking = getattr(_speaker_mod, "IS_AGENT_SPEAKING", False)
-            except ImportError:
-                _agent_speaking = False
-
-            if _agent_speaking:
-                # Discard frame and reset talking state to avoid triggering mid-speech
+            if state and state.is_agent_speaking.is_set():
                 silence_frames_counter = 0
                 continue
 
-            # 2b. Apply DC offset + auto-gain to the raw frame so both the
-            #     mic_writer WAV file and the VAD/Whisper audio are boosted.
-            #     (Confirmed fix: demo_raw.wav sounds clear because of this pipeline.)
+            # 2b. Apply DC offset + auto-gain + Noise Gate to the raw frame
             proc_frame = original_frame.copy()
             if len(proc_frame) < CHUNK:
                 proc_frame = np.pad(proc_frame, (0, CHUNK - len(proc_frame)), 'constant')
+            
             proc_frame = proc_frame - np.mean(proc_frame)  # DC offset removal
             frame_peak = float(np.max(np.abs(proc_frame)))
-            if frame_peak > 0.0005:
-                frame_gain = min(0.9 / frame_peak, 50.0)   # up to 50x, target 90% peak
+            
+            # Noise gate: zero out frames that are just mic static
+            if frame_peak < 0.002:
+                proc_frame = np.zeros_like(proc_frame)
+            elif frame_peak > 0.002:
+                frame_gain = min(0.9 / frame_peak, 20.0)   # cap at 20x, target 90% peak
                 proc_frame = proc_frame * frame_gain
 
             if mic_writer:
@@ -142,41 +157,42 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
             # 3. Run Silero VAD v3 — 3 inputs: input, state, sr
             ort_inputs = {
                 "input": audio_input,
-                "state": state,
+                "state": vad_state,
                 "sr": sr_scalar,
             }
             # Outputs: [output_prob [batch,1], stateN [2,batch,128]]
             ort_outputs = vad_session.run(None, ort_inputs)
             out   = ort_outputs[0]   # shape [1, 1]
-            state = ort_outputs[1]   # updated hidden state
+            vad_state = ort_outputs[1]   # updated hidden state
             speech_prob = out[0, 0]
 
             # 4. Speech Start/End Decision Logic
             rms = np.sqrt(np.mean(audio_frame ** 2))
             
             if not has_spoken:
-                # Debounce speech start: require 2 consecutive frames to avoid false triggers
-                if (speech_prob > 0.10 and rms > 0.005) or (rms > 0.025):
+                # Debounce speech start: require 4 consecutive frames (128ms) to avoid false triggers
+                if (speech_prob > 0.30 and rms > 0.01) or (rms > 0.04):
                     speech_start_candidate_frames += 1
-                    if speech_start_candidate_frames >= 2:
+                    if speech_start_candidate_frames >= 4:
                         print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
                         has_spoken = True
+                        if state:
+                            state.is_candidate_speaking.set()
                         silence_frames_counter = 0
                 else:
                     speech_start_candidate_frames = 0
             else:
-                # Forgiving speech continuation: reset silence counter if speech_prob > 0.05 OR rms > 0.008.
-                # This ensures natural pauses (breathing, hesitation) don't cut off speech prematurely.
-                if speech_prob > 0.05 or rms > 0.008:
+                # Forgiving speech continuation: reset silence counter if speech_prob > 0.20 OR rms > 0.015.
+                if speech_prob > 0.20 or rms > 0.015:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
 
             if ui_callback:
-                rms = np.sqrt(np.mean(audio_frame ** 2))
+                display_rms = np.sqrt(np.mean(audio_frame ** 2))
                 ui_callback({
                     "type": "audio_level",
-                    "rms": float(rms),
+                    "rms": float(display_rms),
                     "vad_prob": float(speech_prob),
                     "state": "Hearing you..." if has_spoken else "Waiting for speech..."
                 })
@@ -185,11 +201,20 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
             if has_spoken:
                 audio_buffer.append(proc_frame.copy())
                 total_frames_counter += 1
+                
+                # Warning near timeout (around 50s)
+                if total_frames_counter == 1562 and ui_callback:
+                    ui_callback({
+                        "type": "audio_level", 
+                        "rms": 0.0, 
+                        "vad_prob": 0.0,
+                        "state": "⚠️ Approaching time limit (10s remaining)..."
+                    })
 
-            # Break loop when silence threshold (~900ms) is reached after speech (and minimum speech duration met), or hard timeout
+            # Break loop when silence threshold is reached after speech (and minimum speech duration met), or hard timeout
             if has_spoken:
                 can_endpoint = total_frames_counter >= MIN_SPEECH_FRAMES
-                if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > 375:
+                if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > MAX_RECORDING_FRAMES:
                     print(f"[Silence Detected ({silence_frames_counter * 32}ms). Processing speech...]")
                     if ui_callback:
                         ui_callback({
@@ -203,6 +228,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
                     break
 
     finally:
+        if state:
+            state.is_candidate_speaking.clear()
         # Clean up audio hardware streams immediately
         stream.stop()
         stream.close()
@@ -212,8 +239,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
 
     # Combine accumulated (already DC-offset + auto-gain processed) frames
     audio_array = np.concatenate(audio_buffer)
+    
     # Final whole-utterance gain pass: ensures consistent level for Whisper
-    # (per-frame gain can vary; this normalizes the full utterance)
     audio_array = audio_array - np.mean(audio_array)  # re-center
     utterance_peak = float(np.max(np.abs(audio_array)))
     if utterance_peak > 0.0005:
@@ -226,35 +253,39 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None):
         audio_array,
         language="en",
         initial_prompt=WHISPER_INITIAL_PROMPT,
-        beam_size=5,
+        beam_size=1,
+        best_of=1,
         temperature=0.0,
         vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=300)
+        vad_parameters=dict(min_silence_duration_ms=500)
     )
     transcript_text = "".join([segment.text for segment in segments]).strip()
 
     stt_ms = Benchmark.end("stt")
     Benchmark.last_stt_ms = stt_ms
 
-    # Filter out empty responses
     if not transcript_text:
+        return ""
+
+    if not is_valid_transcript(transcript_text):
+        print(f"[STT] Rejected likely hallucination: '{transcript_text}'", flush=True)
         return ""
 
     return transcript_text
 
+
 def run_timed_test(rounds: int = 3, record_seconds: int = 8):
     """
     Standalone timed test for the STT listener.
-    Uses sounddevice (same as notebook - proven to work on Windows) for
-    recording, then runs Silero VAD + Whisper for transcription.
+    Uses sounddevice for recording, then runs Silero VAD + Whisper for transcription.
     """
     import time
-
+    
     # Force UTF-8 output so the terminal does not crash on Windows cp1252
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except AttributeError:
-        pass  # Python < 3.7 fallback — safe to ignore
+        pass
 
     try:
         import sounddevice as sd
@@ -265,7 +296,6 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
     RATE  = 16000
     CHUNK = 512   # VAD frame size (32ms at 16kHz)
 
-    # -- Mic warmup: confirm audio is being captured ----------------------
     print("\n  [MIC CHECK] Stay silent for 1 second...", flush=True)
     warmup = sd.rec(RATE, samplerate=RATE, channels=1, dtype="float32")
     sd.wait()
@@ -279,21 +309,15 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
     print("=" * 52, flush=True)
     print("   NETRAN AI -- STT LISTENER STANDALONE TEST", flush=True)
     print("=" * 52, flush=True)
-    print(f"  Rounds        : {rounds}", flush=True)
-    print(f"  Record time   : {record_seconds}s per round (VAD trims silence)", flush=True)
-    print("  Whisper model : small  |  VAD: Silero v3", flush=True)
-    print("=" * 52, flush=True)
 
     for round_num in range(1, rounds + 1):
         print(f"\n-- Round {round_num}/{rounds} " + "-" * 32, flush=True)
 
-        # 3-second countdown
         for t in range(3, 0, -1):
             print(f"  [MIC] Get ready... {t}", end="\r", flush=True)
             time.sleep(1)
         print(f"  [REC] SPEAK NOW! Recording for {record_seconds}s...          ", flush=True)
 
-        # -- Record with sounddevice --------------------------------------
         raw_recording = sd.rec(
             int(record_seconds * RATE),
             samplerate=RATE,
@@ -307,20 +331,14 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
         sd.wait()
         print("  [DONE] Recording complete. Running VAD + Whisper...              ", flush=True)
 
-        # Flatten to 1D float32
         audio_flat = raw_recording.flatten()
-
-        # ── Auto-Gain / Peak Normalization ────────────────────────────────
-        # 1. Remove DC offset (centers audio at 0 so VAD neural net doesn't get confused)
         audio_flat = audio_flat - np.mean(audio_flat)
 
-        # 2. Dynamically boost volume to 90% max so VAD always hears it
         peak = float(np.max(np.abs(audio_flat)))
         if peak > 0.0005:
             target_peak = 0.9
             dynamic_gain = target_peak / peak
-            # Cap gain at 50x so we don't blow up silent static
-            dynamic_gain = min(dynamic_gain, 50.0)
+            dynamic_gain = min(dynamic_gain, 20.0)
             audio_flat = audio_flat * dynamic_gain
             print(f"  [GAIN] Auto-boosted volume by {dynamic_gain:.1f}x (Peak was {peak:.4f})", flush=True)
 
@@ -331,8 +349,7 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
             print("  [ERROR] Audio is near-silence even after gain boost. Check mic permissions.", flush=True)
             continue
 
-        # -- Run VAD over frames to find speech region --------------------
-        state     = np.zeros((2, 1, 128), dtype=np.float32)
+        vad_state_arr = np.zeros((2, 1, 128), dtype=np.float32)
         sr_scalar = np.array(RATE, dtype=np.int64)
 
         speech_start_idx = None
@@ -343,12 +360,11 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
         for i in range(n_frames):
             frame    = audio_flat[i * CHUNK : (i + 1) * CHUNK]
             audio_in = np.expand_dims(frame, 0)
-            ort_out  = vad_session.run(None, {"input": audio_in, "state": state, "sr": sr_scalar})
-            state    = ort_out[1]
+            ort_out  = vad_session.run(None, {"input": audio_in, "state": vad_state_arr, "sr": sr_scalar})
+            vad_state_arr    = ort_out[1]
             prob     = float(ort_out[0][0, 0])
             max_prob = max(max_prob, prob)
 
-            # VAD thresholds: 0.3 for speech start, 0.1 for speech end
             if prob > 0.3 and speech_start_idx is None:
                 speech_start_idx = i * CHUNK
             if prob > 0.1 and speech_start_idx is not None:
@@ -358,7 +374,6 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
 
         if speech_start_idx is None:
             print("  [VAD] No speech region found. Transcribing full recording.", flush=True)
-            print("        Tip: Try speaking louder or closer to the microphone.", flush=True)
             audio_to_transcribe = audio_flat
         else:
             pad   = int(0.2 * RATE)
@@ -367,8 +382,6 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
             audio_to_transcribe = audio_flat[start:end]
             print(f"  [VAD] Speech found: {(end-start)/RATE:.1f}s trimmed and ready.", flush=True)
 
-        # -- Transcribe with Whisper -------------------------------------
-        FRONTEND_PROMPT = "React.js, Next.js, TypeScript, JavaScript, Vite, Tailwind CSS, HTML, CSS, frontend developer, UI layout, coding framework, tech mock interview."
         Benchmark.start("stt")
         segments, _ = whisper_model.transcribe(
             audio_to_transcribe,
@@ -387,10 +400,6 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
         if not transcript or len(transcript.split()) < 3:
             print("  [WARNING] Very short result - try speaking closer to the mic.", flush=True)
         print(flush=True)
-
-    print("=" * 52, flush=True)
-    print("  Test complete.", flush=True)
-    print("=" * 52 + "\n", flush=True)
 
 
 if __name__ == "__main__":
@@ -465,4 +474,4 @@ class ContinuousMicWriter:
         self.queue.put(None)  # Send sentinel
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=2.0)
-        print(f"[ContinuousMicWriter] Recording saved and closed -> {self.filepath}", flush=True)
+        print(f"[ContinuousMicWriter] Recording saved and closed -> {self.filepath}", flush=True)

@@ -39,7 +39,8 @@ try:
     from .schemas import load_stage2_bundle
     from .session_logger import SessionLogger
     from .speaker import preload_models as preload_speaker
-    from .speaker import speak_text
+    from .speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+    from .session_state import SessionState
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
@@ -58,7 +59,8 @@ except ImportError:
         from model.voice_to_voice_model.model.speaker import (
             preload_models as preload_speaker,
         )
-        from model.voice_to_voice_model.model.speaker import speak_text
+        from model.voice_to_voice_model.model.speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+        from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
         from brain import TextSanitizer, generate_eva_response
@@ -68,7 +70,8 @@ except ImportError:
         from schemas import load_stage2_bundle
         from session_logger import SessionLogger
         from speaker import preload_models as preload_speaker
-        from speaker import speak_text
+        from speaker import speak_text, init_speaker_compat, StreamingTTSPlayer
+        from session_state import SessionState
 
 
 # Multi-Screen KV layout definition with responsive proportions
@@ -148,6 +151,15 @@ KV = """
                 height: '34dp'
                 font_size: '12sp'
                 on_text: root.on_limit_select(self.text)
+
+            Spinner:
+                id: pause_tolerance
+                text: '⚖️ Balanced (1.6s)'
+                values: ('⚡ Fast Response (1.0s)', '⚖️ Balanced (1.6s)', '🧠 Deep Thinker (2.2s)')
+                size_hint_y: None
+                height: '34dp'
+                font_size: '12sp'
+                on_text: root.on_pause_select(self.text)
 
             Spinner:
                 id: script_selector
@@ -556,8 +568,19 @@ class InterviewScreen(Screen):
         self.question_manager = None
         self.selected_preset_name = "sample_backend"
 
+        self.session_state = SessionState()
+        self.tts_player = None
+
         self._load_calibration_scripts()
         self._load_selected_preset(self.selected_preset_name)
+
+    def on_pause_select(self, text):
+        if "1.0s" in text:
+            self.session_state.pause_tolerance_ms = 1000
+        elif "1.6s" in text:
+            self.session_state.pause_tolerance_ms = 1600
+        elif "2.2s" in text:
+            self.session_state.pause_tolerance_ms = 2200
 
     def _load_calibration_scripts(self):
         script_dir = os.path.dirname(__file__)
@@ -719,20 +742,13 @@ class InterviewScreen(Screen):
 
     def submit_answer_now(self):
         """Forces immediate speech endpointing when candidate finishes speaking."""
-        try:
-            from .listener import trigger_speech_done
-            trigger_speech_done()
-        except Exception:
-            try:
-                from listener import trigger_speech_done
-                trigger_speech_done()
-            except Exception:
-                pass
+        self.session_state.force_speech_done.set()
         self.update_status("⚡ Processing answer immediately...")
 
     def stop_interview(self):
         """Finalizes audio recording, writes session_manifest.json, and transitions to history screen."""
         self.is_running = False
+        self.session_state.should_stop.set()
         if self.mic_writer:
             self.mic_writer.stop()
             self.mic_writer = None
@@ -800,6 +816,12 @@ class InterviewScreen(Screen):
             preload_speaker()
             if self.llm_enabled:
                 preload_brain(custom_system_prompt=self.stage2_bundle.system_prompt if self.stage2_bundle else None)
+            
+            init_speaker_compat(self.session_state)
+            self.tts_player = StreamingTTSPlayer()
+            self.session_state.should_stop.clear()
+            self.session_state.force_speech_done.clear()
+
             self.update_status("Eva is initializing speech channels...")
             self.append_ui_text("[System]: Voice pipeline connected.\n")
 
@@ -845,11 +867,15 @@ class InterviewScreen(Screen):
             while self.is_running:
                 self.update_status("Listening to your response...")
                 turn_start_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
-                user_transcript = listen_and_transcribe(ui_callback=self.update_audio_diagnostics, mic_writer=self.mic_writer)
+                user_transcript = listen_and_transcribe(
+                    ui_callback=self.update_audio_diagnostics, 
+                    mic_writer=self.mic_writer,
+                    state=self.session_state
+                )
                 turn_end_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
                 silence_gap_sec = max(0.0, turn_start_sec - self.last_eva_speech_end_sec)
 
-                if not user_transcript.strip() or not self.is_running:
+                if user_transcript is None or not user_transcript.strip() or not self.is_running:
                     continue
 
                 clean_transcript = user_transcript.strip()
@@ -859,68 +885,61 @@ class InterviewScreen(Screen):
                     prompt_ctx = clean_transcript
                     if self.question_manager and not self.question_manager.is_finished():
                         branch_taken = self.question_manager.evaluate_transcript(clean_transcript)
-                        prompt_ctx = self.question_manager.format_prompt_context(branch_taken, clean_transcript)
-                        self.question_manager.advance_question()
+                        llm_prompt, target_question = self.question_manager.format_prompt_context(branch_taken, clean_transcript)
+                        prompt_ctx = llm_prompt
+                        if branch_taken == "next_topic":
+                            self.question_manager.advance_question()
 
                     self.log_and_display_turn("You", clean_transcript)
                     self.append_ui_text(f"[Branch Taken]: {branch_taken}")
                     self.conversation_history.append({"role": "user", "content": prompt_ctx})
+                    
+                    import random
+                    fillers = ["Okay.", "Right.", "Alright.", "Mmhmm.", "Got it."]
+                    filler = random.choice(fillers)
+                    speak_text(filler)
 
                     self.update_status("Eva is evaluating...")
                     Benchmark.start("ttft")
-                    sys_prompt = self.stage2_bundle.system_prompt if self.stage2_bundle else None
-                    brain_generator = generate_eva_response(self.conversation_history, custom_system_prompt=sys_prompt)
+                    from model.voice_to_voice_model.model.prompts import get_system_prompt
+                    sys_prompt_dict = get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
+                    sys_prompt = sys_prompt_dict["content"]
+                    
+                    MAX_HISTORY_MESSAGES = 8
+                    if len(self.conversation_history) > MAX_HISTORY_MESSAGES:
+                        trimmed_history = self.conversation_history[:2] + self.conversation_history[-(MAX_HISTORY_MESSAGES-2):]
+                    else:
+                        trimmed_history = self.conversation_history
 
-                    full_eva_reply = ""
-                    sentence_buffer = ""
-                    ttft_logged = False
+                    think_text, speak_content = generate_eva_response(trimmed_history, custom_system_prompt=sys_prompt)
+
+                    Benchmark.end("ttft")
+                    ttft_logged = True
+                    current_ttft = Benchmark.last_ttft_ms if hasattr(Benchmark, 'last_ttft_ms') else 0.0
+
+                    if think_text:
+                        grey_italic = f"[i][color=888888][Eva thinking...]: {think_text}[/color][/i]"
+                        self.append_ui_text(grey_italic)
+
+                    full_eva_reply = speak_content
+                    self.log_and_display_turn("Eva", speak_content)
+
                     ttfa_logged = False
-                    current_ttft = 0.0
                     current_ttfa = 0.0
 
-                    for token in brain_generator:
-                        if not self.is_running:
-                            break
-
-                        if not ttft_logged:
-                            current_ttft = Benchmark.end("ttft")
-                            ttft_logged = True
-
-                        full_eva_reply += token
-                        sentence_buffer += token
-
-                        sentences = re.split(r'(?<=[.!?\n])\s+', sentence_buffer)
-                        if len(sentences) > 1:
-                            new_buffer = []
-                            for sentence in sentences[:-1]:
-                                sentence = sentence.strip()
-                                if len(sentence) > 15 and not any(sentence.lower().endswith(abbr) for abbr in ["mr.", "dr.", "ms.", "mrs.", "prof.", "e.g.", "i.e.", "vs."]):
-                                    self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
-                                    if not ttfa_logged:
-                                        current_ttfa = Benchmark.end("ttfa")
-                                        ttfa_logged = True
-                                    clean_sentence = TextSanitizer.clean_for_tts(sentence)
-                                    if clean_sentence:
-                                        speak_text(clean_sentence)
-                                else:
-                                    new_buffer.append(sentence)
-
-                            new_buffer.append(sentences[-1])
-                            sentence_buffer = " ".join(new_buffer)
-
-                    if sentence_buffer.strip() and self.is_running:
-                        if not ttfa_logged:
-                            current_ttfa = Benchmark.end("ttfa")
-                            ttfa_logged = True
-                        clean_leftover = TextSanitizer.clean_for_tts(sentence_buffer.strip())
-                        if clean_leftover:
-                            speak_text(clean_leftover)
+                    if speak_content.strip() and self.is_running:
+                        Benchmark.start("ttfa")
+                        clean_speak = TextSanitizer.clean_for_tts(speak_content)
+                        if clean_speak:
+                            self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
+                            speak_text(clean_speak)
+                        current_ttfa = Benchmark.end("ttfa")
+                        ttfa_logged = True
 
                     if self.session_logger:
                         self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
 
-                    self.log_and_display_turn("Eva", full_eva_reply)
-                    self.conversation_history.append({"role": "assistant", "content": full_eva_reply})
+                    self.conversation_history.append({"role": "assistant", "content": speak_content})
 
                     stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
                     if ttft_logged and ttfa_logged:
@@ -937,16 +956,27 @@ class InterviewScreen(Screen):
                             silence_duration_before_answer_sec=silence_gap_sec,
                             stt_latency_ms=stt_ms,
                             ttft_ms=current_ttft,
-                            evaluation_branch_taken=branch_taken
+                            evaluation_branch_taken=branch_taken,
+                            eva_reasoning=think_text if 'think_text' in locals() else None,
+                            eva_reply=speak_content if 'speak_content' in locals() else full_eva_reply
                         )
 
-                    self.current_question_text = full_eva_reply
+                    # Fix: Ensure the NEXT turn logs the actual question template text,
+                    # not Eva's conversational generation.
+                    self.current_question_text = target_question if 'target_question' in locals() else full_eva_reply
                     self.question_count += 1
                     self.update_question_label(self.question_count)
 
                     if self.question_count >= self.MAX_QUESTIONS:
-                        self.update_status("Interview Complete — Limit Reached")
-                        self.append_ui_text(f"\n[System]: Target limit of {self.MAX_QUESTIONS} questions reached. Stopping session...")
+                        self.update_status("Interview Complete — Wrapping Up")
+                        closing = (
+                            "That concludes our technical evaluation for today. "
+                            "Thank you for your time, and we will follow up with detailed feedback shortly."
+                        )
+                        self.log_and_display_turn("Eva", closing)
+                        self.conversation_history.append({"role": "assistant", "content": closing})
+                        speak_text(closing)
+                        self.append_ui_text(f"\n[System]: Session complete. {self.MAX_QUESTIONS} questions covered.")
                         self.stop_interview()
                         break
 

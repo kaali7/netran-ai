@@ -197,7 +197,7 @@ def run_test():
 
         # Evaluate candidate transcript using QuestionManager state machine
         branch_taken = qm.evaluate_transcript(answer_text)
-        prompt_ctx = qm.format_prompt_context(branch_taken, answer_text)
+        llm_prompt, target_question = qm.format_prompt_context(branch_taken, answer_text)
 
         start_sec = current_sec + 1.5
         end_sec = start_sec + 4.2
@@ -213,7 +213,9 @@ def run_test():
             silence_duration_before_answer_sec=0.45,
             stt_latency_ms=180.5,
             ttft_ms=320.0,
-            evaluation_branch_taken=branch_taken
+            evaluation_branch_taken=branch_taken,
+            eva_reasoning="Mocked reasoning based on candidate answer.",
+            eva_reply=target_question
         )
 
         current_sec = end_sec + 1.0

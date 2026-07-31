@@ -49,7 +49,9 @@ class SessionLogger:
         stt_latency_ms: float = 0.0,
         ttft_ms: float = 0.0,
         question_id: Optional[int] = None,
-        evaluation_branch_taken: Literal["strong_followup", "weak_followup", "next_topic"] = "next_topic"
+        evaluation_branch_taken: Literal["strong_followup", "weak_followup", "next_topic"] = "next_topic",
+        eva_reasoning: Optional[str] = None,
+        eva_reply: Optional[str] = None
     ):
         """Appends turn information to internal turn list using TurnManifest validation."""
         q_id = question_id if question_id is not None else turn_id
@@ -65,7 +67,9 @@ class SessionLogger:
             silence_duration_before_answer_sec=round(max(0.0, silence_duration_before_answer_sec), 3),
             stt_latency_ms=round(stt_latency_ms, 1),
             ttft_ms=round(ttft_ms, 1),
-            evaluation_branch_taken=evaluation_branch_taken
+            evaluation_branch_taken=evaluation_branch_taken,
+            eva_reasoning=eva_reasoning,
+            eva_reply=eva_reply
         )
         self.turns.append(turn_manifest)
 
