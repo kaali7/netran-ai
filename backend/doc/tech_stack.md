@@ -47,15 +47,15 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * **Model**: `gemini-3.6-flash`
   * **Stage 1 (JD Research & Intelligence Engine)**: Deep structural breakdown of Job Descriptions, tech stack requirement extraction, and trusted web domain scraping synthesis.
   * **Stage 2 (Question & Prompt Engine)**: Generates 15-question stratified interview trees paired with custom latency-tuned system prompts for the **Eva** interviewer persona.
-* **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (1.5B)**
-  * Low-latency streaming response generation during live interview conversations.
+* **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
+  * Low-latency clause-level streaming response generation during live interview conversations.
   * Zero external API cost and full privacy compliance.
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper)**
   * Real-time streaming candidate voice transcription with GPU/CPU acceleration.
 * **Voice Activity Detection (VAD)**: **Silero VAD (v4/v5 ONNX Runtime)**
   * Ultra-low-latency speech start/stop detection (`listener.py`), processing audio chunks in microsecond frames.
 * **Text-to-Speech (TTS)**: **Kokoro-82M (ONNX / PyTorch)**
-  * High-fidelity, ultra-fast neural speech synthesis for the **Eva** interviewer persona with sub-200ms latency (`speaker.py`).
+  * High-fidelity, ultra-fast neural speech synthesis for the **Eva** interviewer persona with sub-250ms latency using a Persistent PyAudio stream (`speaker.py`).
 
 ---
 
@@ -63,7 +63,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 * **Desktop Application**: **Kivy 2.3 GUI**
   * Cross-platform Python UI framework leveraging OpenGL/GLEW hardware acceleration.
-  * Custom **Glassmorphic Design System** with dark obsidian theme (`#0D0F17`), smooth rounded cards, and responsive layouts.
+  * Custom **Premium Dark Theme UI** with deep charcoal backgrounds (`#121212`), sleek rounded panels, tactile flat buttons, and vibrant color-coded chat tags.
   * Thread-safe UI updates integrated with Kivy's main event loop using `Clock.schedule_once`.
 
 ---
