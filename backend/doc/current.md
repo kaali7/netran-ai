@@ -1,7 +1,7 @@
 # Netran AI Backend — Current System Architecture & Implementation Status
 
 **Status:** ✅ **COVERED & OPERATIONAL** (All 4 Stages + Unified Workflow Orchestrator Complete)  
-**Last Updated:** July 28, 2026  
+**Last Updated:** August 01, 2026  
 **Root Path:** `backend/`  
 
 ---
@@ -13,7 +13,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 1. **Stage 1 (Research Model):** Web-augmented Job Description analysis and market intelligence search.
 2. **Stage 2 (Question Engine):** Candidate resume parsing, skill gap matrix calculation, and 15-question tree generation.
 3. **Stage 3 (Voice-to-Voice Loop):** Real-time cascaded voice interaction (VAD + STT + Streaming LLM + Neural TTS) with multi-screen Kivy GUI, preset loader, selectable question limit spinner, output history inspector, and WAV audio player.
-4. **Stage 4 (Reports Engine):** Non-destructive audio slicing and 3-branch Gemini multimodal evaluation to synthesize candidate hiring reports.
+4. **Stage 4 (Reports Engine):** Non-destructive audio slicing, precision Stage 3 telemetry extraction, and 3-branch Gemini multimodal evaluation with 429 RateLimit retry to synthesize executive candidate hiring reports.
 5. **Workflow Orchestrator:** Unified 5-screen Kivy desktop GUI application integrating Stage 1 → Stage 2 → Stage 3 → Stage 4 seamlessly.
 
 ---
@@ -25,7 +25,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | Gemini 3.6 Flash, Tavily Search API, SQLite caching (`cache.db`), Kivy UI |
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`front.py`), `interview_questions.json`, `interviewer_behavior.json`, `resume_analysis.json`, `system_prompt.txt` |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS. Per-frame DC offset + auto-gain (up to 50x boost) before `ContinuousMicWriter` WAV write AND Whisper STT. Clause-Level Streaming for sub-250ms TTFA, Persistent PyAudio output stream. Multi-screen Kivy GUI (`ScreenManager`) with premium dark theme, top history action bar, selectable question limit (5, 10, 15, All), full-page output inspector, audio playback engine with progress bar (`0:15 / 1:30`), pixel-perfect wrapped text layout, and 4-button control bar. Session outputs saved in `test/output/sess_<timestamp>/`. |
-| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, `report.json`, `evaluation_summary.md`, Kivy GUI (`front.py`) |
+| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, 429 RateLimit exponential backoff retry, `TurnTelemetry`, `BehavioralFlag`, `CandidateFeedback` roadmap, `report.json`, `evaluation_summary.md`, Kivy GUI (`front.py`) with interactive input/output selectors |
 | **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`front.py`), demo data testing harness |
 
 ---
@@ -68,9 +68,13 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  STAGE 4: Reports Engine (reports_model/model/report_builder.py)           │
-│  • Slices turn_XX.wav clips -> Gemini 3-Branch Multimodal Evaluation        │
-│  • Output: report.json & evaluation_summary.md                              │
+│  STAGE 4: Reports Engine (reports_model/model/pipeline.py)                  │
+│  • Ingests recording.wav + session_manifest.json + Resume/Rubric context    │
+│  • Slices turn_XX.wav clips -> Gemini 3-Branch Evaluation (Audio/Tech/Comb) │
+│  • Extracts TurnTelemetry & programmatically detects STT Hallucination flags │
+│  • Generates Behavioral Red Flags & Candidate Upskilling Roadmap            │
+│  • Auto-retries RateLimit 429 errors with exponential backoff               │
+│  • Output: report.json & evaluation_summary.md (in test/output/sess_.../)   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -95,8 +99,8 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 
 ### 4. Stage 4: Reports Model (`reports_model`)
 - **Location**: `backend/model/reports_model/model/`
-- **Core Files**: `audio_slicer.py`, `gemini_evaluator.py`, `report_builder.py`, `report_schema.py`, `front.py`, `test_pipeline.py`
-- **Functionality**: Post-interview analytics module. Uses Python `wave` to cut non-destructive turn audio clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps, runs a 3-branch Gemini multimodal evaluation (Audio Branch, Technical Branch, Combine Branch), and generates `report.json` and `evaluation_summary.md`.
+- **Core Files**: `audio_slicer.py`, `config.py`, `gemini_evaluator.py`, `pipeline.py`, `prompts.py`, `schemas.py`, `front.py`, `test_pipeline.py`
+- **Functionality**: Post-interview analytics module. Uses Python `wave` to cut non-destructive turn audio clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps, ingests Stage 1 rubric and resume grounding context, runs a 3-branch Gemini multimodal evaluation (Audio Branch, Technical Branch, Combine Branch) with automatic 429 RateLimit exponential backoff retry, extracts deterministic `TurnTelemetry` (`initial_silence_latency_ms`, `turn_duration_sec`, `stt_whisper_hallucination_flag`), surfaces `BehavioralFlag` red flags and `CandidateFeedback` upskilling roadmaps, and generates `report.json` and `evaluation_summary.md` exclusively inside `test/output/sess_<timestamp>/`. Features interactive Kivy Desktop GUI (`front.py`) with input session picker and saved output artifact selector.
 
 ### 5. Workflow Orchestrator (`workflow`)
 - **Location**: `backend/model/workflow/model/`
@@ -114,7 +118,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
    - [`scan_code_quality.py`](file:///c:/kali/product/netran%20ai/backend/scan_code_quality.py) verifies docstring coverage, file hygiene, and single requirements file enforcement across all Python files.
 
 3. **Isolated Test & Workflow Storage**:
-   - Standalone stage test executions save output locally inside `<stage>/model/test_output/`.
+   - Standalone stage test executions save output strictly inside `<stage>/test/output/sess_<timestamp>/`.
    - Unified workflow runs store middle process data in `model/workflow/test/process/sess_<timestamp>/` and final reports in `model/workflow/test/output/sess_<timestamp>/`.
 
 4. **Interactive Batch Launcher**:
