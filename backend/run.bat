@@ -34,15 +34,16 @@ echo   9. Install / Update Backend Dependencies (requirements.txt)
 echo  10. Download / Verify Silero VAD Model Weights (download_vad.py)
 echo.
 echo  --- MAINTENANCE ^& DATA CLEANING ---
-echo  11. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/model/test_output/)
+echo  11. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
 echo  12. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
 echo  13. Clean SQLite Research Cache Database (cache.db)
-echo  14. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
+echo  14. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
 echo  15. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  16. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-15): "
+set /p choice="Enter your choice (0-16): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
@@ -59,6 +60,7 @@ if "%choice%"=="12" goto clean_sessions
 if "%choice%"=="13" goto clean_cache_db
 if "%choice%"=="14" goto clean_bytecode_trash
 if "%choice%"=="15" goto clean_full_deep
+if "%choice%"=="16" goto run_quality_audit
 if "%choice%"=="0" goto end
 goto menu
 
@@ -179,15 +181,15 @@ goto menu
 
 :clean_test_outputs
 echo.
-echo [CLEANING] Deleting stage test output ^& workflow process directories...
-powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*', 'model\*\model\test_output\*' -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Stage test output ^& process directories removed.
+echo [CLEANING] Deleting stage test output & workflow process directories...
+powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*' -Recurse -Force -ErrorAction SilentlyContinue"
+echo Clean complete: Stage test output & process directories removed.
 pause
 goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting deprecated session directories (model\sessions ^& sessions)...
+echo [CLEANING] Deleting deprecated session directories (model\sessions & sessions)...
 if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Deprecated session directories deleted.
@@ -205,9 +207,9 @@ goto menu
 
 :clean_bytecode_trash
 echo.
-echo [CLEANING] Removing Python bytecode trash, __pycache__, logs, and benchmark files...
+echo [CLEANING] Removing Python bytecode trash, __pycache__, logs, and _interview_log.txt files...
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','_interview_log.txt' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Python bytecode and temporary logs removed.
 pause
 goto menu
@@ -217,15 +219,22 @@ echo.
 echo ===================================================================
 echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
 echo ===================================================================
-powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*', 'model\*\model\test_output\*' -Recurse -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
-powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','benchmark_log.csv' | Remove-Item -Force -ErrorAction SilentlyContinue"
+powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','_interview_log.txt' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo.
 echo DEEP CLEAN COMPLETE: System returned to pristine condition!
+pause
+goto menu
+
+:run_quality_audit
+echo.
+echo [QUALITY AUDIT] Running Ruff, Bandit, and Radon Code Quality Scanners...
+.venv\Scripts\python.exe scan_code_quality.py
 pause
 goto menu
 

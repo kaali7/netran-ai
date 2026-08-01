@@ -12,7 +12,7 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
 
 1. **Stage 1 (Research Model):** Job Description parsing, market intelligence web search (Tavily), and evaluation rubric synthesis (Gemini).
 2. **Stage 2 (Question Engine):** Candidate Resume + JD skill gap analysis, 15-question tree generation (`interview_questions.json`), and custom dynamic system prompt generation (`system_prompt.txt`).
-3. **Stage 3 (Voice-to-Voice Loop):** Live AI voice interviewer (`Eva` persona in Ollama `qwen2.5:1.5b`), Silero VAD v3, Faster-Whisper STT, Kokoro-82M TTS, continuous raw PCM mic capture (`continuous_mic_input.wav`), and millisecond-accurate timing manifest (`session_manifest.json`).
+3. **Stage 3 (Voice-to-Voice Loop):** Live AI voice interviewer (`Eva` persona in Ollama `qwen2.5:3b`), Silero VAD v3, Faster-Whisper STT, Kokoro-82M TTS, continuous raw PCM mic capture (`continuous_mic_input.wav`), and millisecond-accurate timing manifest (`session_manifest.json`).
 4. **Stage 4 (Reports Engine):** Non-destructive turn audio slicer, 3-branch Gemini multimodal evaluator (Audio branch, Technical branch, Combine Synthesis branch), and final hiring report synthesis (`report.json` and `evaluation_summary.md`).
 
 ---

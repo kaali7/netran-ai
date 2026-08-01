@@ -4,13 +4,13 @@ Module: prompts.py
 Description: Centralized system prompts and instruction templates for Stage 2.
              Upgraded to ingest rich Stage 1 Market Intelligence (HR signals, tech pillars,
              skill requirements) alongside candidate resumes to produce dynamic branching 
-             question trees and latency-calibrated voice prompts for Qwen2.5:1.5b.
+             question trees and latency-calibrated voice prompts for Qwen2.5:3b.
 """
 
 # Instruction template for generating Eva's voice-streaming system prompt
 SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE = """
 Generate a highly specific 'Interviewer Behavioral System Prompt' for the 'Eva' persona.
-This prompt will be injected into a live streaming voice LLM (Qwen2.5:1.5b) via Ollama.
+This prompt will be injected into a live streaming voice LLM (Qwen2.5:3b) via Ollama.
 
 Follow these STRICT rules for Eva's generated system prompt:
 1. STRICT LATENCY CONSTRAINTS: Enforce that Eva must speak in MAX 1 to 2 short sentences per turn (MAX 20 WORDS TOTAL). She must never output code blocks, bullet points, markdown formatting, or long narrative explanations.

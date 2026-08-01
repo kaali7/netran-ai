@@ -20,9 +20,15 @@ Full-Duplex Barge-In Architecture (v3 — TRUE FIX):
 import atexit
 import os
 import queue
-import threading
-import wave
 import sys
+import threading
+import time
+import warnings
+import wave
+
+# Suppress PyTorch RNN and weight_norm deprecation noise
+warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.modules.rnn")
+warnings.filterwarnings("ignore", category=FutureWarning, module="torch.nn.utils.weight_norm")
 
 import numpy as np
 import onnxruntime as ort
@@ -31,15 +37,18 @@ from faster_whisper import WhisperModel
 
 try:
     from .benchmark import Benchmark
+    from .config import WHISPER_MODEL
     from .prompts import WHISPER_INITIAL_PROMPT
     from .session_state import SessionState
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
+        from model.voice_to_voice_model.model.config import WHISPER_MODEL
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
+        from config import WHISPER_MODEL
         from prompts import WHISPER_INITIAL_PROMPT
         from session_state import SessionState
 
@@ -52,17 +61,18 @@ ort_opts = ort.SessionOptions()
 ort_opts.log_severity_level = 3
 vad_session = ort.InferenceSession(VAD_MODEL_PATH, ort_opts)
 
-# 'small' model is now fully cached locally — loads fast from disk, no download needed.
-print("Loading Faster-Whisper model (small)...", flush=True)
-whisper_model = WhisperModel("small", device="cpu", compute_type="int8", cpu_threads=4)
+# Loads from local offline snapshot path directly
+print(f"Loading Faster-Whisper model ({WHISPER_MODEL})...", flush=True)
+whisper_model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=4)
 print("Models loaded successfully!", flush=True)
 
 # Known Whisper hallucinations on silence or background static
 WHISPER_HALLUCINATION_PATTERNS = {
     "thank you.", "thanks for watching.", "subscribe to my channel.",
-    "you", "thank you very much.", "bye.", "so", "am",
+    "you", "thank you very much.", "bye.", "so", "am", "oh.", "next.",
     "thanks.", "bye bye.", "see you next time.", "please subscribe.",
-    "like and subscribe.", "thank you for watching."
+    "like and subscribe.", "thank you for watching.", "oh", "next",
+    "uh", "um", "ah", "ah.", "huh", "huh.", "okay.", "okay", "yes.", "no."
 }
 
 def is_valid_transcript(text: str) -> bool:
@@ -71,14 +81,14 @@ def is_valid_transcript(text: str) -> bool:
     if not clean or clean in WHISPER_HALLUCINATION_PATTERNS:
         return False
     words = clean.split()
-    if len(words) < 2 and clean not in {"yes", "no", "sure", "ok", "correct", "yeah", "nope"}:
+    if len(words) < 2 and clean not in {"yes", "no", "sure", "ok", "correct", "yeah", "nope", "fastapi", "python"}:
         return False
     return True
 
 
 def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None):
     """
-    Opens the microphone, uses Silero VAD to detect speech start and end,
+    Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
     respects the echo gate via SessionState, transcribes the speech using Faster-Whisper,
     and optionally streams raw frames to continuous mic writer.
     """
@@ -96,16 +106,20 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     )
     stream.start()
 
-    print("\n[Listening...] Speak into your microphone now.", flush=True)
+    is_ptt = bool(state and getattr(state, "input_mode", "VAD") == "PTT")
+    if is_ptt:
+        print("\n[Push-To-Talk Active] Hold PTT button or Spacebar to speak...", flush=True)
+    else:
+        print("\n[Listening...] Speak into your microphone now.", flush=True)
 
     audio_buffer = []
     has_spoken = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
     
-    # Defaults if state isn't provided (for standalone tests)
-    max_silence_frames = 50 if state is None else max(10, state.pause_tolerance_ms // 32)
-    MIN_SPEECH_FRAMES = 20   # Must accumulate at least 20 frames (~640ms) before endpointing is allowed
+    # Defaults if state isn't provided (for standalone tests) — 800ms default pause tolerance (25 frames * 32ms)
+    max_silence_frames = 25 if state is None else max(8, state.pause_tolerance_ms // 32)
+    MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
     total_frames_counter = 0 
     MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms)
 
@@ -179,8 +193,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             # barge-in audio so the candidate's interrupted speech is captured for STT.
             if state and state.is_agent_speaking.is_set():
                 if speech_prob > 0.65:
-                    import time as _time
-                    now = _time.monotonic()
+                    now = time.monotonic()
                     cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
                     last_t = getattr(state, 'last_interrupt_time', 0.0)
                     if now - last_t > cooldown:
@@ -209,12 +222,11 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             rms = np.sqrt(np.mean(audio_frame ** 2))
             
             if not has_spoken:
-                # Debounce speech start: require 2 consecutive frames (~64ms) to avoid false triggers.
-                # Uses OR logic — VAD alone OR RMS alone is sufficient (not both required).
-                # Lowered RMS threshold: 0.005 (was 0.01) — detects quiet/distant voices.
-                if speech_prob > 0.25 or rms > 0.005:
+                # Require valid VAD probability (>= 0.35) AND sufficient RMS energy (>= 0.015), or strong VAD (>= 0.50).
+                # Eliminates false speech triggers on static background noise when VAD prob is 0.00.
+                if (speech_prob >= 0.35 and rms >= 0.015) or speech_prob >= 0.50:
                     speech_start_candidate_frames += 1
-                    if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms (was 4 = ~128ms)
+                    if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms debounce
                         print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
                         has_spoken = True
                         if state:
@@ -223,8 +235,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 else:
                     speech_start_candidate_frames = 0
             else:
-                # Forgiving speech continuation: lower threshold to 0.15 OR RMS > 0.008
-                if speech_prob > 0.15 or rms > 0.008:
+                # Forgiving speech continuation threshold
+                if speech_prob > 0.20 or rms > 0.010:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
@@ -302,9 +314,11 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         beam_size=1,
         best_of=1,
         temperature=0.0,
+        condition_on_previous_text=False,      # Prevents infinite phrase loops & repeated hallucinations
+        no_speech_threshold=0.6,               # Drops non-speech static segments
+        hallucination_silence_threshold=2.0,   # Drops long hallucinated silent segments
         vad_filter=False,
-        no_speech_threshold=0.4,    # default 0.6 — accepts quieter segments
-        compression_ratio_threshold=2.4,  # allows slightly repetitive but real speech
+        compression_ratio_threshold=2.4,
     )
     transcript_text = "".join([segment.text for segment in segments]).strip()
 
@@ -434,10 +448,14 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
             audio_to_transcribe,
             language="en",
             initial_prompt=WHISPER_INITIAL_PROMPT,
-            beam_size=5,
+            beam_size=1,
+            best_of=1,
             temperature=0.0,
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500)
+            condition_on_previous_text=False,
+            no_speech_threshold=0.6,
+            hallucination_silence_threshold=2.0,
+            vad_filter=False,
+            compression_ratio_threshold=2.4,
         )
         transcript = "".join(s.text for s in segments).strip()
         stt_ms     = Benchmark.end("stt")

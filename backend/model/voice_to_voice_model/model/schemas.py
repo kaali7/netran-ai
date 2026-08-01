@@ -6,6 +6,7 @@ Description: Pydantic v2 data contracts enforcing strict input validation for St
 """
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field
@@ -51,38 +52,117 @@ class Stage2SessionBundle(BaseModel):
     resume_analysis: Optional[Dict[str, Any]] = None
 
 
+class Telemetry(BaseModel):
+    """Timing and latency metrics for a single turn."""
+    stt_latency_ms: float = 0.0
+    llm_ttft_ms: float = 0.0
+    tts_ttfa_ms: float = 0.0
+    barge_in_reaction_time_ms: float = 0.0
+
+
+class EvaluationMetrics(BaseModel):
+    """Keyword density and evaluation branch metrics."""
+    keyword_density_score: float = 0.0
+    branch_taken: str = "next_topic"
+    matched_keywords: List[str] = Field(default_factory=list)
+
+
 class TurnManifest(BaseModel):
     """Telemetry and transcript data for a single interview turn."""
     turn_id: int
-    question_id: int
-    topic: str
-    question_text: str
-    candidate_transcript: str
-    audio_start_sec: float
-    audio_end_sec: float
+    timestamp_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    turn_intent: Literal[
+        "TECHNICAL_ANSWER",
+        "ICEBREAKER",
+        "CANDIDATE_META_QUERY",
+        "SKIP_REQUEST",
+        "AUDIO_CHECK_OR_PAUSE",
+        "BARGE_IN_INTERRUPTION"
+    ] = "TECHNICAL_ANSWER"
+    question_id: Optional[Union[int, str]] = None
+    topic: Optional[str] = "General Technical"
+    question_text: Optional[str] = ""
+    candidate_transcript: str = ""
+    candidate_raw_transcript: Optional[str] = None
+    eva_internal_reasoning: Optional[str] = None
+    eva_tone_used: Optional[str] = "direct"
+    eva_spoken_reply: Optional[str] = None
+    audio_start_sec: float = 0.0
+    audio_end_sec: float = 0.0
     silence_duration_before_answer_sec: float = 0.0
-    stt_latency_ms: float = 0.0
-    ttft_ms: float = 0.0
-    evaluation_branch_taken: Literal[
-        "strong_followup",
-        "weak_followup",
-        "next_topic",
-        "icebreaker_response",
-        "interviewer_meta",
-        "audio_check",
-        "thinking_pause",
-        "interview_completed"
-    ] = "next_topic"
-    eva_reasoning: Optional[str] = None
-    eva_reply: Optional[str] = None
+    evaluation_branch_taken: str = "next_topic"
+    evaluation_metrics: Optional[EvaluationMetrics] = None
+    telemetry: Telemetry = Field(default_factory=Telemetry)
+
+    # Backward compatibility properties
+    @property
+    def stt_latency_ms(self) -> float:
+        return self.telemetry.stt_latency_ms
+
+    @property
+    def ttft_ms(self) -> float:
+        return self.telemetry.llm_ttft_ms
+
+    @property
+    def eva_reasoning(self) -> Optional[str]:
+        return self.eva_internal_reasoning
+
+    @property
+    def eva_reply(self) -> Optional[str]:
+        return self.eva_spoken_reply
+
+
+class SessionMetadata(BaseModel):
+    """Session metadata details."""
+    session_id: str
+    candidate_name: Optional[str] = "Candidate"
+    target_role: Optional[str] = "Technical Role"
+    target_company: Optional[str] = "Netran AI"
+    start_time_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    end_time_iso: Optional[str] = None
+    total_turns: int = 0
+    total_barge_ins: int = 0
+
+
+class EvaluatedTechnicalSummary(BaseModel):
+    """Consolidated technical evaluation summary."""
+    topics_covered: int = 0
+    completed_naturally: bool = True
+    average_keyword_density: float = 0.0
+    strong_branches_triggered: int = 0
+    weak_branches_triggered: int = 0
+    skips_requested: int = 0
 
 
 class SessionManifest(BaseModel):
-    """Root container storing session metadata and sequence of turn manifests."""
-    session_id: str
-    session_start_iso: str
-    total_turns: int
-    turns: List[TurnManifest]
+    """Root container storing session metadata, chronological transcript turns, and evaluated technical summary."""
+    session_metadata: SessionMetadata
+    turns: List[TurnManifest] = Field(default_factory=list)
+    evaluated_technical_summary: EvaluatedTechnicalSummary = Field(default_factory=EvaluatedTechnicalSummary)
+
+    # Backward compatibility properties & dict exports
+    @property
+    def session_id(self) -> str:
+        return self.session_metadata.session_id
+
+    @property
+    def session_start_iso(self) -> str:
+        return self.session_metadata.start_time_iso
+
+    @property
+    def total_turns(self) -> int:
+        return self.session_metadata.total_turns
+
+    @property
+    def full_chronological_transcript(self) -> List[TurnManifest]:
+        return self.turns
+
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        d = super().model_dump(**kwargs)
+        d["session_id"] = self.session_metadata.session_id
+        d["session_start_iso"] = self.session_metadata.start_time_iso
+        d["total_turns"] = self.session_metadata.total_turns
+        return d
 
 
 def load_stage2_bundle(dir_path: Union[str, Path]) -> Stage2SessionBundle:

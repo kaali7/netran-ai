@@ -12,11 +12,28 @@ Full-Duplex Barge-In Architecture (v2):
   - This prevents the audio queue from being refilled after a barge-in flush.
 """
 
+import logging
+import os
 import re
 import time
 from typing import Dict, Generator, List, Optional, Union, Tuple
 
+# Suppress HTTPX and HTTPCORE debug logs from flooding terminal output
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 import ollama
+
+try:
+    from .config import OLLAMA_MODEL
+    from .benchmark import Benchmark
+except ImportError:
+    try:
+        from model.voice_to_voice_model.model.config import OLLAMA_MODEL
+        from model.voice_to_voice_model.model.benchmark import Benchmark
+    except ImportError:
+        OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+        from benchmark import Benchmark
 
 try:
     from .prompts import SYSTEM_PROMPT
@@ -27,102 +44,173 @@ except ImportError:
         from prompts import SYSTEM_PROMPT
 
 
-MODEL_NAME = "qwen2.5:3b"
+MODEL_NAME = OLLAMA_MODEL
+
+TONE_SPEED_MAP: Dict[str, float] = {
+    "empathetic": 0.92,
+    "encouraging": 0.92,
+    "curious": 1.05,
+    "probing": 1.05,
+    "direct": 1.00,
+    "technical": 1.00,
+    "warm": 0.96,
+    "icebreaker": 0.96,
+}
+
+
+def get_speed_for_tone(tone: Optional[str], default_speed: float = 1.00) -> float:
+    """
+    Maps LLM tone attribute to Kokoro TTS synthesis speed factor with boundary clamping [0.88x, 1.08x].
+    """
+    if not tone:
+        return default_speed
+    tone_lower = tone.strip().lower()
+    raw_speed = TONE_SPEED_MAP.get(tone_lower, default_speed)
+    return max(0.88, min(1.08, float(raw_speed)))
+
 
 EVA_HUMANIZED_SYSTEM_PROMPT = """
-You are Eva, a warm, senior technical interviewer having a live voice conversation with a candidate.
+You are Eva, a warm, articulate, and natural lead technical interviewer having a live voice conversation with a candidate.
 
 ### CORE CONVERSATIONAL RULES
-1. **Human Cadence:** Speak naturally as if you are on a video call. Use micro-fillers ("Hmm...", "Ah, got it...", "I see...", "Alright...") and thinking pauses ("...").
-2. **Contextual Bridging:** NEVER ask textbook questions out of nowhere. Always acknowledge what the candidate just said OR connect the question to their background project.
-3. **Breathing Length:** Keep spoken text under 25 words per turn. Ask strictly ONE question at a time.
-4. **Tone:** Encouraging, peer-like, and collaborative. Not an interrogator or quiz-master.
+1. **Spoken Human Cadence:** Speak casually as if you are on a real-time voice call. Use natural contractions ("I'm", "it's", "let's", "that's") and short vocal anchors ("Ah, got it...", "Hmm, good point...", "Right...").
+2. **Concise Spoken Turns:** Keep every spoken response short (1 to 2 sentences max, 15–25 words). Never output long written lists, multi-bullet points, or textbook lectures.
+3. **Contextual Bridging:** NEVER ask isolated textbook questions out of nowhere. Always acknowledge what the candidate just said OR connect the question to their background project.
+4. **Structural Spoken Template:** Structure every spoken response in 3 micro-phases:
+   - **Vocal Anchor (1–3 words):** Start with natural opening feedback ("Ah, got it...", "Hmm, good point...", "Right...").
+   - **Core Answer / Follow-up (15–25 words):** Provide concise feedback or context in 1 to 2 complete sentences.
+   - **Terminal Question (5–10 words):** Ask a direct, clear question handing the conversation back to the candidate.
+5. **Tone Selection:** Encouraging, peer-like, and collaborative. Select an appropriate tone attribute from the Tone Taxonomy below.
+
+### TONE TAXONOMY
+Choose ONE tone attribute for the <speak tone="..."> tag matching the candidate's turn context:
+- `empathetic` / `encouraging`: Candidate hesitates, stumbles, says "I don't know" or "skip", or gives a weak answer.
+- `curious` / `probing`: Candidate gives a strong answer; escalating to trade-offs, architecture, or edge cases.
+- `direct` / `technical`: Baseline introduction of a new technical topic or standard baseline question.
+- `warm` / `icebreaker`: Candidate introduction phase or casual conversational meta-questions ("Who created you?").
 
 ### SPECIAL INTERACTION HANDLERS
-- **Candidate Says "I Don't Know" / "Skip":** Reassure them immediately ("No worries at all!", "All good, that's pretty niche anyway!"), normalize it, and pivot smoothly to a lighter or related concept.
+- **Candidate Says "I Don't Know" / "Skip":** Reassure them immediately ("No worries at all!", "All good, that's pretty niche anyway!"), normalize it, and pivot smoothly to a lighter concept.
 - **Candidate Asks Meta-Questions ("Who are you?"):** Answer warmly in 1 short sentence, reassure them, and ask if they are ready to continue.
 - **Candidate Interrupts / Says "Wait":** Immediately yield ("Oh, take your time!"), pause, and let them speak.
 
-### OUTPUT FORMAT REQUIREMENTS
-You MUST respond using XML tags:
-<think>
-Brief internal reasoning: Validate candidate input, pick the context bridge, and plan the warm response.
-</think>
-<speak>
-The exact humanized text Eva will speak out loud. Use "..." for soft thinking pauses and commas for breathing gaps.
-</speak>
+### OUTPUT FORMAT REQUIREMENTS & STRICT DIRECTIVES
+1. **Strict <think> Budget (Max 30 Words):** Wrap internal reasoning in <think>...</think>. Keep it strictly under 30 words in 3 quick points: (1) Intent detected, (2) Evaluation/reaction, (3) Planned response and closing question.
+2. **Spoken Response Format (<speak tone="...">):** Wrap spoken text in <speak tone="[empathetic|encouraging|curious|probing|direct|technical|warm|icebreaker]">...</speak>.
+3. **MANDATORY CALL-TO-ACTION (CTA) HANDOFF:** Every single <speak> payload MUST end with a terminal question mark (?) or an explicit turn handoff question. NEVER end a turn with a passive statement.
 """
 
 
 class TextSanitizer:
     @staticmethod
-    def clean_for_tts(text: str) -> str:
-        # 1. Extract only the content inside <speak> tags if present
-        speak_match = re.search(r'<speak>(.*?)</speak>', text, re.DOTALL)
-        clean_text = speak_match.group(1) if speak_match else text
+    def clean_for_tts(text: str, tone: str = "direct") -> str:
+        if not text:
+            return ""
+
+        # 1. Extract only the content inside <speak> tags if present, including tone attribute
+        speak_match = re.search(r'<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>(.*?)</speak>', text, re.DOTALL | re.IGNORECASE)
+        if speak_match:
+            clean_text = speak_match.group(2)
+            if speak_match.group(1):
+                tone = speak_match.group(1).strip().lower()
+        else:
+            clean_text = text
         
         # 2. Strip leftover XML tags or action brackets
         clean_text = re.sub(r'<[^>]+>', '', clean_text)
         clean_text = re.sub(r'\[.*?\]|\(.*?\)', '', clean_text)
         clean_text = clean_text.replace('`', '')
         
-        # 3. Enhance prosody for Kokoro TTS
-        # Inject soft thinking pauses on opening anchors
+        # 3. Tone-Specific Micro-Prosody & Conversational Anchors
+        tone_lower = tone.strip().lower() if tone else "direct"
+
+        if tone_lower in ("empathetic", "encouraging"):
+            # Soft opening ellipses & reassuring pauses
+            clean_text = re.sub(
+                r'^(Ah|No worries|All good|Don\'t worry|Hmm|Got it|I see)\b',
+                r'\1...',
+                clean_text,
+                flags=re.IGNORECASE
+            )
+        elif tone_lower in ("warm", "icebreaker"):
+            # Natural breathing commas & friendly anchors
+            clean_text = re.sub(
+                r'^(Hey there|Well|Hi|Hello|Ah|Right)\b',
+                r'\1,',
+                clean_text,
+                flags=re.IGNORECASE
+            )
+        else:
+            # Inject soft thinking pauses on standard vocal anchors
+            clean_text = re.sub(
+                r'^(Ah|Hmm|Got it|I see|Alright|Makes sense)\b',
+                r'\1...',
+                clean_text,
+                flags=re.IGNORECASE
+            )
+
+        # 4. Forced Technical Micro-Pauses (em-dashes around technical jargon)
         clean_text = re.sub(
-            r'^(Ah|Hmm|Got it|I see|Alright|Makes sense)\b', 
-            r'\1...', 
-            clean_text, 
+            r'\b(FastAPI|asyncio|gRPC|Kafka|Protobuf|PgBouncer|PostgreSQL|REST|Docker|Kubernetes)\b\s+with\b',
+            r'\1--with',
+            clean_text,
             flags=re.IGNORECASE
         )
-        # Add breathing comma pauses around technical terms
         clean_text = re.sub(
-            r'\b(FastAPI|asyncio|gRPC|Kafka|Protobuf|PgBouncer|REST)\b', 
-            r', \1,', 
-            clean_text
+            r'\b(FastAPI|asyncio|gRPC|Kafka|Protobuf|PgBouncer|REST)\b',
+            r', \1,',
+            clean_text,
+            flags=re.IGNORECASE
         )
-        
-        # Clean up double punctuation & spaces
+
+        # 5. Kokoro TTS Prosody Fix: Replace Exclamation Marks with Soft Periods to Eliminate Pitch Spikes
+        clean_text = clean_text.replace("!", ".")
+
+        # Clean up double punctuation & multi-spaces
         clean_text = re.sub(r',\s*,', ',', clean_text)
+        clean_text = re.sub(r'--\s*--', '--', clean_text)
+        clean_text = re.sub(r'\.\s*\.', '.', clean_text)
         clean_text = re.sub(r'\s+', ' ', clean_text)
         return clean_text.strip()
 
 
-def parse_think_speak(raw: str) -> Tuple[str, str]:
+def parse_think_speak(raw: str) -> Tuple[str, str, str]:
     """
-    Splits LLM raw output into (think_text, speak_text).
+    Splits LLM raw output into (think_text, speak_text, tone).
     Uses fuzzy matching and positional inference to handle heavily malformed LLM outputs.
+    Applies software guardrail safety net to guarantee terminal punctuation handoffs.
     """
     raw = raw.strip()
     think_text = ""
     speak_text = ""
+    tone = "direct"
     
-    # 1. Fuzzy match speak tag (catches <speak>, speak:, [speak], and typos like peak>)
-    speak_pattern = r'(?:<speak>|speak:|\[speak\]|peak>)(.*?)(?:</speak>|$)'
+    # 1. Fuzzy match speak tag and tone attribute (catches <speak tone="curious">, speak:, [speak], peak>)
+    speak_pattern = r'(?:<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>|speak:|\[speak\]|peak>)(.*?)(?:</speak>|$)'
     speak_match = re.search(speak_pattern, raw, re.DOTALL | re.IGNORECASE)
     
     # 2. Fuzzy match think tag
-    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|<speak>|speak:|\[speak\]|peak>|$)'
+    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|<speak(?:\s+tone=["\']?[a-zA-Z_-]+["\']?)?\s*>|speak:|\[speak\]|peak>|$)'
     think_match = re.search(think_pattern, raw, re.DOTALL | re.IGNORECASE)
     
+    if speak_match:
+        if speak_match.group(1):
+            tone = speak_match.group(1).strip().lower()
+        speak_text = speak_match.group(2).strip()
     if think_match:
         think_text = think_match.group(1).strip()
-    if speak_match:
-        speak_text = speak_match.group(1).strip()
         
     # 3. Positional Inference (The Safety Net)
     if speak_text and not think_text:
-        # Everything before the speak tag is reasoning
-        parts = re.split(r'(?:<speak>|speak:|\[speak\]|peak>)', raw, maxsplit=1, flags=re.IGNORECASE)
+        parts = re.split(r'(?:<speak(?:\s+tone=["\']?[a-zA-Z_-]+["\']?)?\s*>|speak:|\[speak\]|peak>)', raw, maxsplit=1, flags=re.IGNORECASE)
         if len(parts) > 1:
             think_text = re.sub(r'^(?:<think>|think:|\[think\])', '', parts[0], flags=re.IGNORECASE).strip()
             
     elif think_text and not speak_text:
-        # Everything outside the think tag is speech
         parts = re.split(r'</think>', raw, maxsplit=1, flags=re.IGNORECASE)
         if len(parts) > 1:
             speak_text = parts[1].strip()
         else:
-            # If no closing tag, try paragraphs
             parts = re.split(r'\n\s*\n', think_text)
             if len(parts) > 1:
                 speak_text = parts[-1].strip()
@@ -141,8 +229,12 @@ def parse_think_speak(raw: str) -> Tuple[str, str]:
     speak_text = re.sub(r'^(?:speak:\s*)', '', speak_text, flags=re.IGNORECASE).strip()
     if not speak_text:
         speak_text = "Got it, let's continue."
+    
+    # 5. Software Guardrail Safety Net: Enforce terminal punctuation handoff
+    if not speak_text.endswith(('?', '.', '!')):
+        speak_text = speak_text + "... What are your thoughts on that?"
         
-    return think_text, speak_text
+    return think_text, speak_text, tone
 
 
 def stream_llm_response(
@@ -174,9 +266,9 @@ def stream_llm_response(
     full_messages = [sys_msg] + conversation_history
 
     options = {
-        "num_predict": 250,        # Accommodates <think> block + 35-word <speak> block
-        "temperature": 0.7,        # Optimal balance of natural speech variation and instruction following
-        "top_p": 0.9,
+        "num_predict": 380,        # Refined headroom to prevent truncation mid-sentence
+        "temperature": 0.65,       # Tuned for consistent CTA formatting & closing punctuation
+        "top_p": 0.85,             # High-probability token selection for grammatical endings
         "repeat_penalty": 1.15,    # Prevent "Great, let's move on..." loops
     }
 
@@ -193,11 +285,20 @@ def stream_llm_response(
             clause_regex = re.compile(r'([,?!.\n])')
             in_speak_block = False
             speak_buffer = ""
+            detected_tone = "direct"
+            first_token_received = False
 
             print("\n[Brain] Live LLM Output: ", end="", flush=True)
             for chunk in stream:
                 token = chunk.get("message", {}).get("content", "")
                 if token:
+                    if not first_token_received:
+                        if Benchmark.get_start_time("ttft"):
+                            ttft_ms = Benchmark.end("ttft")
+                            Benchmark.last_ttft_ms = ttft_ms
+                            print(f"[Benchmark] Time-To-First-Token (TTFT): {ttft_ms:.1f}ms", flush=True)
+                        first_token_received = True
+
                     raw_output += token
                     print(token, end="", flush=True)
 
@@ -208,10 +309,19 @@ def stream_llm_response(
 
                     if speaker_player and session_state:
                         if not in_speak_block:
-                            speak_match = re.search(r'(?:<speak>|speak:|\[speak\]|peak>)(.*)', raw_output, flags=re.IGNORECASE | re.DOTALL)
+                            speak_match = re.search(
+                                r'(?:<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>|speak:|\[speak\]|peak>)(.*)',
+                                raw_output,
+                                flags=re.IGNORECASE | re.DOTALL
+                            )
                             if speak_match:
                                 in_speak_block = True
-                                token = speak_match.group(1)
+                                if speak_match.group(1):
+                                    extracted_tone = speak_match.group(1).strip().lower()
+                                    detected_tone = extracted_tone
+                                    session_state.current_tone = detected_tone
+                                    session_state.tts_speed = get_speed_for_tone(detected_tone)
+                                token = speak_match.group(2)
 
                         if in_speak_block:
                             clean_token = token
@@ -228,20 +338,29 @@ def stream_llm_response(
 
                                 # Do not dispatch clause if interrupted
                                 if clause_to_speak.strip() and not session_state.interrupt_event.is_set():
-                                    speaker_player.speak_clause(clause_to_speak, session_state)
+                                    speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
 
             print("\n") # Newline after streaming finishes
             
-            think_text, speak_text = parse_think_speak(raw_output)
+            think_text, speak_text, parsed_tone = parse_think_speak(raw_output)
+            if parsed_tone and parsed_tone != "direct":
+                detected_tone = parsed_tone
+
+            if session_state:
+                session_state.current_tone = detected_tone
+                session_state.tts_speed = get_speed_for_tone(detected_tone)
             
             if speaker_player and session_state:
                 if in_speak_block and speak_buffer.strip():
-                    speaker_player.speak_clause(speak_buffer, session_state)
+                    residual_buf = speak_buffer.strip()
+                    if not residual_buf.endswith(('?', '.', '!')):
+                        residual_buf += "... What are your thoughts on that?"
+                    speaker_player.speak_clause(residual_buf, session_state, tone=detected_tone)
                 elif not in_speak_block and speak_text.strip() and speak_text != "Got it, let's continue.":
-                    speaker_player.speak_clause(speak_text, session_state)
+                    speaker_player.speak_clause(speak_text, session_state, tone=detected_tone)
             
             print(f"[Brain] Extracted THINK: {repr(think_text[:100])}...")
-            print(f"[Brain] Extracted SPEAK: {repr(speak_text[:100])}...\n", flush=True)
+            print(f"[Brain] Extracted SPEAK (tone={detected_tone}): {repr(speak_text[:100])}...\n", flush=True)
             return think_text, speak_text
 
         except Exception as e:

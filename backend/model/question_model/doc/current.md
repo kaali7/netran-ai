@@ -13,7 +13,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 
 1. **Resume Analysis & Skill Gap Matrix (`resume_analysis.json`):** Evaluates candidate proficiency tiers (`Foundational`, `Intermediate`, `Production Master`), identifies missing requirements from JD/Rubric, highlights warning flags, and selects top projects to probe.
 2. **Branching Question Tree (`interview_questions.json`):** 15 stratified technical questions across 3 tiers with 3-level evaluation rubrics (`poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`) and 2-way branching paths (`followup_if_strong`, `followup_if_weak`).
-3. **Interviewer Behavior & System Prompt (`interviewer_behavior.json` & `system_prompt.txt`):** Generates Eva's persona configuration and latency-constrained voice system prompt (1–2 sentence max for Qwen2.5:1.5b in Stage 3).
+3. **Interviewer Behavior & System Prompt (`interviewer_behavior.json` & `system_prompt.txt`):** Generates Eva's persona configuration and latency-constrained voice system prompt (1–2 sentence max for Qwen2.5:3b in Stage 3).
 
 ---
 
@@ -72,7 +72,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
   3. **`interviewer_behavior.json`**:
      - `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, `behavior_rules`.
   4. **`system_prompt.txt`**:
-     - Plain text system prompt extracted for direct ingestion by Stage 3 Ollama `qwen2.5:1.5b`.
+     - Plain text system prompt extracted for direct ingestion by Stage 3 Ollama `qwen2.5:3b`.
 
 ---
 

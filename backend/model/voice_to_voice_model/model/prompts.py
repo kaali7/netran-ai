@@ -41,10 +41,10 @@ SYSTEM_PROMPT: Dict[str, str] = {
 # =====================================================================
 
 WHISPER_INITIAL_PROMPT = (
-    "Python, asyncio, FastAPI, PostgreSQL, B-Tree, Redis, gRPC, Protobuf, HTTP/2, HTTP/1.1, "
+    "User is speaking in English in a clear conversational tone during a technical interview. "
+    "Technical terms: Python, asyncio, FastAPI, PostgreSQL, B-Tree, Redis, gRPC, Protobuf, HTTP/2, HTTP/1.1, "
     "Docker, Kubernetes, Kafka, System Design, REST APIs, Microservices, Data Structures, "
-    "Algorithms, React.js, Next.js, TypeScript, Tailwind CSS, Cache-Aside, Token Bucket, "
-    "Sliding Window, Sequential Scan, Query Planner, Mock Interview, Candidate Response."
+    "Algorithms, React.js, Next.js, TypeScript, Tailwind CSS, Cache-Aside, Token Bucket."
 )
 
 

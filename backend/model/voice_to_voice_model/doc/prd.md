@@ -56,7 +56,7 @@ Candidates frequently struggle with real-world interview performance due to:
 ### 4.2 Local AI & Machine Learning Pipeline
 * **Voice Activity Detection (VAD):** Silero VAD v3 ONNX model + dynamic auto-gain and RMS volume failsafes.
 * **Speech-to-Text (STT):** Faster-Whisper (`small` int8 model) running locally on CPU.
-* **Reasoning Engine (LLM):** Ollama `qwen2.5:1.5b` running locally with streaming token responses.
+* **Reasoning Engine (LLM):** Ollama `qwen2.5:3b` running locally with streaming token responses.
 * **Text-to-Speech (TTS):** Kokoro-82M neural TTS (`af_bella` voice) outputting directly to sounddevice speaker streams.
 * **Session Logger:** `SessionLogger` managing millisecond-precision timing telemetry and atomic JSON manifest generation.
 

@@ -17,7 +17,7 @@ The **Contextual Question & Behavioral Prompt Engine (Stage 2)** bridges Stage 1
 Stage 2 generates **two core outputs**:
 
 1. A structured **Question Tree (`interview_questions.json`)** tailored to the candidate's unique resume projects and technical background.
-2. A customized **Interviewer Behavioral System Prompt** fed directly into Stage 3's live streaming voice LLM (`qwen2.5:1.5b` in `brain.py`), governing how the interviewer probes, handles shallow answers, and enforces latency-friendly concise responses.
+2. A customized **Interviewer Behavioral System Prompt** fed directly into Stage 3's live streaming voice LLM (`qwen2.5:3b` in `brain.py`), governing how the interviewer probes, handles shallow answers, and enforces latency-friendly concise responses.
 
 ### 1.1 Problem Statement
 
@@ -107,7 +107,7 @@ AI voice interviews frequently fail due to:
   │   └──────────────────────────────────────────────────────┘   │
   │   ┌──────────────────────────────────────────────────────┐   │
   │   │ OUTPUT 2: Stage 3 Behavioral System Prompt           │   │
-  │   │ • Tailored Runtime Persona for brain.py (qwen2.5)    │   │
+  │   │ • Tailored Runtime Persona for brain.py (qwen2.5:3b) │   │
   │   │ • Probing & Latency Guardrail Rules                  │   │
   │   └──────────────────────────────────────────────────────┘   │
   └──────────────────────────────────────────────────────────────┘
@@ -128,7 +128,7 @@ The generated `Stage2Output` must strictly satisfy the following contract:
 | Object / Field | Type | Description |
 | --- | --- | --- |
 | `session_id` | `str` | Unique session identifier (e.g., `sess_20260724_201422`). |
-| `interviewer_system_prompt` | `str` | Formatted runtime system prompt injected into Ollama Qwen2.5 (`brain.py`). |
+| `interviewer_system_prompt` | `str` | Formatted runtime system prompt injected into Ollama Qwen2.5:3b (`brain.py`). |
 | `question_tree` | `List[QuestionItem]` | Ordered array of 15 structured technical questions. |
 | `QuestionItem.id` | `int` | Sequential question index ($1{-}15$). |
 | `QuestionItem.topic` | `str` | Technical domain pillar (e.g., *React Internals*, *Tailwind CSS*). |

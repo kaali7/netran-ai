@@ -161,14 +161,36 @@ KV = """
 
             Spinner:
                 id: pause_tolerance
-                text: '⚖️ Balanced (1.6s)'
-                values: ('⚡ Fast Response (1.0s)', '⚖️ Balanced (1.6s)', '🧠 Deep Thinker (2.2s)')
+                text: '⚡ Fast Response (0.8s)'
+                values: ('⚡ Fast Response (0.8s)', '⚖️ Balanced (1.2s)', '🧠 Deep Thinker (1.8s)')
                 size_hint_y: None
                 height: '40dp'
                 font_size: '13sp'
                 background_normal: ''
                 background_color: 0.16, 0.16, 0.2, 1
                 on_text: root.on_pause_select(self.text)
+
+            Spinner:
+                id: voice_selector
+                text: '🎙️ Voice: af_bella'
+                values: ('🎙️ Voice: af_bella', '🎙️ Voice: af_nicole', '🎙️ Voice: am_adam', '🎙️ Voice: bf_emma')
+                size_hint_y: None
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
+                on_text: root.on_voice_select(self.text)
+
+            Spinner:
+                id: input_mode_selector
+                text: '🎙️ Mode: Auto-VAD'
+                values: ('🎙️ Mode: Auto-VAD', '🔴 Mode: Push-To-Talk')
+                size_hint_y: None
+                height: '40dp'
+                font_size: '13sp'
+                background_normal: ''
+                background_color: 0.16, 0.16, 0.2, 1
+                on_text: root.on_input_mode_select(self.text)
 
             Spinner:
                 id: script_selector
@@ -551,9 +573,7 @@ class InterviewScreen(Screen):
         super().__init__(**kwargs)
         self.is_running = False
         self.interview_thread = None
-        test_out_dir = os.path.join(os.path.dirname(__file__), "test_output")
-        os.makedirs(test_out_dir, exist_ok=True)
-        self.log_filename = os.path.join(test_out_dir, "interview_log.txt")
+        self.log_filename = os.path.join(os.path.dirname(__file__), "_interview_log.txt")
         self.conversation_history = []
         self.question_count = 0
         self.MAX_QUESTIONS = 5  # Default to 5 questions during testing time
@@ -582,12 +602,25 @@ class InterviewScreen(Screen):
         self._load_selected_preset(self.selected_preset_name)
 
     def on_pause_select(self, text):
-        if "1.0s" in text:
-            self.session_state.pause_tolerance_ms = 1000
-        elif "1.6s" in text:
-            self.session_state.pause_tolerance_ms = 1600
-        elif "2.2s" in text:
-            self.session_state.pause_tolerance_ms = 2200
+        if "0.8s" in text:
+            self.session_state.pause_tolerance_ms = 800
+        elif "1.2s" in text or "1.0s" in text:
+            self.session_state.pause_tolerance_ms = 1200
+        elif "1.8s" in text or "2.2s" in text:
+            self.session_state.pause_tolerance_ms = 1800
+
+    def on_voice_select(self, text):
+        preset = text.replace("🎙️ Voice: ", "").strip()
+        self.session_state.selected_voice = preset
+        print(f"[GUI] Selected Kokoro voice preset: {preset}", flush=True)
+
+    def on_input_mode_select(self, text):
+        if "Push-To-Talk" in text or "PTT" in text:
+            self.session_state.input_mode = "PTT"
+            print("[GUI] Input Mode changed to Push-To-Talk (PTT)", flush=True)
+        else:
+            self.session_state.input_mode = "VAD"
+            print("[GUI] Input Mode changed to Auto-VAD", flush=True)
 
     def _load_calibration_scripts(self):
         script_dir = os.path.dirname(__file__)
@@ -736,7 +769,17 @@ class InterviewScreen(Screen):
                 f"=== AI INTERVIEW LOG: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} ===\n\n"
             )
 
-        self.session_logger = SessionLogger(session_id=session_id, session_dir=self.session_dir)
+        cand_name = self.stage2_bundle.behavior.candidate_name if (self.stage2_bundle and self.stage2_bundle.behavior and self.stage2_bundle.behavior.candidate_name) else "Candidate"
+        target_role = self.stage2_bundle.behavior.target_role if (self.stage2_bundle and self.stage2_bundle.behavior and self.stage2_bundle.behavior.target_role) else "Software Engineer"
+        target_company = self.stage2_bundle.behavior.target_company if (self.stage2_bundle and self.stage2_bundle.behavior and self.stage2_bundle.behavior.target_company) else "Netran AI"
+
+        self.session_logger = SessionLogger(
+            session_id=session_id,
+            session_dir=self.session_dir,
+            candidate_name=cand_name,
+            target_role=target_role,
+            target_company=target_company
+        )
         mic_wav_path = os.path.join(self.session_dir, "recording.wav")
         self.mic_writer = ContinuousMicWriter(filepath=mic_wav_path)
         self.mic_writer.start()
@@ -969,8 +1012,8 @@ class InterviewScreen(Screen):
                         prompt_ctx = llm_prompt
 
                     self.log_and_display_turn("You", clean_transcript)
-                    self.append_ui_text(f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}")
-                    self.conversation_history.append({"role": "user", "content": prompt_ctx})
+                    
+                    self.conversation_history.append({"role": "user", "content": clean_transcript})
 
                     self.update_status("Eva is evaluating...")
 
@@ -981,8 +1024,6 @@ class InterviewScreen(Screen):
                         _player.interrupt_event.clear()
 
                     # TRUE FULL-DUPLEX: Start BargeInWatcher BEFORE LLM streaming begins.
-                    # Clause-level streaming pushes audio to the speaker queue DURING
-                    # generate_eva_response, so we need the watcher running immediately.
                     self.session_state.is_agent_speaking.set()
                     _barge_watcher = BargeInWatcher(self.session_state, on_barge_in=force_stop_all)
                     _barge_watcher.start()
@@ -998,18 +1039,23 @@ class InterviewScreen(Screen):
                     if len(self.conversation_history) > MAX_HISTORY_MESSAGES:
                         trimmed_history = self.conversation_history[:2] + self.conversation_history[-(MAX_HISTORY_MESSAGES-2):]
                     else:
-                        trimmed_history = self.conversation_history
+                        trimmed_history = list(self.conversation_history)
 
+                    messages_for_llm = [dict(m) for m in trimmed_history]
+                    if messages_for_llm:
+                        messages_for_llm[-1]["content"] = prompt_ctx
+
+                    Benchmark.start("ttft")
+                    Benchmark.start("ttfa")
                     try:
                         think_text, speak_content = generate_eva_response(
-                            trimmed_history,
+                            messages_for_llm,
                             custom_system_prompt=sys_prompt,
                             speaker_player=get_default_player(),
                             session_state=self.session_state
                         )
                     finally:
                         # Always drain audio queue + stop watcher, even on exception
-                        Benchmark.end("ttft")
                         _player2 = get_default_player()
                         if _player2:
                             import time as _t
@@ -1022,8 +1068,19 @@ class InterviewScreen(Screen):
                         _barge_watcher.stop()
                         self.session_state.is_agent_speaking.clear()
 
-                    ttft_logged = True
-                    current_ttft = Benchmark.last_ttft_ms if hasattr(Benchmark, 'last_ttft_ms') else 0.0
+                    was_barge_in = self.session_state.interrupt_event.is_set()
+                    active_tone = getattr(self.session_state, "current_tone", "direct")
+                    active_speed = getattr(self.session_state, "tts_speed", 1.0)
+                    
+                    self.append_ui_text(
+                        f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}  |  "
+                        f"[color=00ccff]🎭 [Tone]:[/color] {active_tone} ({active_speed:.2f}x)"
+                    )
+                    if was_barge_in:
+                        self.append_ui_text("[color=ff3333]⚡ [Candidate Barged In — Hardware Flush][/color]")
+
+                    current_ttft = getattr(Benchmark, 'last_ttft_ms', 0.0)
+                    current_ttfa = getattr(Benchmark, 'last_ttfa_ms', 0.0)
 
                     if think_text:
                         safe_think = think_text.replace("[", "&#91;").replace("]", "&#93;").replace("&", "&amp;")
@@ -1036,9 +1093,6 @@ class InterviewScreen(Screen):
                     full_eva_reply = speak_content
                     self.log_and_display_turn("Eva", speak_content)
 
-                    ttfa_logged = True
-                    current_ttfa = Benchmark.end("ttfa") if Benchmark.get_start_time("ttfa") else 0.0
-
                     if self.session_logger:
                         self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
 
@@ -1049,13 +1103,14 @@ class InterviewScreen(Screen):
                     self.conversation_history.append({"role": "assistant", "content": history_content})
 
                     stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
-                    if ttft_logged and ttfa_logged:
-                        Benchmark.log_metrics(stt_ms, current_ttft, current_ttfa)
+                    Benchmark.log_metrics(stt_ms, current_ttft, current_ttfa)
 
                     if self.session_logger:
+                        current_q_topic = self.question_manager.get_current_question().topic if (self.question_manager and self.question_manager.get_current_question()) else "Technical Interview"
+                        turn_seq = len(self.session_logger.turns) + 1
                         self.session_logger.log_turn(
-                            turn_id=self.question_count,
-                            topic="Technical Interview",
+                            turn_id=turn_seq,
+                            topic=current_q_topic,
                             question_text=self.current_question_text,
                             candidate_transcript=clean_transcript,
                             audio_start_sec=turn_start_sec,
@@ -1063,9 +1118,12 @@ class InterviewScreen(Screen):
                             silence_duration_before_answer_sec=silence_gap_sec,
                             stt_latency_ms=stt_ms,
                             ttft_ms=current_ttft,
+                            tts_ttfa_ms=current_ttfa if 'current_ttfa' in locals() else 0.0,
                             evaluation_branch_taken=branch_taken,
                             eva_reasoning=think_text if 'think_text' in locals() else None,
-                            eva_reply=speak_content if 'speak_content' in locals() else full_eva_reply
+                            eva_tone_used=active_tone,
+                            eva_reply=speak_content if 'speak_content' in locals() else full_eva_reply,
+                            was_barge_in=was_barge_in
                         )
 
                     self.current_question_text = target_question if 'target_question' in locals() else full_eva_reply
@@ -1120,8 +1178,9 @@ class InterviewScreen(Screen):
 
                         if self.session_logger:
                             stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
+                            turn_seq = len(self.session_logger.turns) + 1
                             self.session_logger.log_turn(
-                                turn_id=self.question_count,
+                                turn_id=turn_seq,
                                 topic=self.active_track or "Calibration",
                                 question_text=self.current_question_text,
                                 candidate_transcript=clean_transcript,
@@ -1130,14 +1189,16 @@ class InterviewScreen(Screen):
                                 silence_duration_before_answer_sec=silence_gap_sec,
                                 stt_latency_ms=stt_ms,
                                 ttft_ms=0.0,
-                                evaluation_branch_taken="next_topic"
+                                evaluation_branch_taken="next_topic",
+                                eva_tone_used="direct"
                             )
                         self.current_question_text = next_q
                     else:
                         if self.session_logger:
                             stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
+                            turn_seq = len(self.session_logger.turns) + 1
                             self.session_logger.log_turn(
-                                turn_id=self.question_count,
+                                turn_id=turn_seq,
                                 topic=self.active_track or "Calibration",
                                 question_text=self.current_question_text,
                                 candidate_transcript=clean_transcript,
@@ -1146,7 +1207,8 @@ class InterviewScreen(Screen):
                                 silence_duration_before_answer_sec=silence_gap_sec,
                                 stt_latency_ms=stt_ms,
                                 ttft_ms=0.0,
-                                evaluation_branch_taken="next_topic"
+                                evaluation_branch_taken="next_topic",
+                                eva_tone_used="direct"
                             )
                         self.update_status("Calibration Complete!")
                         self.append_ui_text("\n[System]: Calibration complete!")
@@ -1197,7 +1259,9 @@ class SessionHistoryScreen(Screen):
                 for folder_name in os.listdir(target_dir):
                     fpath = os.path.join(target_dir, folder_name)
                     if os.path.isdir(fpath) and folder_name.startswith("sess_"):
-                        manifest_file = os.path.join(fpath, "session_manifest.json")
+                        manifest_file = os.path.join(fpath, "transcript.json")
+                        if not os.path.exists(manifest_file):
+                            manifest_file = os.path.join(fpath, "session_manifest.json")
                         rec_file = os.path.join(fpath, "recording.wav")
                         mtime = os.path.getmtime(fpath)
                         found_sessions.append({

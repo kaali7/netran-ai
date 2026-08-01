@@ -18,22 +18,33 @@ Full-Duplex Barge-In Architecture (v2):
 import queue
 import re
 import threading
-from typing import Generator, Optional
+import warnings
+from typing import Optional
+
+# Suppress PyTorch RNN and weight_norm deprecation noise
+warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.modules.rnn")
+warnings.filterwarnings("ignore", category=FutureWarning, module="torch.nn.utils.weight_norm")
 
 import numpy as np
 import sounddevice as sd
 from kokoro import KPipeline
 
 try:
+    from .benchmark import Benchmark
+    from .brain import TextSanitizer, get_speed_for_tone
+    from .config import KOKORO_MODEL
     from .session_state import SessionState
-    from .brain import TextSanitizer
 except ImportError:
     try:
+        from model.voice_to_voice_model.model.benchmark import Benchmark
+        from model.voice_to_voice_model.model.brain import TextSanitizer, get_speed_for_tone
+        from model.voice_to_voice_model.model.config import KOKORO_MODEL
         from model.voice_to_voice_model.model.session_state import SessionState
-        from model.voice_to_voice_model.model.brain import TextSanitizer
     except ImportError:
+        from benchmark import Benchmark
+        from brain import TextSanitizer, get_speed_for_tone
+        from config import KOKORO_MODEL
         from session_state import SessionState
-        from brain import TextSanitizer
 
 
 # Lazy-init sentinel: the heavy Kokoro model is only loaded on the FIRST call.
@@ -44,8 +55,8 @@ def _get_pipeline():
     """Returns the shared Kokoro pipeline, initializing it on first use."""
     global _kokoro_pipeline
     if _kokoro_pipeline is None:
-        print("Loading Kokoro TTS model into memory...")
-        _kokoro_pipeline = KPipeline(lang_code="a")
+        print("Loading Kokoro TTS model into memory (offline mode)...", flush=True)
+        _kokoro_pipeline = KPipeline(lang_code="a", repo_id=KOKORO_MODEL)
     return _kokoro_pipeline
 
 
@@ -79,7 +90,7 @@ class PersistentSpeaker:
     - frames_per_buffer=512 minimizes the OS hardware buffer (~21ms at 24kHz).
     - _play_loop writes audio in 1024-sample sub-chunks, checking interrupt_event
       between each write — maximum interrupt lag is one sub-chunk (~42ms).
-    - stop_immediately() hard-resets the audio driver via stop_stream()/start_stream()
+    - stop_immediately() hard-resets the OS audio driver via stop_stream()/start_stream()
       rather than only draining the Python queue.
     """
     def __init__(self):
@@ -169,7 +180,7 @@ class PersistentSpeaker:
         elif _default_state:
             _default_state.is_agent_speaking.clear()
 
-    def speak_clause(self, clause: str, state: SessionState, voice_preset: str = "af_bella"):
+    def speak_clause(self, clause: str, state: SessionState, voice_preset: str = "af_bella", tone: Optional[str] = None):
         """
         Synthesize a single clause and enqueue audio chunks for playback.
 
@@ -177,6 +188,7 @@ class PersistentSpeaker:
         state.interrupt_event (barge-in signal from listener/brain) before
         synthesis and between each audio chunk, so TTS aborts within one
         Kokoro generation step (<50ms typically).
+        Applies dynamic Kokoro speed factor resolved from tone attribute.
         """
         def _is_interrupted() -> bool:
             return (
@@ -188,13 +200,16 @@ class PersistentSpeaker:
         if not clause.strip() or _is_interrupted():
             return
 
-        clean_text = TextSanitizer.clean_for_tts(clause)
+        effective_voice = getattr(state, "selected_voice", voice_preset) if voice_preset == "af_bella" else voice_preset
+        effective_tone = tone or getattr(state, "current_tone", "direct")
+        clean_text = TextSanitizer.clean_for_tts(clause, tone=effective_tone)
         clean_text = normalize_technical_text_for_tts(clean_text)
         if not clean_text.strip():
             return
 
         try:
-            generator = _get_pipeline()(clean_text, voice=voice_preset, speed=state.tts_speed)
+            speed = get_speed_for_tone(effective_tone, default_speed=state.tts_speed)
+            generator = _get_pipeline()(clean_text, voice=effective_voice, speed=speed)
 
             for _, _, audio_array in generator:
                 if audio_array is None or _is_interrupted():
@@ -204,6 +219,12 @@ class PersistentSpeaker:
                     audio_array = audio_array.cpu().numpy()
 
                 audio_data = audio_array.astype(np.float32)
+
+                # Record true Time-To-First-Audio (TTFA) on first synthesized audio chunk
+                if Benchmark.get_start_time("ttfa"):
+                    ttfa_ms = Benchmark.end("ttfa")
+                    Benchmark.last_ttfa_ms = ttfa_ms
+                    print(f"[Benchmark] Time-To-First-Audio (TTFA): {ttfa_ms:.1f}ms", flush=True)
 
                 while not _is_interrupted():
                     try:
@@ -269,16 +290,6 @@ def speak_text(text_to_say, voice_preset="af_bella"):
                 audio_array = audio_array.cpu().numpy()
             sd.play(audio_array, samplerate=24000)
             sd.wait()
-
-
-# Provide IS_AGENT_SPEAKING flag for backward compatibility
-class DummyEvent:
-    """Dummy event for backward compatibility with legacy code paths."""
-    def is_set(self):
-        return False
-
-
-IS_AGENT_SPEAKING = DummyEvent()
 
 
 def force_stop_all():

@@ -31,7 +31,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 │                               STAGE 3: VOICE-TO-VOICE LOOP                             │
 │                   backend/model/voice_to_voice_model/model/  [COVERED]                 │
 │  - Silero VAD v3 + Auto-Gain Peak Normalizer + Faster-Whisper STT (listener.py)        │
-│  - Local Ollama Qwen2.5:1.5B Interviewer Persona Engine (brain.py)                     │
+│  - Local Ollama Qwen2.5:3B Interviewer Persona Engine (brain.py)                     │
 │  - Kokoro-82M Neural TTS Direct 24kHz Audio Streaming (speaker.py)                     │
 │  - Asynchronous PCM Mic Recording -> continuous_mic_input.wav (listener.py)            │
 │  - Monotonic Timestamp Telemetry -> session_manifest.json (session_logger.py)          │
@@ -101,7 +101,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 * **Implemented Code**:
   - `main_app.py`: Kivy Desktop UI, streaming regex sentence buffer, live conversation panel, dual modes (LLM vs. Script Calibration).
   - `listener.py`: Silero VAD v3 ONNX + Faster-Whisper (`small` int8 CPU) + Echo Gate + `ContinuousMicWriter` background thread writing raw 16kHz WAV.
-  - `brain.py`: Ollama `qwen2.5:1.5b` local streaming LLM engine (`Eva` persona).
+  - `brain.py`: Ollama `qwen2.5:3b` local streaming LLM engine (`Eva` persona).
   - `speaker.py`: Kokoro-82M neural TTS (`af_bella` voice) with direct `sounddevice` float32 streaming playback.
   - `session_logger.py`: High-resolution monotonic timer (`time.perf_counter()`) logging per-turn millisecond offsets and outputting `session_manifest.json`.
   - `benchmark.py`: Latency performance telemetry (`stt_ms`, `ttft_ms`, `ttfa_ms`) saved to `benchmark_log.csv`.

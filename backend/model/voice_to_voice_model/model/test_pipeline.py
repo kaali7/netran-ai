@@ -225,7 +225,7 @@ def run_test():
     wav_path = session_output_dir / "recording.wav"
     generate_dummy_wav(wav_path, duration_sec=current_sec + 1.0)
 
-    # Finalize session_manifest.json artifact
+    # Finalize transcript.json artifact
     logger_inst.finalize()
 
     print("\n===================================================================")
@@ -236,7 +236,7 @@ def run_test():
     print(f"Recorded Turns: {len(logger_inst.turns)} Dialogue Turns")
     print(f"Output Session Directory: {session_output_dir}")
     print("  ├── recording.wav (Continuous Gain-Boosted Audio)")
-    print("  └── session_manifest.json (Unified Manifest Telemetry)\n")
+    print("  └── transcript.json (Unified Dialogue & Timing Telemetry)\n")
 
     print("--- TURN 1 PREVIEW & BRANCHING LOG ---")
     if logger_inst.turns:

@@ -69,7 +69,7 @@ backend/
     │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> recording.wav & session_manifest.json )
     │   └── model/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
-    │       ├── brain.py       # Local Ollama Qwen2.5:1.5b streaming LLM engine with TextSanitizer regex
+    │       ├── brain.py       # Local Ollama Qwen2.5:3b streaming LLM engine with TextSanitizer regex
     │       ├── config.py      # Stage 3 configuration loader (Stage3Config)
     │       ├── download_vad.py # Downloader utility for Silero VAD ONNX model weights
     │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
@@ -79,19 +79,19 @@ backend/
     │       ├── prompts.py     # Centralized Stage 3 system prompts (SYSTEM_PROMPT, WHISPER_INITIAL_PROMPT)
     │       ├── question_manager.py # State machine & keyword density adaptive branching engine
     │       ├── schemas.py     # Pydantic v2 schemas (InterviewQuestionInput, InterviewerBehaviorInput, Stage2SessionBundle, TurnManifest, SessionManifest)
-    │       ├── session_logger.py # Monotonic timer & session_manifest.json logger
+    │       ├── session_logger.py # Monotonic timer & transcript.json logger
     │       ├── session_state.py  # Thread-safe cross-module state/event tracker (Echo Gate)
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
     │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
     │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
-    │       └── run.bat        # Local Windows launcher menu for testing Stage 3 standalone scripts
+    │       └── _interview_log.txt # Consolidated session logging file
     │
     ├── reports_model/         # STAGE 4: Post-Session Multimodal Evaluation Engine
     │   ├── doc/
     │   │   ├── current.md     # Stage 4 technical implementation status
     │   │   └── prd.md         # Stage 4 Product Requirements Document
     │   ├── test/              # Stage 4 test harness input/output directories
-    │   │   ├── input/         # Stage 3 preset input sessions (sample_session/ -> continuous_mic_input.wav & session_manifest.json)
+    │   │   ├── input/         # Stage 3 preset input sessions (sample_session/ -> continuous_mic_input.wav & transcript.json)
     │   │   └── output/        # Generated report sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
     │   └── model/
     │       ├── audio_slicer.py # Non-destructive WAV slicing utility (turn_XX.wav)

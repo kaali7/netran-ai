@@ -227,9 +227,11 @@ class Stage4Pipeline:
         Main execution method for Stage 4 Report Generation.
         """
         session_dir = Path(session_dir)
-        manifest_path = session_dir / "session_manifest.json"
+        manifest_path = session_dir / "transcript.json"
         if not manifest_path.exists():
-            raise FileNotFoundError(f"Manifest missing at {manifest_path}")
+            manifest_path = session_dir / "session_manifest.json"
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"Transcript manifest missing at {session_dir}")
 
         wav_path = self._resolve_audio_file(session_dir)
 

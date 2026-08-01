@@ -15,7 +15,7 @@ The backend architecture comprises **4 core AI model stages** linked by a **Unif
    - Parses candidate resumes (`.pdf`, `.docx`, `.txt`) using `pypdf` and `python-docx`. Performs skill-gap cross-matching against the JD rubric to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and generates a 1-2 sentence latency-constrained system prompt for Stage 3.
 
 3. **Stage 3 — Live Voice-to-Voice Streaming Loop (`voice_to_voice_model`)**:
-   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (speech probability + dynamic peak auto-gain), **Faster-Whisper** (`small` int8 model on CPU) for STT, local **Ollama Qwen2.5:1.5b** streaming LLM reasoning under the `Eva` interviewer persona, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`continuous_mic_input.wav`) and millisecond-precision timing telemetry (`session_manifest.json`).
+   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (speech probability + dynamic peak auto-gain), **Faster-Whisper** (`small` int8 model on CPU) for STT, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`continuous_mic_input.wav`) and millisecond-precision timing telemetry (`session_manifest.json`).
 
 4. **Stage 4 — Post-Session Multimodal Evaluation Engine (`reports_model`)**:
    - Slices continuous audio into per-turn WAV clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps and runs a 3-branch **Gemini Multimodal Evaluation Engine** (Audio Branch, Technical Branch, Combine Branch) to output dual evaluation artifacts: `report.json` and `evaluation_summary.md`.
@@ -48,7 +48,7 @@ Stage 3 uses local Ollama execution for LLM reasoning:
 2. Ensure Ollama service is running in the background.
 3. Open a terminal and pull the Qwen2.5 model:
    ```cmd
-   ollama pull qwen2.5:1.5b
+   ollama pull qwen2.5:3b
    ```
 
 ---
@@ -91,7 +91,7 @@ Create or edit the `.env` file in the `backend/` directory:
 GEMINI_API_KEY=your_gemini_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
 GEMINI_MODEL=gemini-3.6-flash
-OLLAMA_MODEL=qwen2.5:1.5b
+OLLAMA_MODEL=qwen2.5:3b
 ```
 
 ### Step 6: Download / Verify Silero VAD Weights

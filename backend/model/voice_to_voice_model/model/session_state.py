@@ -31,5 +31,9 @@ class SessionState:
     # Updated by listener.py on each successful barge-in trigger.
     last_interrupt_time: float = 0.0
 
-    pause_tolerance_ms: int = 1600   # Default ⚖️ Balanced (1.6s)
-    tts_speed: float = 1.05          # Slightly faster for natural interviewer cadence
+    pause_tolerance_ms: int = 800    # Default ⚡ Fast (800ms)
+    tts_speed: float = 1.00          # Dynamic Kokoro TTS synthesis speed factor
+    current_tone: str = "direct"     # Master emotional tone attribute for turn synthesis
+    selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset
+    input_mode: str = "VAD"          # Input mode: "VAD" or "PTT" (Push-To-Talk)
+    ptt_active: threading.Event = field(default_factory=threading.Event)

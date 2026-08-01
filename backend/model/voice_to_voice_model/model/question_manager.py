@@ -77,21 +77,29 @@ class QuestionManager:
         clean_text = (transcript or "").lower().strip()
         return bool(skip_pattern.search(clean_text))
 
-    def classify_turn_intent(self, transcript: str) -> str:
+    def classify_turn_intent(self, transcript: str, was_barge_in: bool = False) -> str:
         """
-        Classifies candidate turns into specific conversational, technical, or meta intents.
+        Classifies candidate turns into Universal Intent Taxonomy:
+        TECHNICAL_ANSWER, ICEBREAKER, CANDIDATE_META_QUERY, SKIP_REQUEST, AUDIO_CHECK_OR_PAUSE, BARGE_IN_INTERRUPTION
         """
+        if was_barge_in:
+            return "BARGE_IN_INTERRUPTION"
+
         clean = (transcript or "").lower().strip()
 
-        # 1. Candidate meta questions about Eva / Role / Location / Origin / Process
+        # 1. Candidate Meta-Intent Override (Explicit Skip / Pass)
+        if self.is_candidate_requesting_skip(clean):
+            return "SKIP_REQUEST"
+
+        # 2. Candidate meta questions about Eva / Role / Location / Origin / Process
         meta_pattern = re.compile(
-            r"\b(who are you|what is your name|are you real|where are you from|who created you|tell me about yourself|where do you live|what is your role|are you an? ai)\b", 
+            r"\b(who are you|what is your name|are you real|where are you from|who created you|tell me about yourself|where do you live|what is your role|are you an? ai|how many questions)\b", 
             re.IGNORECASE
         )
         if meta_pattern.search(clean):
-            return "interviewer_meta"
+            return "CANDIDATE_META_QUERY"
 
-        # 2. Audio / Connectivity checks
+        # 3. Audio / Connectivity checks
         audio_check_patterns = [
             r"\bcan\s+you\s+hear\s+me\b",
             r"\bam\s+i\s+audible\b",
@@ -100,9 +108,9 @@ class QuestionManager:
             r"\bcan\s+you\s+listen\b"
         ]
         if any(re.search(pat, clean) for pat in audio_check_patterns):
-            return "audio_check"
+            return "AUDIO_CHECK_OR_PAUSE"
 
-        # 3. Thinking pauses / Filler remarks
+        # 4. Thinking pauses / Filler remarks
         pause_patterns = [
             r"\bgive\s+me\s+a\s+(second|moment|min|minute)\b",
             r"\blet\s+me\s+think\b",
@@ -112,13 +120,13 @@ class QuestionManager:
             r"\bjust\s+a\s+sec\b"
         ]
         if any(re.search(pat, clean) for pat in pause_patterns):
-            return "thinking_pause"
+            return "AUDIO_CHECK_OR_PAUSE"
 
-        # 4. Explicit Skip / Advancement request
-        if self.is_candidate_requesting_skip(clean):
-            return "next_topic"
+        # 5. Icebreaker Phase
+        if self.phase == "ICEBREAKER":
+            return "ICEBREAKER"
 
-        return "technical_answer"
+        return "TECHNICAL_ANSWER"
 
     def calculate_keyword_density(self, transcript: str, keywords: List[str]) -> float:
         """Calculates match density of expected keywords in candidate transcript."""
@@ -131,26 +139,28 @@ class QuestionManager:
     def evaluate_transcript(self, transcript: str) -> str:
         """
         Evaluates turn intent and determines branching without losing question context.
-        Meta intents (interviewer_meta, audio_check, thinking_pause) return immediately without advancing questions.
+        Meta intents (CANDIDATE_META_QUERY, AUDIO_CHECK_OR_PAUSE) return immediately without advancing questions.
         """
         if self.phase == "COMPLETED":
             return "interview_completed"
 
-        intent = self.classify_turn_intent(transcript)
+        raw_intent = self.classify_turn_intent(transcript)
 
-        # Meta questions never advance the question index or phase
-        if intent in ("interviewer_meta", "audio_check", "thinking_pause"):
-            return intent
+        # Meta questions / audio checks never advance question index or phase
+        if raw_intent in ("CANDIDATE_META_QUERY", "interviewer_meta"):
+            return "interviewer_meta"
+        if raw_intent in ("AUDIO_CHECK_OR_PAUSE", "audio_check"):
+            return "audio_check"
 
         # Handle Icebreaker Phase Transition
-        if self.phase == "ICEBREAKER":
+        if self.phase == "ICEBREAKER" or raw_intent == "ICEBREAKER":
             self.icebreaker_turn_count += 1
             if self.icebreaker_turn_count >= 1:
                 self.phase = "LAST_QUESTION" if len(self.questions) == 1 else "TECHNICAL"
             return "icebreaker_response"
 
         # Explicit Candidate Skip
-        if intent == "next_topic":
+        if raw_intent in ("SKIP_REQUEST", "next_topic"):
             status = self.advance_question()
             return "interview_completed" if status == "completed" else "next_topic"
 
