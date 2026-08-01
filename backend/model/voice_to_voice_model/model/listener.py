@@ -4,6 +4,17 @@ Module: listener.py
 Description: Audio capture engine utilizing sounddevice, Silero VAD ONNX inference,
              dynamic peak auto-gain normalization, Faster-Whisper int8 STT,
              asynchronous continuous PCM mic WAV streaming, and Whisper hallucination filtering.
+
+Full-Duplex Barge-In Architecture (v3 — TRUE FIX):
+  - Root cause: listen_and_transcribe() is called AFTER speak_text() returns,
+    so the microphone was never open while Eva was playing audio.
+    Barge-in code inside listen_and_transcribe could never fire.
+  - Fix: BargeInWatcher opens its OWN independent sounddevice input stream in a
+    background daemon thread and runs Silero VAD concurrently with TTS playback.
+    front.py starts the watcher BEFORE speaking and stops it after the audio drains.
+  - When speech_prob > 0.65, BargeInWatcher sets state.interrupt_event,
+    calls force_stop_all() to hardware-flush audio, and exits.
+  - listen_and_transcribe() then captures the candidate's barge-in speech normally.
 """
 
 import atexit
@@ -128,15 +139,16 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             proc_frame = original_frame.copy()
             if len(proc_frame) < CHUNK:
                 proc_frame = np.pad(proc_frame, (0, CHUNK - len(proc_frame)), 'constant')
-            
+
             proc_frame = proc_frame - np.mean(proc_frame)  # DC offset removal
             frame_peak = float(np.max(np.abs(proc_frame)))
-            
-            # Noise gate: zero out frames that are just mic static
-            if frame_peak < 0.002:
+
+            # Noise gate: 0.0005 threshold (was 0.002) allows quiet/distant voices through.
+            # Auto-gain cap: 40x (was 20x) — essential for laptop/built-in mics at distance.
+            if frame_peak < 0.0005:
                 proc_frame = np.zeros_like(proc_frame)
-            elif frame_peak > 0.002:
-                frame_gain = min(0.9 / frame_peak, 20.0)   # cap at 20x, target 90% peak
+            else:
+                frame_gain = min(0.9 / frame_peak, 40.0)   # target 90% peak, cap at 40x
                 proc_frame = proc_frame * frame_gain
 
             if mic_writer:
@@ -161,20 +173,35 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             vad_state = ort_outputs[1]   # updated hidden state
             speech_prob = out[0, 0]
 
-            # 3b. Echo Gate & Real-time User Barge-In Interruption
+            # 3b. Full-Duplex Barge-In Detection
+            # VAD runs continuously even during agent speech. When speech_prob > 0.65,
+            # we fire the interrupt (with cooldown) and FALL THROUGH to accumulate the
+            # barge-in audio so the candidate's interrupted speech is captured for STT.
             if state and state.is_agent_speaking.is_set():
                 if speech_prob > 0.65:
-                    print("⚡ User barge-in detected! Stopping Eva speech output immediately.", flush=True)
-                    try:
-                        from .speaker import force_stop_all
-                    except ImportError:
+                    import time as _time
+                    now = _time.monotonic()
+                    cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
+                    last_t = getattr(state, 'last_interrupt_time', 0.0)
+                    if now - last_t > cooldown:
+                        print("⚡ [Barge-In] Candidate interrupted Eva! Halting audio output.", flush=True)
+                        # 1. Set global interrupt signal (checked by brain.py & speaker.py)
+                        state.interrupt_event.set()
+                        state.last_interrupt_time = now
+                        # 2. Hard-flush hardware audio buffer + drain Python queue
                         try:
-                            from model.voice_to_voice_model.model.speaker import force_stop_all
+                            from .speaker import force_stop_all
                         except ImportError:
-                            from speaker import force_stop_all
-                    force_stop_all()
-                    state.is_agent_speaking.clear()
+                            try:
+                                from model.voice_to_voice_model.model.speaker import force_stop_all
+                            except ImportError:
+                                from speaker import force_stop_all
+                        force_stop_all()
+                        state.is_agent_speaking.clear()
+                        # 3. Fall through — do NOT continue; let audio_buffer accumulate
+                        #    the barge-in speech so STT captures what the candidate said.
                 else:
+                    # Low-probability frame during agent speech: suppress mic accumulation
                     silence_frames_counter = 0
                     continue
 
@@ -182,10 +209,12 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             rms = np.sqrt(np.mean(audio_frame ** 2))
             
             if not has_spoken:
-                # Debounce speech start: require 4 consecutive frames (128ms) to avoid false triggers
-                if (speech_prob > 0.30 and rms > 0.01) or (rms > 0.04):
+                # Debounce speech start: require 2 consecutive frames (~64ms) to avoid false triggers.
+                # Uses OR logic — VAD alone OR RMS alone is sufficient (not both required).
+                # Lowered RMS threshold: 0.005 (was 0.01) — detects quiet/distant voices.
+                if speech_prob > 0.25 or rms > 0.005:
                     speech_start_candidate_frames += 1
-                    if speech_start_candidate_frames >= 4:
+                    if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms (was 4 = ~128ms)
                         print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
                         has_spoken = True
                         if state:
@@ -194,8 +223,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 else:
                     speech_start_candidate_frames = 0
             else:
-                # Forgiving speech continuation: reset silence counter if speech_prob > 0.20 OR rms > 0.015.
-                if speech_prob > 0.20 or rms > 0.015:
+                # Forgiving speech continuation: lower threshold to 0.15 OR RMS > 0.008
+                if speech_prob > 0.15 or rms > 0.008:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
@@ -251,16 +280,21 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
 
     # Combine accumulated (already DC-offset + auto-gain processed) frames
     audio_array = np.concatenate(audio_buffer)
-    
-    # Final whole-utterance gain pass: ensures consistent level for Whisper
+
+    # Final whole-utterance gain pass: ensures consistent level for Whisper.
+    # 15x cap (was 10x) provides extra headroom for quiet voices.
     audio_array = audio_array - np.mean(audio_array)  # re-center
     utterance_peak = float(np.max(np.abs(audio_array)))
-    if utterance_peak > 0.0005:
-        final_gain = min(0.9 / utterance_peak, 10.0)  # gentle 10x cap for utterance-level
+    if utterance_peak > 0.0001:
+        final_gain = min(0.9 / utterance_peak, 15.0)  # 15x cap for utterance-level normalisation
         audio_array = audio_array * final_gain
     print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f})", flush=True)
 
-    # Generate transcription using Faster-Whisper
+    # Generate transcription using Faster-Whisper.
+    # vad_filter=False: Whisper's built-in VAD is deliberately disabled because it
+    # re-applies a silence gate that strips out quiet/distant speech that our Silero
+    # VAD already approved and our auto-gain already amplified. Letting Whisper
+    # re-filter the audio causes quiet voices to produce empty transcripts.
     segments, _ = whisper_model.transcribe(
         audio_array,
         language="en",
@@ -268,8 +302,9 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         beam_size=1,
         best_of=1,
         temperature=0.0,
-        vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=500)
+        vad_filter=False,
+        no_speech_threshold=0.4,    # default 0.6 — accepts quieter segments
+        compression_ratio_threshold=2.4,  # allows slightly repetitive but real speech
     )
     transcript_text = "".join([segment.text for segment in segments]).strip()
 
@@ -487,3 +522,180 @@ class ContinuousMicWriter:
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=2.0)
         print(f"[ContinuousMicWriter] Recording saved and closed -> {self.filepath}", flush=True)
+
+
+class BargeInWatcher:
+    """
+    Full-Duplex Barge-In Detection — Background Daemon Thread.
+
+    ROOT CAUSE OF ORIGINAL FAILURE:
+    listen_and_transcribe() was called AFTER speak_text() returned, so the
+    microphone was NEVER open while Eva was playing audio. The barge-in code
+    inside listen_and_transcribe() could never fire because the function
+    wasn't running.
+
+    THIS FIX:
+    BargeInWatcher opens its OWN independent sounddevice InputStream in a
+    background daemon thread and runs Silero VAD concurrently with TTS
+    playback. front.py starts this watcher BEFORE Eva begins speaking and
+    stops it after the audio queue drains (or after barge-in fires).
+
+    When speech_prob > 0.65:
+      1. Sets state.interrupt_event  (aborts LLM generation in brain.py)
+      2. Calls on_barge_in callback  (calls force_stop_all → hardware flush)
+      3. Clears is_agent_speaking    (signals pipeline that Eva is done)
+      4. Exits the watcher loop      (mic stream closed immediately)
+
+    listen_and_transcribe() then starts fresh and captures whatever the
+    candidate continues to say after the barge-in.
+
+    Usage in front.py:
+        watcher = BargeInWatcher(state, on_barge_in=force_stop_all)
+        watcher.start()
+        try:
+            # ... Eva speaks / LLM streams ...
+            # ... audio queue drain poll ...
+        finally:
+            watcher.stop()
+    """
+
+    # VAD probability threshold for barge-in trigger.
+    # 0.50 (was 0.65) — detects quiet/normal conversational voice without requiring shouting.
+    VAD_THRESHOLD = 0.50
+
+    def __init__(self, state: SessionState, on_barge_in=None):
+        self.state = state
+        self.on_barge_in = on_barge_in
+        self._stop_event = threading.Event()
+        self._thread = None
+        self.triggered = False
+
+    def start(self):
+        """Starts the background VAD monitoring thread."""
+        self._stop_event.clear()
+        self.triggered = False
+        self._thread = threading.Thread(
+            target=self._watch_loop,
+            name="BargeInWatcher",
+            daemon=True
+        )
+        self._thread.start()
+        print("[BargeInWatcher] Barge-in monitor started.", flush=True)
+
+    def stop(self):
+        """
+        Signals the watcher to stop and waits briefly for mic stream cleanup.
+        Safe to call even if watcher already exited due to barge-in.
+        """
+        self._stop_event.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=0.8)
+
+    def _watch_loop(self):
+        """
+        Background thread: opens an independent mic stream and runs Silero VAD
+        on every 32ms frame (512 samples at 16kHz) while the agent is speaking.
+
+        Uses its own local VAD state so there is NO shared state with the
+        listen_and_transcribe() VAD session — they are never concurrent.
+        """
+        import time as _time
+
+        RATE = 16000
+        CHUNK = 512  # 32ms frame — Silero VAD v3 requires exactly 512 samples
+
+        # Local VAD state — isolated from listen_and_transcribe's VAD state
+        vad_state_local = np.zeros((2, 1, 128), dtype=np.float32)
+        sr_scalar_local = np.array(RATE, dtype=np.int64)
+
+        # Open an independent sounddevice input stream for concurrent mic monitoring
+        try:
+            stream = sd.InputStream(
+                samplerate=RATE,
+                channels=1,
+                dtype="float32",
+                blocksize=CHUNK
+            )
+            stream.start()
+        except Exception as exc:
+            print(f"[BargeInWatcher] Could not open mic stream: {exc}", flush=True)
+            return
+
+        try:
+            while not self._stop_event.is_set() and not self.state.should_stop.is_set():
+                # Read one 32ms frame from the microphone
+                try:
+                    raw_data, _ = stream.read(CHUNK)
+                except Exception:
+                    break
+
+                frame = raw_data.flatten()
+                if len(frame) < CHUNK:
+                    frame = np.pad(frame, (0, CHUNK - len(frame)), "constant")
+
+                # DC offset removal + noise gate + auto-gain (matches listen_and_transcribe sensitivity)
+                frame = frame - np.mean(frame)
+                peak = float(np.max(np.abs(frame)))
+                # Noise gate: 0.0005 (was 0.002) — allows quiet voices through
+                if peak < 0.0005:
+                    continue  # Pure silence — skip VAD for this frame
+                # Auto-gain: 40x cap (was 20x) — amplifies quiet/distant mic
+                gain = min(0.9 / peak, 40.0)
+                frame = frame * gain
+
+                # Run Silero VAD v3 inference
+                audio_input = np.expand_dims(frame, axis=0)  # shape [1, 512]
+                ort_inputs = {
+                    "input": audio_input,
+                    "state": vad_state_local,
+                    "sr": sr_scalar_local,
+                }
+                try:
+                    ort_outputs = vad_session.run(None, ort_inputs)
+                except Exception:
+                    continue
+                vad_state_local = ort_outputs[1]
+                speech_prob = float(ort_outputs[0][0, 0])
+
+                # Barge-in detected: speech above threshold
+                if speech_prob > self.VAD_THRESHOLD:
+                    now = _time.monotonic()
+                    cooldown = getattr(self.state, "interrupt_cooldown_sec", 0.3)
+                    last_t = getattr(self.state, "last_interrupt_time", 0.0)
+
+                    if now - last_t > cooldown:
+                        print(
+                            f"\n⚡ [BargeInWatcher] BARGE-IN detected (prob={speech_prob:.2f})! "
+                            f"Interrupting Eva immediately.",
+                            flush=True
+                        )
+                        # 1. Set global interrupt signal — brain.py token loop and
+                        #    speaker._play_loop sub-chunk loop both check this
+                        self.state.interrupt_event.set()
+                        self.state.last_interrupt_time = now
+
+                        # 2. Clear agent-speaking flag
+                        self.state.is_agent_speaking.clear()
+
+                        # 3. Fire hardware-flush callback (force_stop_all)
+                        self.triggered = True
+                        if self.on_barge_in:
+                            try:
+                                self.on_barge_in()
+                            except Exception as cb_exc:
+                                print(f"[BargeInWatcher] Callback error: {cb_exc}", flush=True)
+
+                        # 4. Exit watcher — interrupt is handled
+                        break
+
+        finally:
+            try:
+                stream.stop()
+                stream.close()
+            except Exception:
+                pass
+            print(
+                f"[BargeInWatcher] Monitor stopped. "
+                f"{'Barge-in triggered.' if self.triggered else 'No barge-in.'}",
+                flush=True
+            )

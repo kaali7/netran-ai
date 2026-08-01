@@ -34,12 +34,12 @@ try:
     from .benchmark import Benchmark
     from .brain import TextSanitizer, generate_eva_response
     from .brain import preload as preload_brain
-    from .listener import ContinuousMicWriter, listen_and_transcribe
+    from .listener import ContinuousMicWriter, listen_and_transcribe, BargeInWatcher
     from .question_manager import QuestionManager
     from .schemas import load_stage2_bundle
     from .session_logger import SessionLogger
     from .speaker import preload_models as preload_speaker
-    from .speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
+    from .speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
     from .session_state import SessionState
 except ImportError:
     try:
@@ -52,6 +52,7 @@ except ImportError:
         from model.voice_to_voice_model.model.listener import (
             ContinuousMicWriter,
             listen_and_transcribe,
+            BargeInWatcher,
         )
         from model.voice_to_voice_model.model.question_manager import QuestionManager
         from model.voice_to_voice_model.model.schemas import load_stage2_bundle
@@ -59,18 +60,18 @@ except ImportError:
         from model.voice_to_voice_model.model.speaker import (
             preload_models as preload_speaker,
         )
-        from model.voice_to_voice_model.model.speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
+        from model.voice_to_voice_model.model.speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
         from brain import TextSanitizer, generate_eva_response
         from brain import preload as preload_brain
-        from listener import ContinuousMicWriter, listen_and_transcribe
+        from listener import ContinuousMicWriter, listen_and_transcribe, BargeInWatcher
         from question_manager import QuestionManager
         from schemas import load_stage2_bundle
         from session_logger import SessionLogger
         from speaker import preload_models as preload_speaker
-        from speaker import speak_text, init_speaker_compat, PersistentSpeaker, get_default_player
+        from speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
         from session_state import SessionState
 
 
@@ -831,8 +832,61 @@ class InterviewScreen(Screen):
 
         self.append_ui_text(formatted_ui)
 
+    def _eva_speak_blocking(self, text: str):
+        """
+        TRUE FULL-DUPLEX BARGE-IN: Speaks text with concurrent mic monitoring.
+
+        Architecture:
+          1. Clears stale interrupt flags.
+          2. Starts BargeInWatcher — a background daemon thread that opens its
+             OWN sounddevice input stream and runs Silero VAD every 32ms.
+          3. Calls player.speak_clause() which synthesizes and queues audio
+             (non-blocking for playback — _play_loop plays in its own thread).
+          4. Polls the audio queue in a 50ms loop until the queue empties or
+             BargeInWatcher fires interrupt_event (candidate barged in).
+          5. Stops the watcher, clears agent-speaking flag, and returns.
+
+        This is the ONLY correct way to support barge-in — the mic must be
+        monitored concurrently with playback, not sequentially after it.
+        """
+        import time as _t
+        player = get_default_player()
+        if not player or not self.is_running:
+            return
+
+        # Clear stale interrupt flags from previous turn
+        self.session_state.interrupt_event.clear()
+        self.session_state.interrupt_event.clear()
+        player.interrupt_event.clear()
+
+        # Signal that Eva is speaking (BargeInWatcher uses this + its own stop_event)
+        self.session_state.is_agent_speaking.set()
+
+        # Start concurrent mic monitoring BEFORE synthesis begins
+        watcher = BargeInWatcher(self.session_state, on_barge_in=force_stop_all)
+        watcher.start()
+
+        try:
+            # Synthesize text and enqueue audio chunks (non-blocking for playback)
+            player.speak_clause(text, self.session_state)
+
+            # Wait for audio queue to drain or barge-in interrupt
+            while (
+                not player.audio_queue.empty()
+                and not self.session_state.interrupt_event.is_set()
+                and self.is_running
+            ):
+                _t.sleep(0.05)
+        finally:
+            watcher.stop()
+            self.session_state.is_agent_speaking.clear()
+
+        if self.session_logger:
+            self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
+
     def _run_interview_pipeline(self):
         """Main automated hardware pipeline loop linking components."""
+
         try:
             preload_speaker()
             if self.llm_enabled:
@@ -863,9 +917,8 @@ class InterviewScreen(Screen):
                 self.question_count = 0
                 self.update_question_label(self.question_count)
                 self.update_status("Eva is speaking...")
-                speak_text(initial_greeting)
-                if self.session_logger:
-                    self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
+                # TRUE FULL-DUPLEX: _eva_speak_blocking starts BargeInWatcher concurrently
+                self._eva_speak_blocking(initial_greeting)
 
             else:
                 if not self.current_track_data:
@@ -882,9 +935,8 @@ class InterviewScreen(Screen):
                 self.update_question_label(self.question_count + 1)
                 Clock.schedule_once(lambda dt: self._update_script_display())
                 self.update_status("Eva is speaking...")
-                speak_text(initial_greeting)
-                if self.session_logger:
-                    self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
+                # TRUE FULL-DUPLEX: _eva_speak_blocking starts BargeInWatcher concurrently
+                self._eva_speak_blocking(initial_greeting)
 
             # --- MAIN CYCLE LOOP ---
             while self.is_running:
@@ -914,32 +966,55 @@ class InterviewScreen(Screen):
                     self.log_and_display_turn("You", clean_transcript)
                     self.append_ui_text(f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}")
                     self.conversation_history.append({"role": "user", "content": prompt_ctx})
-                    
-                    import random
-                    fillers = ["Okay.", "Right.", "Alright.", "Mmhmm.", "Got it."]
-                    filler = random.choice(fillers)
-                    speak_text(filler)
 
                     self.update_status("Eva is evaluating...")
+
+                    # Clear barge-in flags before this LLM turn
+                    self.session_state.interrupt_event.clear()
+                    _player = get_default_player()
+                    if _player:
+                        _player.interrupt_event.clear()
+
+                    # TRUE FULL-DUPLEX: Start BargeInWatcher BEFORE LLM streaming begins.
+                    # Clause-level streaming pushes audio to the speaker queue DURING
+                    # generate_eva_response, so we need the watcher running immediately.
+                    self.session_state.is_agent_speaking.set()
+                    _barge_watcher = BargeInWatcher(self.session_state, on_barge_in=force_stop_all)
+                    _barge_watcher.start()
+
                     Benchmark.start("ttft")
                     from model.voice_to_voice_model.model.prompts import get_system_prompt
                     sys_prompt_dict = get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
                     sys_prompt = sys_prompt_dict["content"]
-                    
+
                     MAX_HISTORY_MESSAGES = 8
                     if len(self.conversation_history) > MAX_HISTORY_MESSAGES:
                         trimmed_history = self.conversation_history[:2] + self.conversation_history[-(MAX_HISTORY_MESSAGES-2):]
                     else:
                         trimmed_history = self.conversation_history
 
-                    think_text, speak_content = generate_eva_response(
-                        trimmed_history, 
-                        custom_system_prompt=sys_prompt,
-                        speaker_player=get_default_player(),
-                        session_state=self.session_state
-                    )
+                    try:
+                        think_text, speak_content = generate_eva_response(
+                            trimmed_history,
+                            custom_system_prompt=sys_prompt,
+                            speaker_player=get_default_player(),
+                            session_state=self.session_state
+                        )
+                    finally:
+                        # Always drain audio queue + stop watcher, even on exception
+                        Benchmark.end("ttft")
+                        _player2 = get_default_player()
+                        if _player2:
+                            import time as _t
+                            while (
+                                not _player2.audio_queue.empty()
+                                and not self.session_state.interrupt_event.is_set()
+                                and self.is_running
+                            ):
+                                _t.sleep(0.05)
+                        _barge_watcher.stop()
+                        self.session_state.is_agent_speaking.clear()
 
-                    Benchmark.end("ttft")
                     ttft_logged = True
                     current_ttft = Benchmark.last_ttft_ms if hasattr(Benchmark, 'last_ttft_ms') else 0.0
 
@@ -954,15 +1029,8 @@ class InterviewScreen(Screen):
                     full_eva_reply = speak_content
                     self.log_and_display_turn("Eva", speak_content)
 
-                    ttfa_logged = False
-                    current_ttfa = 0.0
-
-                    if speak_content.strip() and self.is_running:
-                        Benchmark.start("ttfa")
-                        # Audio was already streamed during generation. We just update the UI status.
-                        self.update_status(f"Eva is speaking... (Q {self.question_count + 1}/{self.MAX_QUESTIONS})")
-                        current_ttfa = Benchmark.end("ttfa")
-                        ttfa_logged = True
+                    ttfa_logged = True
+                    current_ttfa = Benchmark.end("ttfa") if Benchmark.get_start_time("ttfa") else 0.0
 
                     if self.session_logger:
                         self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
@@ -993,16 +1061,13 @@ class InterviewScreen(Screen):
                             eva_reply=speak_content if 'speak_content' in locals() else full_eva_reply
                         )
 
-                    # Fix: Ensure the NEXT turn logs the actual question template text, not Eva's conversational generation.
                     self.current_question_text = target_question if 'target_question' in locals() else full_eva_reply
 
-                    # Synchronize question counter from QuestionManager index so follow-ups don't trigger premature exit
                     if self.question_manager:
                         displayed_q = min(self.question_manager.current_index + 1, self.MAX_QUESTIONS)
                         self.question_count = displayed_q
                         self.update_question_label(self.question_count)
 
-                    # Interview completes ONLY when QuestionManager reaches completion after evaluating the last answer
                     if branch_taken == "interview_completed" or (self.question_manager and self.question_manager.is_finished()):
                         self.update_status("Interview Complete — Wrapping Up")
                         if branch_taken != "interview_completed":
@@ -1012,7 +1077,9 @@ class InterviewScreen(Screen):
                             )
                             self.log_and_display_turn("Eva", closing)
                             self.conversation_history.append({"role": "assistant", "content": closing})
-                            speak_text(closing)
+                            # TRUE FULL-DUPLEX: use _eva_speak_blocking for closing message too
+                            self.update_status("Eva is concluding...")
+                            self._eva_speak_blocking(closing)
                         total_qs = len(self.question_manager.questions) if self.question_manager else self.MAX_QUESTIONS
                         self.append_ui_text(f"\n[System]: Session complete. All {total_qs} questions covered.")
                         self.stop_interview()

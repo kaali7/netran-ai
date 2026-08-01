@@ -3,6 +3,7 @@ Netran AI — Stage 3: Live Voice-to-Voice Loop
 Module: session_state.py
 Description: Thread-safe synchronization object shared across listener, speaker, and front.
              Replaces broken importlib-based echo gate with threading.Event primitives.
+             Includes interrupt_event for full-duplex barge-in interruption architecture.
 """
 
 import threading
@@ -16,5 +17,19 @@ class SessionState:
     is_candidate_speaking: threading.Event = field(default_factory=threading.Event)
     should_stop: threading.Event = field(default_factory=threading.Event)
     force_speech_done: threading.Event = field(default_factory=threading.Event)
+
+    # Full-duplex barge-in interrupt signal.
+    # Set by listener.py when speech_prob > 0.65 during agent speech.
+    # Checked by brain.py (per token), speaker.py (per sub-chunk), and speak_clause.
+    # Must be cleared by front.py before each new LLM generation turn.
+    interrupt_event: threading.Event = field(default_factory=threading.Event)
+
+    # Cooldown prevents a single loud frame from triggering multiple rapid interrupts.
+    interrupt_cooldown_sec: float = 0.3
+
+    # Monotonic timestamp of the last barge-in interrupt (time.monotonic()).
+    # Updated by listener.py on each successful barge-in trigger.
+    last_interrupt_time: float = 0.0
+
     pause_tolerance_ms: int = 1600   # Default ⚖️ Balanced (1.6s)
     tts_speed: float = 1.05          # Slightly faster for natural interviewer cadence

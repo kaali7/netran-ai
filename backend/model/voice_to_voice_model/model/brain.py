@@ -1,9 +1,15 @@
 """
 Netran AI — Stage 3: Live Voice-to-Voice Loop
 Module: brain.py
-Description: Streaming LLM engine powered by local Ollama execution of Qwen2.5:1.5b
+Description: Streaming LLM engine powered by local Ollama execution of Qwen2.5:3b
              with token-capped generation, tuned sampling parameters, TextSanitizer 
              regex filter, and exponential backoff retry on failure.
+
+Full-Duplex Barge-In Architecture (v2):
+  - stream_llm_response() checks session_state.interrupt_event on every token.
+  - When interrupt_event is set (candidate barged in), LLM streaming is aborted
+    immediately so no further clauses are dispatched to the speaker queue.
+  - This prevents the audio queue from being refilled after a barge-in flush.
 """
 
 import re
@@ -178,35 +184,41 @@ def stream_llm_response(
             clause_regex = re.compile(r'([,?!.\n])')
             in_speak_block = False
             speak_buffer = ""
-            
+
             print("\n[Brain] Live LLM Output: ", end="", flush=True)
             for chunk in stream:
                 token = chunk.get("message", {}).get("content", "")
                 if token:
                     raw_output += token
                     print(token, end="", flush=True)
-                    
+
+                    # Full-Duplex Barge-In: abort LLM generation on interrupt signal
+                    if session_state and session_state.interrupt_event.is_set():
+                        print("\n⛔ [Brain] LLM generation aborted — candidate barge-in.", flush=True)
+                        break
+
                     if speaker_player and session_state:
                         if not in_speak_block:
                             speak_match = re.search(r'(?:<speak>|speak:|\[speak\]|peak>)(.*)', raw_output, flags=re.IGNORECASE | re.DOTALL)
                             if speak_match:
                                 in_speak_block = True
                                 token = speak_match.group(1)
-                                
+
                         if in_speak_block:
                             clean_token = token
                             if "</speak>" in clean_token:
                                 clean_token = clean_token.split("</speak>")[0]
                                 in_speak_block = False
-                                
+
                             speak_buffer += clean_token
-                            
+
                             parts = clause_regex.split(speak_buffer)
                             if len(parts) > 1:
                                 clause_to_speak = "".join(parts[:-1])
                                 speak_buffer = parts[-1]
-                                
-                                if clause_to_speak.strip():
+
+                                # Do not dispatch clause if interrupted
+                                if clause_to_speak.strip() and not session_state.interrupt_event.is_set():
                                     speaker_player.speak_clause(clause_to_speak, session_state)
 
             print("\n") # Newline after streaming finishes
