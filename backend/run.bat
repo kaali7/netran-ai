@@ -181,15 +181,15 @@ goto menu
 
 :clean_test_outputs
 echo.
-echo [CLEANING] Deleting stage test output & workflow process directories...
+echo [CLEANING] Deleting stage test output ^& workflow process directories...
 powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*' -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Stage test output & process directories removed.
+echo Clean complete: Stage test output ^& process directories removed.
 pause
 goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting deprecated session directories (model\sessions & sessions)...
+echo [CLEANING] Deleting deprecated session directories (model\sessions ^& sessions)...
 if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 echo Clean complete: Deprecated session directories deleted.
