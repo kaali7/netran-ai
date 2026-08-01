@@ -24,8 +24,8 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | Gemini 3.6 Flash, Tavily Search API, SQLite caching (`cache.db`), Kivy UI |
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | `pypdf`, `python-docx`, Gemini 3.6 Flash, Kivy GUI (`front.py`), `interview_questions.json`, `interviewer_behavior.json`, `resume_analysis.json`, `system_prompt.txt` |
-| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS. Per-frame DC offset + auto-gain (up to 50x boost) before `ContinuousMicWriter` WAV write AND Whisper STT. Clause-Level Streaming for sub-250ms TTFA, Persistent PyAudio output stream. Multi-screen Kivy GUI (`ScreenManager`) with premium dark theme, top history action bar, selectable question limit (5, 10, 15, All), full-page output inspector, audio playback engine with progress bar (`0:15 / 1:30`), pixel-perfect wrapped text layout, and 4-button control bar. Session outputs saved in `test/output/sess_<timestamp>/`. |
-| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, 429 RateLimit exponential backoff retry, `TurnTelemetry`, `BehavioralFlag`, `CandidateFeedback` roadmap, `report.json`, `evaluation_summary.md`, Kivy GUI (`front.py`) with interactive input/output selectors |
+| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS. 100% offline local model resolution (`HF_HUB_OFFLINE=1`). Per-frame DC offset + auto-gain before WAV write AND Whisper STT. Clause-Level Streaming for sub-250ms TTFA, Persistent PyAudio output stream. Multi-screen Kivy GUI (`ScreenManager`) with premium dark theme, top history action bar, selectable question limit (5, 10, 15, All), full-page output inspector, audio playback engine with progress bar (`0:15 / 1:30`), pixel-perfect wrapped text layout, and 4-button control bar. Session outputs saved in `test/output/sess_<timestamp>/` as `transcript.json` and `recording.wav`. |
+| **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), Gemini 3-branch multimodal evaluation, 429 RateLimit exponential backoff retry, `TurnTelemetry`, `BehavioralFlag`, `CandidateFeedback` roadmap, `transcript.json` resolution, `report.json`, `evaluation_summary.md`, Kivy GUI (`front.py`) with interactive input/output selectors |
 | **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy Desktop App (`front.py`), demo data testing harness |
 
 ---
@@ -59,17 +59,17 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STAGE 3: Voice Interview (voice_to_voice_model/model/front.py)             │
 │  • Ingests Stage 2 bundle (interview_questions.json, system_prompt.txt)     │
-│  • Silero VAD + Faster-Whisper STT + Qwen2.5:3B LLM + Kokoro TTS           │
+│  • Silero VAD + Faster-Whisper STT + Qwen2.5:3B LLM + Kokoro TTS (Offline)  │
 │  • Clause-Level Streaming & Persistent PyAudio for 0ms overhead            │
 │  • Selectable question limit spinner (5, 10, 15, All)                       │
 │  • Full-page history inspector with interactive audio playback engine       │
-│  • Output: recording.wav & session_manifest.json                            │
+│  • Output: recording.wav & transcript.json                                  │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STAGE 4: Reports Engine (reports_model/model/pipeline.py)                  │
-│  • Ingests recording.wav + session_manifest.json + Resume/Rubric context    │
+│  • Ingests recording.wav + transcript.json + Resume/Rubric context          │
 │  • Slices turn_XX.wav clips -> Gemini 3-Branch Evaluation (Audio/Tech/Comb) │
 │  • Extracts TurnTelemetry & programmatically detects STT Hallucination flags │
 │  • Generates Behavioral Red Flags & Candidate Upskilling Roadmap            │
@@ -95,7 +95,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`
 - **Core Files**: `listener.py`, `brain.py`, `speaker.py`, `session_logger.py`, `benchmark.py`, `question_manager.py`, `schemas.py`, `download_vad.py`, `front.py`
-- **Functionality**: Drives the real-time cascaded voice loop. Uses Silero VAD v3 + dynamic peak auto-gain for robust speech detection, Faster-Whisper (`small` int8) for STT, Ollama `qwen2.5:3b` for LLM reasoning, Kokoro-82M (`af_bella`) for neural TTS streaming (via Persistent PyAudio & Clause-Level streaming), and logs gain-boosted continuous PCM mic audio (`recording.wav`) alongside a millisecond-precision timing manifest (`session_manifest.json`). Features premium dark-themed multi-screen Kivy GUI with preset ingestion, selectable question limits, full-page history inspector, interactive audio playback engine with progress tracking, and non-overlapping controls.
+- **Functionality**: Drives the real-time cascaded voice loop under 100% offline model resolution (`HF_HUB_OFFLINE=1`). Uses Silero VAD v3 + dynamic peak auto-gain for robust speech detection, Faster-Whisper (`small` int8) for STT, Ollama `qwen2.5:3b` for LLM reasoning, Kokoro-82M (`af_bella`) for neural TTS streaming (via Persistent PyAudio & Clause-Level streaming), and logs gain-boosted continuous PCM mic audio (`recording.wav`) alongside a millisecond-precision timing manifest (`transcript.json`). Features premium dark-themed multi-screen Kivy GUI with preset ingestion, selectable question limits, full-page history inspector, interactive audio playback engine with progress tracking, and non-overlapping controls.
 
 ### 4. Stage 4: Reports Model (`reports_model`)
 - **Location**: `backend/model/reports_model/model/`
