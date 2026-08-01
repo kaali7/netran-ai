@@ -3,10 +3,11 @@ Netran AI — Stage 4: Post-Session Multimodal Evaluation & Report Generation En
 Module: gemini_evaluator.py
 Description: 3-branch Gemini Multimodal Evaluation Engine using `google-genai` SDK (`gemini-3.6-flash`).
              Evaluates Audio Branch (tone, hesitation, verified transcript), Technical Branch (accuracy, missing concepts),
-             and Combine Synthesis Branch (final executive hiring report).
+             and Combine Synthesis Branch (final executive hiring report) with robust 429 RateLimit auto-retry backoff.
 """
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -24,22 +25,22 @@ except ImportError:
 
 try:
     from .prompts import (
-        AUDIO_SYSTEM_PROMPT,
-        COMBINE_SYSTEM_PROMPT,
-        TECHNICAL_SYSTEM_PROMPT,
+        get_audio_prompt,
+        get_combine_prompt,
+        get_technical_prompt,
     )
 except ImportError:
     try:
         from model.reports_model.model.prompts import (
-            AUDIO_SYSTEM_PROMPT,
-            COMBINE_SYSTEM_PROMPT,
-            TECHNICAL_SYSTEM_PROMPT,
+            get_audio_prompt,
+            get_combine_prompt,
+            get_technical_prompt,
         )
     except ImportError:
         from prompts import (
-            AUDIO_SYSTEM_PROMPT,
-            COMBINE_SYSTEM_PROMPT,
-            TECHNICAL_SYSTEM_PROMPT,
+            get_audio_prompt,
+            get_combine_prompt,
+            get_technical_prompt,
         )
 
 
@@ -52,7 +53,29 @@ class GeminiMultimodalEvaluator:
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name or self.config.gemini_model or "gemini-3.6-flash"
 
-    def evaluate_audio_branch(self, turn_id: int, audio_clip_path: Path) -> AudioBranchOutput:
+    def _create_interaction_with_retry(self, **kwargs) -> Any:
+        """
+        Executes self.client.interactions.create with automatic exponential backoff for 429 RateLimit / Quota Errors.
+        """
+        max_retries = 5
+        base_delay = 6  # seconds
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                return self.client.interactions.create(**kwargs)
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str or "quota" in err_str.lower() or "too many requests" in err_str.lower():
+                    if attempt == max_retries:
+                        print(f"[GeminiEvaluator] [ERROR] Exceeded max retries ({max_retries}) on RateLimit 429: {e}")
+                        raise e
+                    sleep_time = base_delay * (2 ** (attempt - 1))  # 6s, 12s, 24s, 48s
+                    print(f"[GeminiEvaluator] [RateLimit 429 Warning] Quota exceeded. Retrying attempt {attempt}/{max_retries} in {sleep_time}s...")
+                    time.sleep(sleep_time)
+                else:
+                    raise e
+
+    def evaluate_audio_branch(self, turn_id: int, audio_clip_path: Path, resume_text: str = "", jd_rubric_text: str = "") -> AudioBranchOutput:
         """
         Branch 1: Audio Branch - uploads audio WAV clip and evaluates speech & tone.
         """
@@ -61,9 +84,9 @@ class GeminiMultimodalEvaluator:
 
         prompt = f"Analyze turn {turn_id} candidate audio clip. Extract transcript, vocal confidence, hesitation, emotion, filler count, and speech delivery notes."
 
-        interaction = self.client.interactions.create(
+        interaction = self._create_interaction_with_retry(
             model=self.model_name,
-            system_instruction=AUDIO_SYSTEM_PROMPT,
+            system_instruction=get_audio_prompt(resume_text, jd_rubric_text),
             input=[
                 {"type": "text", "text": prompt},
                 {
@@ -88,7 +111,9 @@ class GeminiMultimodalEvaluator:
         turn_id: int,
         topic: str,
         question_text: str,
-        candidate_transcript: str
+        candidate_transcript: str,
+        resume_text: str = "",
+        jd_rubric_text: str = ""
     ) -> TechnicalBranchOutput:
         """
         Branch 2: Technical Branch - evaluates transcript correctness against topic/question.
@@ -102,9 +127,9 @@ Candidate Answer Transcript: {candidate_transcript}
 Evaluate technical depth, correctness, missing concepts, and assign a score (1-10).
 """
 
-        interaction = self.client.interactions.create(
+        interaction = self._create_interaction_with_retry(
             model=self.model_name,
-            system_instruction=TECHNICAL_SYSTEM_PROMPT,
+            system_instruction=get_technical_prompt(resume_text, jd_rubric_text),
             input=prompt,
             response_format={
                 "type": "text",
@@ -122,7 +147,9 @@ Evaluate technical depth, correctness, missing concepts, and assign a score (1-1
         session_id: str,
         turns_data: list[dict[str, Any]],
         audio_outputs: list[AudioBranchOutput],
-        technical_outputs: list[TechnicalBranchOutput]
+        technical_outputs: list[TechnicalBranchOutput],
+        resume_text: str = "",
+        jd_rubric_text: str = ""
     ) -> CandidateReportPayload:
         """
         Branch 3: Combine Branch - fuses Audio & Technical branch outputs into full CandidateReportPayload.
@@ -130,16 +157,44 @@ Evaluate technical depth, correctness, missing concepts, and assign a score (1-1
         print(f"[GeminiEvaluator] [Combine Branch] Synthesizing final report payload for session {session_id}")
 
         turn_payloads = []
+        telemetry_map = {}
+
         for i, turn in enumerate(turns_data):
             t_id = turn.get("turn_id", i + 1)
             aud = next((a for a in audio_outputs if a.turn_id == t_id), None)
             tec = next((t for t in technical_outputs if t.turn_id == t_id), None)
 
+            silence_sec = turn.get("silence_duration_before_answer_sec", 0.0)
+            latency_ms = int(silence_sec * 1000)
+            start_sec = turn.get("audio_start_sec", 0.0)
+            end_sec = turn.get("audio_end_sec", 0.0)
+            duration_sec = round(max(0.0, end_sec - start_sec), 2)
+
+            orig_tx = turn.get("candidate_transcript", "")
+            gemini_tx = aud.gemini_verified_transcript if aud else ""
+
+            is_hallucination = False
+            if len(orig_tx.split()) > 6 and (
+                len(gemini_tx.split()) <= 3
+                or "don't know" in gemini_tx.lower()
+                or "unclear" in gemini_tx.lower()
+                or "short" in gemini_tx.lower()
+            ):
+                is_hallucination = True
+
+            telemetry_data = {
+                "initial_silence_latency_ms": latency_ms,
+                "turn_duration_sec": duration_sec,
+                "stt_whisper_hallucination_flag": is_hallucination
+            }
+            telemetry_map[t_id] = telemetry_data
+
             turn_payloads.append({
                 "turn_id": t_id,
                 "topic": turn.get("topic", "General"),
                 "question_text": turn.get("question_text", ""),
-                "original_transcript": turn.get("candidate_transcript", ""),
+                "original_transcript": orig_tx,
+                "telemetry": telemetry_data,
                 "audio_eval": aud.model_dump() if aud else {},
                 "technical_eval": tec.model_dump() if tec else {}
             })
@@ -150,12 +205,12 @@ Turn Analysis Data:
 {json.dumps(turn_payloads, indent=2)}
 
 Please synthesize the final comprehensive CandidateReportPayload adhering strictly to the JSON schema.
-Ensure all overall scores, technical pillars, turn evaluations, and hiring signals are populated accurately.
+Ensure all overall scores, technical pillars, behavioral flags, candidate feedback roadmap, turn evaluations, and hiring signals are populated accurately.
 """
 
-        interaction = self.client.interactions.create(
+        interaction = self._create_interaction_with_retry(
             model=self.model_name,
-            system_instruction=COMBINE_SYSTEM_PROMPT,
+            system_instruction=get_combine_prompt(resume_text, jd_rubric_text),
             input=combine_input_prompt,
             response_format={
                 "type": "text",
@@ -165,4 +220,12 @@ Ensure all overall scores, technical pillars, turn evaluations, and hiring signa
         )
 
         output_dict = json.loads(interaction.output_text)
+
+        # Inject exact telemetry into generated turn_evaluations
+        if "turn_evaluations" in output_dict:
+            for t_item in output_dict["turn_evaluations"]:
+                tid = t_item.get("turn_id")
+                if tid in telemetry_map:
+                    t_item["telemetry"] = telemetry_map[tid]
+
         return CandidateReportPayload.model_validate(output_dict)

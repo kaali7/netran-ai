@@ -49,6 +49,33 @@ def render_markdown_report(report: CandidateReportPayload) -> str:
     md.append("### Executive Summary")
     md.append(f"> {report.executive_summary}\n")
 
+    if report.behavioral_flags:
+        md.append("---")
+        md.append("## ⚠️ Integrity & Behavioral Red Flags")
+        for flag in report.behavioral_flags:
+            badge = "🚨" if flag.severity in ["CRITICAL", "HIGH"] else "⚠️"
+            md.append(f"> {badge} **[{flag.severity}] Turn #{flag.turn_id} — {flag.type}**  ")
+            md.append(f"> {flag.description}\n")
+
+    if report.candidate_feedback:
+        md.append("---")
+        md.append("## 🚀 Candidate Growth & Learning Roadmap")
+        if report.candidate_feedback.key_strengths:
+            md.append("### 💪 Key Strengths")
+            for s in report.candidate_feedback.key_strengths:
+                md.append(f"- {s}")
+            md.append("")
+        if report.candidate_feedback.primary_growth_areas:
+            md.append("### 📈 Primary Growth Areas")
+            for g in report.candidate_feedback.primary_growth_areas:
+                md.append(f"- {g}")
+            md.append("")
+        if report.candidate_feedback.recommended_topics_to_study:
+            md.append("### 📚 Recommended Study Topics")
+            for t in report.candidate_feedback.recommended_topics_to_study:
+                md.append(f"- `{t}`")
+            md.append("")
+
     md.append("---")
     md.append("## Core Technical Pillars")
     for pillar in report.technical_pillars:
@@ -61,12 +88,33 @@ def render_markdown_report(report: CandidateReportPayload) -> str:
         md.append(f"### Turn #{turn.turn_id}: {turn.question_text}")
         md.append(f"- **Original Transcript:** *\"{turn.candidate_transcript}\"*")
         md.append(f"- **Gemini Audio Verified Transcript:** *\"{turn.gemini_verified_transcript}\"*")
+        
+        # Telemetry metrics
+        if getattr(turn, "telemetry", None):
+            telem = turn.telemetry
+            md.append(f"- **Precision Telemetry:** Latency: `{telem.initial_silence_latency_ms}ms` | Duration: `{telem.turn_duration_sec}s` | STT Hallucination Flag: `{telem.stt_whisper_hallucination_flag}`")
+            if telem.stt_whisper_hallucination_flag:
+                md.append("> [!CAUTION]")
+                md.append("> **STT Audio Discrepancy Flag**: Local STT transcribed text, but raw audio waveform verification detected silence, whisper, or a completely different response.\n")
+        
         md.append(f"- **Scores:** Technical: `{turn.technical_score}/10` | Vocal Confidence: `{turn.vocal_confidence_score}/10`")
         md.append(f"- **Speech Characteristics:** Emotion: `{turn.emotional_state}` | Hesitation: `{turn.hesitation_level}` | Filler Count: `{turn.filler_word_count}`")
         if turn.missing_concepts:
             missing_str = ", ".join([f"`{m}`" for m in turn.missing_concepts])
             md.append(f"- **Missing/Weak Concepts:** {missing_str}")
-        md.append(f"- **Audio & Delivery Notes:** {turn.audio_notes}\n")
+        if getattr(turn, "resume_verification_note", None):
+            md.append(f"- **Resume Claim Verification:** {turn.resume_verification_note}")
+        md.append(f"- **Audio & Delivery Notes:** {turn.audio_notes}")
+        
+        # Acoustic vs Technical Correlation Flag
+        if turn.vocal_confidence_score >= 8 and turn.technical_score <= 4:
+            md.append("> [!WARNING]")
+            md.append("> **Correlation Flag**: High vocal confidence but low technical accuracy detected. Candidate may be overstating knowledge.\n")
+        elif turn.vocal_confidence_score <= 4 and turn.technical_score >= 8:
+            md.append("> [!NOTE]")
+            md.append("> **Correlation Flag**: High technical accuracy but low vocal confidence detected. Candidate is skilled but may be nervous.\n")
+        else:
+            md.append("\n")
 
     md.append("---\n*Report generated automatically by Netran AI Stage 4 Evaluation Engine.*")
     return "\n".join(md)
@@ -90,12 +138,37 @@ class Stage4Pipeline:
         raise FileNotFoundError(f"Audio file missing at {wav_path} or {alt_wav_path}")
 
     @staticmethod
+    def _load_session_context(session_dir: Path) -> tuple[str, str]:
+        """Auto-reads resume and jd rubric from the session directory if available."""
+        resume_text = "Not Provided"
+        rubric_text = "Not Provided"
+        
+        resume_path = session_dir / "sample_resume.txt"
+        if not resume_path.exists():
+            resume_path = session_dir / "resume.txt"
+        if resume_path.exists():
+            with open(resume_path, "r", encoding="utf-8") as f:
+                resume_text = f.read()
+
+        rubric_path = session_dir / "sample_rubric.json"
+        if not rubric_path.exists():
+            rubric_path = session_dir / "stage1_rubric.json"
+        if rubric_path.exists():
+            with open(rubric_path, "r", encoding="utf-8") as f:
+                rubric_text = f.read()
+                
+        return resume_text, rubric_text
+
+    @staticmethod
     def _evaluate_turns(
         evaluator: GeminiMultimodalEvaluator,
         turns: list[dict[str, Any]],
-        turn_clips: dict[int, Path]
+        turn_clips: dict[int, Path],
+        resume_text: str = "",
+        rubric_text: str = ""
     ) -> tuple[list[AudioBranchOutput], list[TechnicalBranchOutput]]:
         """Runs audio and technical branch evaluations per turn."""
+        import time
         audio_outputs = []
         technical_outputs = []
 
@@ -104,16 +177,27 @@ class Stage4Pipeline:
             clip_path = turn_clips.get(t_id)
 
             if clip_path and clip_path.exists():
-                aud_res = evaluator.evaluate_audio_branch(turn_id=t_id, audio_clip_path=clip_path)
+                aud_res = evaluator.evaluate_audio_branch(
+                    turn_id=t_id, 
+                    audio_clip_path=clip_path,
+                    resume_text=resume_text,
+                    jd_rubric_text=rubric_text
+                )
                 audio_outputs.append(aud_res)
+                time.sleep(3)  # Intra-turn rate limit pacing
 
             tec_res = evaluator.evaluate_technical_branch(
                 turn_id=t_id,
                 topic=turn.get("topic", "General Technical"),
                 question_text=turn.get("question_text", ""),
-                candidate_transcript=turn.get("candidate_transcript", "")
+                candidate_transcript=turn.get("candidate_transcript", ""),
+                resume_text=resume_text,
+                jd_rubric_text=rubric_text
             )
             technical_outputs.append(tec_res)
+            
+            # Anti-Rate-Limit pacing for Free Tier (15 RPM)
+            time.sleep(4)
 
         return audio_outputs, technical_outputs
 
@@ -123,7 +207,7 @@ class Stage4Pipeline:
         target_out_dir: Path,
         session_dir: Path
     ):
-        """Saves report.json and evaluation_summary.md artifacts."""
+        """Saves report.json and evaluation_summary.md artifacts strictly to target_out_dir."""
         json_path = target_out_dir / "report.json"
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(final_report.model_dump(), f, indent=2)
@@ -132,15 +216,6 @@ class Stage4Pipeline:
         md_path = target_out_dir / "evaluation_summary.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
-
-        if target_out_dir != session_dir:
-            try:
-                with open(session_dir / "report.json", "w", encoding="utf-8") as f:
-                    json.dump(final_report.model_dump(), f, indent=2)
-                with open(session_dir / "evaluation_summary.md", "w", encoding="utf-8") as f:
-                    f.write(md_content)
-            except OSError:
-                pass
 
     def run(
         self,
@@ -172,13 +247,19 @@ class Stage4Pipeline:
         use_model = model_name or self.config.gemini_model or "gemini-3.6-flash"
         evaluator = GeminiMultimodalEvaluator(model_name=use_model, config=self.config)
 
-        audio_outputs, technical_outputs = self._evaluate_turns(evaluator, turns, turn_clips)
+        resume_text, rubric_text = self._load_session_context(session_dir)
+
+        audio_outputs, technical_outputs = self._evaluate_turns(
+            evaluator, turns, turn_clips, resume_text, rubric_text
+        )
 
         final_report = evaluator.evaluate_combine_branch(
             session_id=session_id,
             turns_data=turns,
             audio_outputs=audio_outputs,
-            technical_outputs=technical_outputs
+            technical_outputs=technical_outputs,
+            resume_text=resume_text,
+            jd_rubric_text=rubric_text
         )
 
         if not final_report.generated_at:

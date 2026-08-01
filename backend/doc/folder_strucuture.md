@@ -102,7 +102,7 @@ backend/
     │       ├── prompts.py     # Centralized Stage 4 system prompts (AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT)
     │       ├── report_builder.py # Backward compatibility alias for pipeline.py
     │       ├── report_schema.py # Backward compatibility alias for schemas.py
-    │       ├── schemas.py     # Pydantic schemas (CandidateReportPayload, TurnAnalysis, PillarScore)
+    │       ├── schemas.py     # Pydantic schemas (CandidateReportPayload, TurnAnalysis, TurnTelemetry, BehavioralFlag, CandidateFeedback, PillarScore)
     │       └── test_pipeline.py # Standalone CLI test harness for Stage 4
     │
     └── workflow/              # UNIFIED WORKFLOW ORCHESTRATOR (Stage 1→4)

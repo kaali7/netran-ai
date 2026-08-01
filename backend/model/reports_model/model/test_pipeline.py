@@ -18,27 +18,52 @@ from model.reports_model.model.report_builder import build_report
 
 
 def main():
-    # 1. Locate input session directory from test/input/ or fallback paths
-    test_input_dir = backend_dir / "model" / "reports_model" / "test" / "input" / "sample_session"
-    
-    if not test_input_dir.exists():
-        # Fallback to scanning Stage 3 voice_to_voice output sessions
-        v2v_out_dir = backend_dir / "model" / "voice_to_voice_model" / "test" / "output"
-        if v2v_out_dir.exists():
-            existing = [d for d in v2v_out_dir.iterdir() if d.is_dir()]
-            if existing:
-                existing.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                test_input_dir = existing[0]
-
-    session_dir = test_input_dir
-    print("=" * 60)
+    print("============================================================")
     print("Netran AI Stage 4 — Headless Pipeline Verification")
+    print("============================================================")
+
+    # 1. Locate available session directories
+    base_input_dir = backend_dir / "model" / "reports_model" / "test" / "input"
+    v2v_out_dir = backend_dir / "model" / "voice_to_voice_model" / "test" / "output"
+    
+    available_sessions = []
+    
+    if base_input_dir.exists():
+        samples = [d for d in base_input_dir.iterdir() if d.is_dir()]
+        samples.sort(key=lambda x: x.name)
+        available_sessions.extend(samples)
+        
+    if v2v_out_dir.exists():
+        v2v_sessions = [d for d in v2v_out_dir.iterdir() if d.is_dir()]
+        v2v_sessions.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        available_sessions.extend(v2v_sessions)
+        
+    if not available_sessions:
+        print("Error: No session input directories found to process.")
+        sys.exit(1)
+        
+    print("Available Test Sessions:")
+    for idx, sess in enumerate(available_sessions):
+        source = "test/input" if sess.parent.name == "input" else "stage3/output"
+        print(f" {idx + 1}. {sess.name}  [{source}]")
+        
+    choice = input(f"Select a session to evaluate (1-{len(available_sessions)}, default 1): ").strip()
+    if not choice:
+        choice = "1"
+        
+    try:
+        selected_idx = int(choice) - 1
+        if selected_idx < 0 or selected_idx >= len(available_sessions):
+            raise ValueError
+    except ValueError:
+        print("Invalid choice, defaulting to 1.")
+        selected_idx = 0
+        
+    session_dir = available_sessions[selected_idx]
+    
+    print("\n" + "=" * 60)
     print(f"Target Session Directory: {session_dir}")
     print("=" * 60)
-
-    if not session_dir.exists():
-        print(f"Error: Session input directory not found at {session_dir}")
-        sys.exit(1)
 
     # 2. Output directory in test/output/
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -68,6 +93,9 @@ def main():
             print(f"Gemini Verified:    {turn1.gemini_verified_transcript}")
             print(f"Emotion:            {turn1.emotional_state}")
             print(f"Hesitation:         {turn1.hesitation_level}")
+            if getattr(turn1, "resume_verification_note", None):
+                print(f"Resume Verification: {turn1.resume_verification_note}")
+
 
         print("\nArtifacts verified in output directory:")
         print(f" - {out_session_dir / 'report.json'}")
