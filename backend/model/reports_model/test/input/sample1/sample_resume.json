@@ -1,0 +1,16 @@
+{
+  "candidate_name": "Marcus Vance",
+  "target_role": "Senior Backend Systems Engineer",
+  "experience_years": 6,
+  "skills": [
+    "Python (FastAPI, Django, AsyncIO)",
+    "PostgreSQL (Query Tuning, Indexing, PgBouncer)",
+    "Redis (Cache-Aside, Rate-Limiting, Cluster)",
+    "Apache Kafka & RabbitMQ",
+    "Celery Asynchronous Task Queues",
+    "Docker & Kubernetes (EKS)",
+    "AWS (EC2, S3, RDS, ElastiCache, IAM)",
+    "gRPC & RESTful API Design"
+  ],
+  "resume_text": "Marcus Vance\nSenior Backend Systems Engineer | New York, NY\n\nExecutive Summary:\nBackend Systems Engineer with 6+ years of hands-on experience designing and scaling distributed microservices architectures in Python. Expert in high-concurrency AsyncIO frameworks, PostgreSQL query optimization, Redis caching strategies, and event-driven streaming with Apache Kafka and RabbitMQ on AWS Kubernetes infrastructure.\n\nTechnical Skills:\n- Backend Languages & Frameworks: Python (FastAPI, Django, AsyncIO), gRPC, REST APIs, Pydantic, SQLAlchemy\n- Databases & Caching: PostgreSQL, Redis, PgBouncer, MongoDB, DynamoDB\n- Messaging & Async: Apache Kafka, RabbitMQ, Celery, Event-Driven Architecture\n- Cloud & DevOps: Docker, Kubernetes, AWS (EKS, RDS, ElastiCache), Terraform, CI/CD Pipelines\n\nWork Experience:\nSenior Backend Systems Engineer | DataScale Systems (2021 - Present)\n- Architected high-throughput FastAPI microservices serving 35M+ daily API requests with median response latency of sub-35ms.\n- Diagnosed and resolved PostgreSQL database connection starvation by implementing PgBouncer connection pooling and optimizing high-impact queries using EXPLAIN ANALYZE.\n- Designed a resilient Redis cache-aside system with TTL jitter to eliminate thundering herd problems during peak traffic surges.\n- Built distributed event ingestion pipeline using Apache Kafka and Celery, processing 500k messages/minute with zero message loss.\n\nBackend Engineer | StreamLine Technologies (2018 - 2021)\n- Developed microservices with Django and FastAPI, integrating gRPC services over HTTP/2 for internal service-to-service communication.\n- Maintained CI/CD deployment pipelines on AWS EKS with Kubernetes Horizontal Pod Autoscaling (HPA) and Prometheus monitoring."
+}

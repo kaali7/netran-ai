@@ -576,6 +576,7 @@ class InterviewScreen(Screen):
 
         self.session_state = SessionState()
         self.tts_player = None
+        self.candidate_project_anchor = ""
 
         self._load_calibration_scripts()
         self._load_selected_preset(self.selected_preset_name)
@@ -960,6 +961,10 @@ class InterviewScreen(Screen):
                     prompt_ctx = clean_transcript
                     if self.question_manager:
                         branch_taken = self.question_manager.evaluate_transcript(clean_transcript)
+                        
+                        if branch_taken == "icebreaker_response":
+                            self.candidate_project_anchor = f"CANDIDATE BACKGROUND: {clean_transcript}"
+
                         llm_prompt, target_question = self.question_manager.format_prompt_context(branch_taken, clean_transcript)
                         prompt_ctx = llm_prompt
 
@@ -985,7 +990,9 @@ class InterviewScreen(Screen):
                     Benchmark.start("ttft")
                     from model.voice_to_voice_model.model.prompts import get_system_prompt
                     sys_prompt_dict = get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
-                    sys_prompt = sys_prompt_dict["content"]
+                    base_sys_prompt = sys_prompt_dict["content"]
+                    
+                    sys_prompt = f"{base_sys_prompt}\n\n{self.candidate_project_anchor}" if self.candidate_project_anchor else base_sys_prompt
 
                     MAX_HISTORY_MESSAGES = 8
                     if len(self.conversation_history) > MAX_HISTORY_MESSAGES:

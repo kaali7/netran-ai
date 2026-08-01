@@ -70,15 +70,12 @@ class QuestionManager:
 
     def is_candidate_requesting_skip(self, transcript: str) -> bool:
         """Detects if candidate is asking to skip or move to the next question."""
-        skip_patterns = [
-            r"\b(move|go)\s+(to\s+)?(the\s+)?next\b",
-            r"\bskip(\s+this)?\b",
-            r"\bnext\s+question\b",
-            r"\bdon'?t\s+know\b",
-            r"\bpass\b"
-        ]
+        skip_pattern = re.compile(
+            r"\b(don'?t know|no idea|not sure|didn'?t study|skip|next question|pass|move on)\b", 
+            re.IGNORECASE
+        )
         clean_text = (transcript or "").lower().strip()
-        return any(re.search(pat, clean_text) for pat in skip_patterns)
+        return bool(skip_pattern.search(clean_text))
 
     def classify_turn_intent(self, transcript: str) -> str:
         """
@@ -87,19 +84,11 @@ class QuestionManager:
         clean = (transcript or "").lower().strip()
 
         # 1. Candidate meta questions about Eva / Role / Location / Origin / Process
-        eva_meta_patterns = [
-            r"\btell\s+me\s+about\s+yourself\b",
-            r"\bwho\s+are\s+you\b",
-            r"\bwhere\s+are\s+you\s+(from|based)\b",
-            r"\bwhere\s+do\s+you\s+live\b",
-            r"\bwhat\s+is\s+your\s+role\b",
-            r"\bare\s+you\s+(an?\s+)?ai\b",
-            r"\bis\s+this\s+right\b",
-            r"\bchecking\s+my\s+knowledge\b",
-            r"\bwho\s+created\s+you\b",
-            r"\babout\s+backend\b"
-        ]
-        if any(re.search(pat, clean) for pat in eva_meta_patterns):
+        meta_pattern = re.compile(
+            r"\b(who are you|what is your name|are you real|where are you from|who created you|tell me about yourself|where do you live|what is your role|are you an? ai)\b", 
+            re.IGNORECASE
+        )
+        if meta_pattern.search(clean):
             return "interviewer_meta"
 
         # 2. Audio / Connectivity checks
@@ -218,11 +207,10 @@ class QuestionManager:
         # 3. INTERVIEWER META QUESTIONS (Role, Location, Identity)
         if branch_taken == "interviewer_meta":
             instruction = (
-                "1. Answer the candidate's question about you, your role, or where you live in 1 short sentence "
-                "(e.g., 'I'm Eva, an AI assistant built to evaluate technical concepts, living right here in your application!').\n"
-                f"2. You MUST immediately guide them back by asking: '{target_logged_q}'"
+                f"The candidate asked a meta question: '{candidate_transcript}'. "
+                f"Answer warmly in 1 short sentence, reassure them, and ask if they are ready to return to: '{target_logged_q}'."
             )
-            return f"Candidate Meta Question: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+            return f"Instruction: {instruction}", target_logged_q
 
         # 4. AUDIO & PAUSE CHECKS
         if branch_taken == "audio_check":
@@ -233,11 +221,22 @@ class QuestionManager:
             instruction = "Acknowledge empathetically (e.g., 'Take your time, no rush at all!') and wait."
             return f"Candidate: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
 
-        # 5. TECHNICAL EVALUATION BRANCHES
+        # 5. EXPLICIT SKIP
+        if branch_taken == "next_topic" and self.is_candidate_requesting_skip(candidate_transcript):
+            next_q = self.get_current_question()
+            target_q = next_q.question_text if next_q else target_logged_q
+            instruction = (
+                f"The candidate wants to skip or doesn't know the answer to the previous topic.\n"
+                f"1. Reassure them empathetically in 1 short phrase ('No worries at all!', 'All good!').\n"
+                f"2. Pivot naturally to this new topic: '{target_q}' by framing it through their background project."
+            )
+            return f"Candidate Answer: '{candidate_transcript}'\nInstruction: {instruction}", target_q
+
+        # 6. TECHNICAL EVALUATION BRANCHES
         if branch_taken == "strong_followup":
             target_q = current_q.followup_if_strong if (current_q and current_q.followup_if_strong) else target_logged_q
             instruction = (
-                f"1. Give a warm 3-5 word positive reaction acknowledging '{candidate_transcript}'.\n"
+                f"1. Validate their answer in 1 warm sentence ('Hmm, I see...', 'Ah, fair point...').\n"
                 f"2. Ask this follow-up question: '{target_q}'"
             )
         elif branch_taken == "weak_followup":
@@ -246,12 +245,12 @@ class QuestionManager:
                 f"1. Acknowledge sympathetically in 3-4 words that this topic is tricky.\n"
                 f"2. Ask this simplifying follow-up: '{target_q}'"
             )
-        else:  # next_topic
+        else:  # standard next_topic
             next_q = self.get_current_question()
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
-                f"1. Give a brief, natural 1-sentence pivot connecting to their last answer.\n"
-                f"2. Ask the next question: '{target_q}'"
+                f"1. Validate their answer in 1 warm sentence ('Hmm, I see...', 'Ah, fair point...').\n"
+                f"2. Connect their point to the next topic: '{target_q}' as a natural continuation."
             )
 
         llm_prompt = (

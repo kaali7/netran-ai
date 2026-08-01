@@ -29,53 +29,62 @@ except ImportError:
 
 MODEL_NAME = "qwen2.5:3b"
 
-EVA_CONVERSATIONAL_SYSTEM_PROMPT = """You are Eva, a warm, intelligent, and highly empathetic Senior Technical Interviewer.
+EVA_HUMANIZED_SYSTEM_PROMPT = """
+You are Eva, a warm, senior technical interviewer having a live voice conversation with a candidate.
 
-PERSONALITY & VOICE RULES:
-1. Speak in concise, natural spoken English (15-35 words max per response).
-2. Use subtle conversational anchors like "Ah,", "Got it,", "Makes sense,", or "Fair point," to start responses naturally.
-3. NEVER sound like a rigid script reader. Always connect your transition directly to what the candidate said.
-4. If the candidate asks about you, your role, or the interview format, answer warmly in 1 short sentence before guiding them back.
+### CORE CONVERSATIONAL RULES
+1. **Human Cadence:** Speak naturally as if you are on a video call. Use micro-fillers ("Hmm...", "Ah, got it...", "I see...", "Alright...") and thinking pauses ("...").
+2. **Contextual Bridging:** NEVER ask textbook questions out of nowhere. Always acknowledge what the candidate just said OR connect the question to their background project.
+3. **Breathing Length:** Keep spoken text under 25 words per turn. Ask strictly ONE question at a time.
+4. **Tone:** Encouraging, peer-like, and collaborative. Not an interrogator or quiz-master.
 
-OUTPUT FORMAT (STRICT):
-<think>1 short sentence summarizing candidate tone, intent, or technical accuracy</think>
-<speak>Your actual spoken words to the candidate</speak>
+### SPECIAL INTERACTION HANDLERS
+- **Candidate Says "I Don't Know" / "Skip":** Reassure them immediately ("No worries at all!", "All good, that's pretty niche anyway!"), normalize it, and pivot smoothly to a lighter or related concept.
+- **Candidate Asks Meta-Questions ("Who are you?"):** Answer warmly in 1 short sentence, reassure them, and ask if they are ready to continue.
+- **Candidate Interrupts / Says "Wait":** Immediately yield ("Oh, take your time!"), pause, and let them speak.
+
+### OUTPUT FORMAT REQUIREMENTS
+You MUST respond using XML tags:
+<think>
+Brief internal reasoning: Validate candidate input, pick the context bridge, and plan the warm response.
+</think>
+<speak>
+The exact humanized text Eva will speak out loud. Use "..." for soft thinking pauses and commas for breathing gaps.
+</speak>
 """
 
 
 class TextSanitizer:
-    """
-    Cleans LLM text output and injects subtle prosodic cues for Kokoro-82M TTS.
-    """
     @staticmethod
     def clean_for_tts(text: str) -> str:
-        if not text:
-            return ""
-
-        # 1. Strip residual XML tags
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-        text = re.sub(r'</?speak>', '', text)
-
-        # 2. Preserve code inside backticks by removing ONLY the backtick symbols, NOT the code
-        text = text.replace('`', '')
-        text = text.replace('*', '').replace('#', '')
-
-        # 3. Strip bracketed action descriptions like [Sighs] or (clears throat) without wiping out code params like (1)
-        text = re.sub(r'\[.*?\]', '', text)
-        text = re.sub(r'\((?:sighs|clears throat|nods|laughs|pauses|chuckles|giggles)\)', '', text, flags=re.IGNORECASE)
-
-        # 4. Inject prosodic comma pauses after common speech fillers
-        fillers = ["Ah", "Hmm", "Got it", "Right", "Makes sense", "Fair point", "Sure", "Loud and clear", "Yes"]
-        for filler in fillers:
-            text = re.sub(rf'\b({filler})\b(?!\s*[,.!?:])', r'\1,', text, flags=re.IGNORECASE)
-
-        # 5. Replace robotic written phrases with natural spoken equivalents
-        text = re.sub(r"\bLet's move to your next question then\b", "Let's pivot to the next topic", text, flags=re.IGNORECASE)
-        text = re.sub(r"\bNext question:\b", "Next up,", text, flags=re.IGNORECASE)
-
-        # 6. Cleanup trailing whitespace & duplicate punctuation
-        text = re.sub(r',\s*,', ',', text)
-        return re.sub(r'\s+', ' ', text).strip()
+        # 1. Extract only the content inside <speak> tags if present
+        speak_match = re.search(r'<speak>(.*?)</speak>', text, re.DOTALL)
+        clean_text = speak_match.group(1) if speak_match else text
+        
+        # 2. Strip leftover XML tags or action brackets
+        clean_text = re.sub(r'<[^>]+>', '', clean_text)
+        clean_text = re.sub(r'\[.*?\]|\(.*?\)', '', clean_text)
+        clean_text = clean_text.replace('`', '')
+        
+        # 3. Enhance prosody for Kokoro TTS
+        # Inject soft thinking pauses on opening anchors
+        clean_text = re.sub(
+            r'^(Ah|Hmm|Got it|I see|Alright|Makes sense)\b', 
+            r'\1...', 
+            clean_text, 
+            flags=re.IGNORECASE
+        )
+        # Add breathing comma pauses around technical terms
+        clean_text = re.sub(
+            r'\b(FastAPI|asyncio|gRPC|Kafka|Protobuf|PgBouncer|REST)\b', 
+            r', \1,', 
+            clean_text
+        )
+        
+        # Clean up double punctuation & spaces
+        clean_text = re.sub(r',\s*,', ',', clean_text)
+        clean_text = re.sub(r'\s+', ' ', clean_text)
+        return clean_text.strip()
 
 
 def parse_think_speak(raw: str) -> Tuple[str, str]:
@@ -160,7 +169,7 @@ def stream_llm_response(
         else:
             sys_msg = custom_system_prompt
     else:
-        sys_msg = {"role": "system", "content": EVA_CONVERSATIONAL_SYSTEM_PROMPT}
+        sys_msg = {"role": "system", "content": EVA_HUMANIZED_SYSTEM_PROMPT}
 
     full_messages = [sys_msg] + conversation_history
 

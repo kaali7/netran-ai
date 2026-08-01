@@ -71,8 +71,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 ### 2. State Machine & Adaptive Branching Engine ([question_manager.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/question_manager.py))
 * **Question Progression & Lifecycle State Machine**: Manages explicit session phases (`ICEBREAKER` -> `TECHNICAL` -> `LAST_QUESTION` -> `COMPLETED`). Tracks 15 technical interview questions where pointer only advances on `next_topic` transitions or completed evaluations to ensure accurate follow-up evaluation and prevent premature final question cutoffs.
 * **Repetition Loop Protection**: Automatically advances to the next topic after 2 weak answer attempts (`retries_on_current_q >= 2`) on the same question.
-* **Turn Intent Classification**: `classify_turn_intent()` categorizes candidate input into `interviewer_meta`, `icebreaker_response`, `audio_check`, `thinking_pause`, `next_topic`, or `technical_answer`. Meta-intents (`interviewer_meta`, `audio_check`, `thinking_pause`) immediately bypass keyword evaluation without advancing the question pointer. Broadened regex intercepts identity/origin queries (*"where are you from"*, *"where are you based"*, *"who created you"*, *"tell me about yourself"*).
-* **Candidate Meta-Intent Override**: `is_candidate_requesting_skip()` intercepts candidate requests to skip or move to the next question (regex matching "move to next", "skip", "pass") and forces a `"next_topic"` transition before keyword scoring.
+* **Turn Intent Classification**: `classify_turn_intent()` categorizes candidate input into `interviewer_meta`, `icebreaker_response`, `audio_check`, `thinking_pause`, `next_topic`, or `technical_answer`. Meta-intents (`interviewer_meta`, `audio_check`, `thinking_pause`) immediately bypass keyword evaluation without advancing the question pointer. Broadened regex intercepts identity/origin queries (*"who are you"*, *"are you real"*, *"who created you"*, *"tell me about yourself"*).
+* **Candidate Meta-Intent Override**: `is_candidate_requesting_skip()` intercepts candidate requests to skip or move to the next question (regex matching *"don't know"*, *"no idea"*, *"didn't study"*, *"skip"*, *"pass"*) and forces a `"next_topic"` transition before keyword scoring.
 * **Keyword Density Scoring**: Evaluates candidate STT transcripts against expected technical keywords via `calculate_keyword_density()`.
 * **Branching Strategy**:
   - **Meta-Intents**: Returns `"interviewer_meta"`, `"audio_check"`, or `"thinking_pause"` immediately.
@@ -97,7 +97,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 
 ### 4. LLM Engine & Text Sanitizer ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/brain.py))
 * **Model**: Local Ollama execution of **`qwen2.5:3b`** (`MODEL_NAME = "qwen2.5:3b"`). Includes 3x exponential backoff retry and streams raw output live to console.
-* **Conversational System Prompt**: Uses `EVA_CONVERSATIONAL_SYSTEM_PROMPT` instructing concise (15–35 words max), natural spoken English with anchors like "Ah,", "Got it,", "Makes sense," and warm single-sentence answers for candidate questions about Eva.
+* **Humanized System Prompt**: Uses `EVA_HUMANIZED_SYSTEM_PROMPT` instructing natural spoken cadence (sub-25 words max), micro-fillers ("Hmm...", "Ah, got it..."), and empathetic handling of "I don't know" responses or meta-questions.
 * **Tuned Params**: `num_predict: 250` (accommodating reasoning + spoken blocks), `temperature: 0.7`, `top_p: 0.9`, `repeat_penalty: 1.15`.
 * **Think/Speak Split Architecture**: 
   - System prompt rigorously enforces `<think>` and `<speak>` XML tags, forbidding filler responses and colon-based artifacts.
@@ -107,7 +107,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Prosodic Regex TextSanitizer (`TextSanitizer.clean_for_tts`)**:
   - Strips residual XML tags like `<think>` and action tags (`[Clears Throat]`, `(Sighs)`).
   - Preserves backticks text content without wiping code identifiers (e.g. ``asyncio.sleep(1)``).
-  - Injects prosodic comma pauses after common fillers ("Ah,", "Hmm,", "Got it,").
+  - Injects soft thinking pauses (`...`) after common opening anchors ("Ah", "Hmm", "Got it").
+  - Adds breathing comma pauses around complex technical terms ("FastAPI", "asyncio", "Kafka").
   - Replaces robotic written phrases with natural spoken equivalents ("Let's pivot to the next topic", "Next up,").
 
 ### 5. Text-to-Speech Playback ([speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/speaker.py))
@@ -142,7 +143,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
     - Interactive WAV audio player with real-time `ProgressBar` and time tracking (`0:15 / 1:30`).
 * **SessionState Management**: Thread-safe `session_state.py` orchestrating cross-module events (Echo Gate, full-duplex barge-in interrupt).
 * **Think/Speak UI Rendering**: Safely escapes Kivy markup from LLM reasoning, then displays LLM internal reasoning and dialog using color-coded markup labels. Ensures only the `<speak>` block is sent to Kokoro TTS and fed back into `conversation_history` context to prevent compounding errors.
-* **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time.
+* **Permanent Context Anchor**: Extracts candidate background details during the ICEBREAKER phase into a `candidate_project_anchor`, dynamically prepending it to the system prompt so it is never purged.
+* **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time, relying on the permanent anchor to retain crucial context.
 
 ---
 
