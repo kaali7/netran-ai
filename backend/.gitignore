@@ -22,6 +22,7 @@ cache.db
 
 # Logs & Temporary Data
 *.log
+_interview_log.txt
 benchmark_log.csv
 .kivy/
 sessions/
