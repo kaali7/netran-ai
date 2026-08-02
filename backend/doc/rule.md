@@ -99,7 +99,9 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 11: Do Not Modify Microphone Priority or Resampling Logic
-* The audio capture hardware settings in `config.py` (e.g., WASAPI vs DirectSound priorities) and the anti-aliased downsampling logic in `listener.py` (e.g., boxcar decimation `reshape(-1, 3).mean(axis=1)`) have been meticulously tuned for specific Intel Smart Sound Array hardware. 
-* **DO NOT** modify, rearrange, or refactor these microphone setup lines.
+## 📌 Rule 11: Microphone Priority, Resampling & Hardware Configurations
+* The audio capture hardware settings in `config.py` (e.g., WASAPI vs DirectSound priorities) and the anti-aliased downsampling fallback logic in `listener.py` (e.g., boxcar decimation `reshape(-1, 3).mean(axis=1)`) have been meticulously tuned for specific Intel Smart Sound Array hardware. 
+* **DO NOT** modify, rearrange, or refactor the baseline hardware priorities in `config.py`.
+* **Override Support**: If hardware decimation causes audio aliasing (robotic/buzzing voice), users MUST use the `.env` override `MIC_DEVICE_INDEX=0` to force MME/DirectSound. `listener.py` natively supports OS-level 16kHz resampling, which provides perfect voice quality for STT when MME is selected.
+* **DC Drift**: Per-chunk DC offset is mitigated by an IIR high-pass filter applied across the entire final utterance buffer before STT. Do not revert to per-chunk mean subtraction.
 * If encountering audio issues, focus strictly on the **alignment** of the three core components (`listener.py`, `brain.py`, `speaker.py`), such as barge-in logic, silence thresholds, turn-taking timing, or prompt alignment.

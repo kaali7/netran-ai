@@ -52,8 +52,9 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * Zero external API cost and full privacy compliance.
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper)**
   * Real-time streaming candidate voice transcription loaded 100% offline (`HF_HUB_OFFLINE=1`) from local disk cache snapshot.
-* **Voice Activity Detection (VAD)**: **Silero VAD (v3 ONNX Runtime)**
+* **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
   * Ultra-low-latency speech start/stop detection with dual VAD+RMS speech gate (`listener.py`), processing audio chunks in microsecond frames.
+  * Employs native Windows OS resampling (via MME `MIC_DEVICE_INDEX=0` override) and a custom Python IIR high-pass filter (`alpha=0.995`) to perfectly eliminate hardware DC drift and mathematical aliasing distortion before STT.
 * **Text-to-Speech (TTS)**: **Kokoro-82M (PyTorch / KPipeline)**
   * High-fidelity, ultra-fast neural speech synthesis loaded 100% offline for the **Eva** interviewer persona with sub-250ms latency using a Persistent PyAudio stream (`speaker.py`).
 
