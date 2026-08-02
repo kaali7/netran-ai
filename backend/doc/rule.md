@@ -96,3 +96,10 @@ Before modifying any source code in a model stage:
 * **Root Execution Context**: Always execute scripts and test modules from the `backend/` root directory using module path format (e.g. `.\.venv\Scripts\python.exe -m model.workflow.model.test_pipeline` or `.\.venv\Scripts\python.exe -m model.<stage_folder>.model.test_pipeline`) to guarantee relative imports and `sys.path` resolution succeed across all 4 stages.
 * **Interactive Launcher**: Use `run.bat` for interactive GUI/CLI launcher menu options across individual model stages and the full workflow application.
 * **Quality & Security Audits**: Execute `.\.venv\Scripts\python.exe scan_code_quality.py` to run automated code quality audits (`ruff`, `pylint`, `mypy`, `bandit`, `radon`).
+
+---
+
+## 📌 Rule 11: Do Not Modify Microphone Priority or Resampling Logic
+* The audio capture hardware settings in `config.py` (e.g., WASAPI vs DirectSound priorities) and the anti-aliased downsampling logic in `listener.py` (e.g., boxcar decimation `reshape(-1, 3).mean(axis=1)`) have been meticulously tuned for specific Intel Smart Sound Array hardware. 
+* **DO NOT** modify, rearrange, or refactor these microphone setup lines.
+* If encountering audio issues, focus strictly on the **alignment** of the three core components (`listener.py`, `brain.py`, `speaker.py`), such as barge-in logic, silence thresholds, turn-taking timing, or prompt alignment.

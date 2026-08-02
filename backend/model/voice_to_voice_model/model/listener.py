@@ -18,17 +18,17 @@ Full-Duplex Barge-In Architecture (v3 — TRUE FIX):
 """
 
 import atexit
-import os
 import queue
-import sys
+import wave
 import threading
 import time
+import os
+import sys
 import warnings
-import wave
 
-# Suppress PyTorch RNN and weight_norm deprecation noise
-warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.modules.rnn")
-warnings.filterwarnings("ignore", category=FutureWarning, module="torch.nn.utils.weight_norm")
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    import audioop
 
 import numpy as np
 import onnxruntime as ort
@@ -169,11 +169,14 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             except Exception:
                 continue
 
-            if native_rate != RATE:
-                duration = len(original_frame) / native_rate
-                x_old = np.linspace(0, duration, len(original_frame))
-                x_new = np.linspace(0, duration, int(len(original_frame) * RATE / native_rate))
-                original_frame = np.interp(x_new, x_old, original_frame).astype(np.float32)
+            # Anti-aliased integer decimation for 48kHz -> 16kHz
+            if native_rate == 48000 and RATE == 16000:
+                original_frame = original_frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
+            elif native_rate != RATE:
+                # Basic fallback
+                pcm16 = (original_frame * 32767.0).astype(np.int16)
+                resampled_pcm, _ = audioop.ratecv(pcm16.tobytes(), 2, 1, native_rate, RATE, None)
+                original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
             # 2. Process the raw frame for VAD (DC offset removal only)
             vad_frame = original_frame.copy()
@@ -182,10 +185,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
 
             vad_frame = vad_frame - np.mean(vad_frame)  # DC offset removal
             frame_peak = float(np.max(np.abs(vad_frame)))
-
-            # Noise gate: 0.0005 threshold to zero-out pure static
-            if frame_peak < 0.0005:
-                vad_frame = np.zeros_like(vad_frame)
 
             # Apply a constant volume boost for the output recording (Whisper + WAV)
             # DO NOT apply dynamic per-chunk auto-gain before Silero VAD, as it destroys RNN temporal continuity!
@@ -700,22 +699,19 @@ class BargeInWatcher:
 
                 frame = raw_data.flatten()
 
-                if native_rate != RATE:
-                    duration = len(frame) / native_rate
-                    x_old = np.linspace(0, duration, len(frame))
-                    x_new = np.linspace(0, duration, int(len(frame) * RATE / native_rate))
-                    frame = np.interp(x_new, x_old, frame).astype(np.float32)
+                if native_rate == 48000 and RATE == 16000:
+                    frame = frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
+                elif native_rate != RATE:
+                    pcm16 = (frame * 32767.0).astype(np.int16)
+                    resampled_pcm, _ = audioop.ratecv(pcm16.tobytes(), 2, 1, native_rate, RATE, None)
+                    frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
                 if len(frame) < CHUNK:
                     frame = np.pad(frame, (0, CHUNK - len(frame)), mode='edge')
 
-                # DC offset removal + noise gate
+                # DC offset removal
                 frame = frame - np.mean(frame)
                 peak = float(np.max(np.abs(frame)))
-                
-                # Noise gate: 0.0005 allows quiet voices through
-                if peak < 0.0005:
-                    frame = np.zeros_like(frame)
 
                 # Feed un-gained frame to Silero VAD to preserve RNN continuity
                 audio_input = np.expand_dims(frame, axis=0)  # shape [1, 512]
