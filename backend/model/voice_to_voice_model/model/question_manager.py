@@ -79,12 +79,20 @@ class QuestionManager:
     def classify_turn_intent(self, transcript: str, was_barge_in: bool = False) -> str:
         """
         Classifies candidate turns into Universal Intent Taxonomy:
-        TECHNICAL_ANSWER, ICEBREAKER, CANDIDATE_META_QUERY, SKIP_REQUEST, AUDIO_CHECK_OR_PAUSE, BARGE_IN_INTERRUPTION
+        TECHNICAL_ANSWER, ICEBREAKER, CANDIDATE_META_QUERY, SKIP_REQUEST, AUDIO_CHECK_OR_PAUSE, BARGE_IN_INTERRUPTION, END_INTERVIEW_REQUEST
         """
         if was_barge_in:
             return "BARGE_IN_INTERRUPTION"
 
         clean = (transcript or "").lower().strip()
+
+        # 0. Candidate explicitly requesting to stop the interview
+        stop_pattern = re.compile(
+            r"\b(stop|end|quit|terminate|bye|goodbye|stop the interview|i want to stop)\b", 
+            re.IGNORECASE
+        )
+        if stop_pattern.search(clean):
+            return "END_INTERVIEW_REQUEST"
 
         # 1. Candidate Meta-Intent Override (Explicit Skip / Pass)
         if self.is_candidate_requesting_skip(clean):
@@ -145,6 +153,10 @@ class QuestionManager:
 
         raw_intent = self.classify_turn_intent(transcript)
 
+        if raw_intent == "END_INTERVIEW_REQUEST":
+            self.phase = "COMPLETED"
+            return "interview_completed"
+
         # Meta questions / audio checks never advance question index or phase
         if raw_intent in ("CANDIDATE_META_QUERY", "interviewer_meta"):
             return "interviewer_meta"
@@ -198,8 +210,8 @@ class QuestionManager:
                 "Thank you so much for your time, and we will follow up with detailed feedback shortly."
             )
             instruction = (
-                f"1. React warmly in 1 sentence to the candidate's last response: '{candidate_transcript}'.\n"
-                f"2. Conclude the interview smoothly by saying: '{closing_text}'"
+                f"React warmly and professionally to the candidate's last response (or request to finish). "
+                f"Then conclude the interview smoothly by saying exactly: '{closing_text}'"
             )
             return f"Candidate Final Answer: '{candidate_transcript}'\nInstruction: {instruction}", closing_text
 
@@ -208,8 +220,8 @@ class QuestionManager:
         # 2. ICEBREAKER PHASE
         if branch_taken == "icebreaker_response":
             instruction = (
-                "React warmly to the candidate's introduction in 1 short sentence. "
-                f"Then smoothly introduce the first technical topic and ask: '{target_logged_q}'"
+                "React warmly to the candidate's introduction in 1 short sentence, "
+                f"then smoothly pivot to ask exactly this question: '{target_logged_q}'"
             )
             return f"Candidate Intro: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
 
@@ -235,9 +247,8 @@ class QuestionManager:
             next_q = self.get_current_question()
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
-                f"The candidate wants to skip or doesn't know the answer to the previous topic.\n"
-                f"1. Reassure them empathetically in 1 short phrase ('No worries at all!', 'All good!').\n"
-                f"2. Pivot naturally to this new topic: '{target_q}' by framing it through their background project."
+                f"The candidate wants to skip or doesn't know the answer.\n"
+                f"Briefly reassure them empathetically (e.g., 'No worries at all!'), then smoothly pivot to ask exactly this question: '{target_q}'"
             )
             return f"Candidate Answer: '{candidate_transcript}'\nInstruction: {instruction}", target_q
 
@@ -245,21 +256,18 @@ class QuestionManager:
         if branch_taken == "strong_followup":
             target_q = current_q.followup_if_strong if (current_q and current_q.followup_if_strong) else target_logged_q
             instruction = (
-                f"1. Validate their answer in 1 warm sentence ('Hmm, I see...', 'Ah, fair point...').\n"
-                f"2. Ask this follow-up question: '{target_q}'"
+                f"Briefly validate their answer in 1 warm sentence, then ask this follow-up question exactly: '{target_q}'"
             )
         elif branch_taken == "weak_followup":
             target_q = current_q.followup_if_weak if (current_q and current_q.followup_if_weak) else target_logged_q
             instruction = (
-                f"1. Acknowledge sympathetically in 3-4 words that this topic is tricky.\n"
-                f"2. Ask this simplifying follow-up: '{target_q}'"
+                f"Briefly acknowledge sympathetically that this topic is tricky, then ask this simplifying follow-up exactly: '{target_q}'"
             )
         else:  # standard next_topic
             next_q = self.get_current_question()
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
-                f"1. Validate their answer in 1 warm sentence ('Hmm, I see...', 'Ah, fair point...').\n"
-                f"2. Connect their point to the next topic: '{target_q}' as a natural continuation."
+                f"Briefly react to their answer in 1 sentence, then smoothly transition to ask exactly this question: '{target_q}'"
             )
 
         llm_prompt = (

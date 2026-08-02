@@ -73,8 +73,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 ### 2. State Machine & Adaptive Branching Engine ([question_manager.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/question_manager.py))
 * **Question Progression & Lifecycle State Machine**: Manages explicit session phases (`ICEBREAKER` -> `TECHNICAL` -> `LAST_QUESTION` -> `COMPLETED`). Tracks 15 technical interview questions where pointer only advances on `next_topic` transitions or completed evaluations to ensure accurate follow-up evaluation and prevent premature final question cutoffs.
 * **Repetition Loop Protection**: Automatically advances to the next topic after 2 weak answer attempts (`retries_on_current_q >= 2`) on the same question.
-* **Universal Turn Intent Taxonomy**: `classify_turn_intent()` categorizes every turn into `TECHNICAL_ANSWER`, `ICEBREAKER`, `CANDIDATE_META_QUERY`, `SKIP_REQUEST`, `AUDIO_CHECK_OR_PAUSE`, or `BARGE_IN_INTERRUPTION`. Unfiltered event-driven logging decouples transcript recording from question scoring.
-* **Candidate Meta-Intent Override**: `is_candidate_requesting_skip()` intercepts candidate requests to skip or move to the next question (regex matching *"don't know"*, *"no idea"*, *"didn't study"*, *"skip"*, *"pass"*) and forces a `"next_topic"` transition before keyword scoring.
+* **Universal Turn Intent Taxonomy**: `classify_turn_intent()` categorizes every turn into `TECHNICAL_ANSWER`, `ICEBREAKER`, `CANDIDATE_META_QUERY`, `SKIP_REQUEST`, `AUDIO_CHECK_OR_PAUSE`, `BARGE_IN_INTERRUPTION`, or `END_INTERVIEW_REQUEST`. Unfiltered event-driven logging decouples transcript recording from question scoring.
+* **Candidate Meta-Intent Override**: `is_candidate_requesting_skip()` intercepts candidate requests to skip or move to the next question (regex matching *"don't know"*, *"no idea"*, *"didn't study"*, *"skip"*, *"pass"*) and forces a `"next_topic"` transition. Explicit requests to stop (*"stop"*, *"bye"*) trigger `END_INTERVIEW_REQUEST` to gracefully conclude the session immediately.
 * **Keyword Density Scoring**: Evaluates candidate STT transcripts against expected technical keywords via `calculate_keyword_density()`.
 * **Branching Strategy**:
   - **Meta-Intents**: Returns `"interviewer_meta"`, `"audio_check"`, or `"thinking_pause"` immediately.
@@ -82,7 +82,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - **Match $\ge$ 50% & `followup_if_strong`**: Triggers `"strong_followup"` branch (escalates to architectural trade-offs and edge cases).
   - **Match $<$ 20% & `followup_if_weak`**: Triggers `"weak_followup"` branch (asks simplifying diagnostic probes).
   - **Otherwise / Interview Completion**: Triggers `"next_topic"` or `"interview_completed"` branch and advances question pointer safely.
-* **Natural Conversational Context & Prompt Bridging**: `format_prompt_context()` constructs natural LLM instructions for meta-intents (answering questions about Eva warmly in 1 short sentence, reassuring audio checks, empathetic pause acknowledgments) and technical branches with warm reactions and seamless transitions, ensuring clean question progression and alignment with `session_manifest.json`.
+* **Natural Conversational Context & Prompt Bridging**: `format_prompt_context()` constructs conversational LLM instructions (e.g., reacting warmly before pivoting) rather than rigid numbered lists. This enforces a smooth 1-question pivot and eliminates "schizophrenic turns" where Eva would ask two disjointed questions in the same breath.
 * **Single Source of Truth Session Completion**: `front.py` synchronizes `self.question_count` directly from `self.question_manager.current_index + 1`. Follow-ups and icebreakers no longer trigger premature `self.question_count >= self.MAX_QUESTIONS` cutoffs. The session only wraps up when `QuestionManager` evaluates the candidate's final technical answer and returns `interview_completed`.
 
 ### 3. Configuration & 100% Offline Local Model Loading ([config.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/config.py))
@@ -110,12 +110,13 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Accurate Millisecond Benchmark Telemetry**:
   - **TTFT (Time-To-First-Token)**: Recorded on arrival of the first LLM token (<300ms).
   - **TTFA (Time-To-First-Audio)**: Recorded in `speaker.py` when the first synthesized Kokoro audio chunk is pushed to `audio_queue` (<1200ms).
-* **Humanized System Prompt**: Uses `EVA_HUMANIZED_SYSTEM_PROMPT` enforcing:
-  - Natural spoken cadence with contractions ("I'm", "let's", "it's", "that's") and short vocal anchors ("Ah, got it...", "Hmm...", "Right...").
-  - Concise spoken turns (1–2 sentences max, 15–25 words).
-  - Strict `<think>` reasoning budget (max 30 words in 3 points: intent, evaluation, planned response).
+* **Humanized System Prompt**: Uses `DEFAULT_EVA_SYSTEM_PROMPT` enforcing:
+  - Natural spoken cadence with contractions ("I'm", "let's", "it's", "that's") and short vocal anchors ("Ah, got it", "Hmm", "I see").
+  - Strict prevention of prompt artifact leakage (`(Think?)`, `[Action]`) into the spoken text.
+  - Strict limitation to **exactly one question per turn**.
+  - Strict `<think>` reasoning budget (hidden from candidate).
   - Mandatory Call-To-Action (CTA) handoff rule: Every `<speak>` payload MUST end with a terminal question mark (`?`) or explicit turn handoff question.
-  - `<speak tone="...">` tag selection from Tone Taxonomy (`empathetic`, `encouraging`, `curious`, `probing`, `direct`, `technical`, `warm`, `icebreaker`).
+  - Mandatory `<speak tone="...">` tag selection from Tone Taxonomy (`empathetic`, `encouraging`, `curious`, `probing`, `direct`, `technical`, `warm`, `icebreaker`).
 * **Tuned Params**: `num_predict: 380` (expanded token headroom to prevent truncation mid-sentence), `temperature: 0.65` (lower variance for crisp CTA adherence), `top_p: 0.85` (grammatical sentence endings), `repeat_penalty: 1.15`.
 * **Tone-to-Speed Parameter Mapping Matrix (`get_speed_for_tone`)**:
   - `empathetic` / `encouraging`: `0.92x` (reassuring, unhurried cadence).
