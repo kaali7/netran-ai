@@ -108,7 +108,14 @@ The first time you run the Stage 3 Voice Model or hardware diagnostics (`listene
 *Note: You must have an active internet connection on the very first run to fetch these weights into your Windows directory at `%USERPROFILE%\.cache\huggingface\hub\`. Subsequent runs will load these 100% offline from the local cache.*
 
 **Manual Pre-Download (Optional):**
-If you want to manually download these models before running the application, you can use the `huggingface-cli` in your activated virtual environment:
+If you want to manually download these models before running the application, you can use the `huggingface-cli`. 
+
+First, ensure the CLI is installed in your activated virtual environment (it is included in `requirements.txt`, but can be installed manually):
+```cmd
+pip install -U "huggingface_hub[cli]"
+```
+
+Then, run the following commands to pre-download the models:
 ```cmd
 huggingface-cli download Systran/faster-whisper-small
 huggingface-cli download hexgrad/Kokoro-82M
