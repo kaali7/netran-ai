@@ -865,6 +865,55 @@ class InterviewScreen(Screen):
 
         Clock.schedule_once(_update)
 
+    def append_ui_chunk(self, text):
+        def _update(dt):
+            if "transcript_display" in self.ids:
+                self.ids.transcript_display.text += text
+        Clock.schedule_once(_update)
+
+    def _llm_ui_callback(self, event_type, content):
+        if event_type == "think":
+            self._think_logged = True
+            safe_think = content.replace("[", "&#91;").replace("]", "&#93;").replace("&", "&amp;")
+            grey_italic = f"[i][color=888888]🧠 [Eva thinking...]: {safe_think}[/color][/i]\n"
+            self.append_ui_chunk(grey_italic)
+            
+            timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            with open(self.log_filename, "a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] [Eva thinking...]: {content}\n")
+                
+        elif event_type == "speak_start":
+            self.append_ui_chunk("[color=3399ff][b]🎙️ Eva:[/b][/color] ")
+            
+        elif event_type == "speak_chunk":
+            if not getattr(self, "_speak_started", False):
+                content = content.lstrip()
+                if content:
+                    self._speak_started = True
+            
+            buffer = getattr(self, "_speak_chunk_buffer", "") + content
+            buffer = buffer.replace("</speak>", "").replace("<speak>", "")
+            
+            partial_matches = [
+                "<", "</", "</s", "</sp", "</spe", "</spea", "</speak",
+                "<s", "<sp", "<spe", "<spea", "<speak"
+            ]
+            
+            hold_len = 0
+            for p in partial_matches:
+                if buffer.endswith(p):
+                    hold_len = max(hold_len, len(p))
+            
+            if hold_len > 0:
+                output = buffer[:-hold_len]
+                self._speak_chunk_buffer = buffer[-hold_len:]
+            else:
+                output = buffer
+                self._speak_chunk_buffer = ""
+                
+            if output:
+                self.append_ui_chunk(output)
+
     def update_audio_diagnostics(self, data):
         def _update(dt):
             if "vad_state_label" in self.ids:
@@ -879,7 +928,7 @@ class InterviewScreen(Screen):
                 self.ids.volume_bar.value = min(display_val, 1.0)
         Clock.schedule_once(_update)
 
-    def log_and_display_turn(self, speaker, text):
+    def log_and_display_turn(self, speaker, text, skip_ui=False):
         timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
         formatted_log = f"[{timestamp}] {speaker}: {text}"
         
@@ -893,7 +942,8 @@ class InterviewScreen(Screen):
         with open(self.log_filename, "a", encoding="utf-8") as f:
             f.write(formatted_log + "\n")
 
-        self.append_ui_text(formatted_ui)
+        if not skip_ui:
+            self.append_ui_text(formatted_ui)
 
     def _eva_speak_blocking(self, text: str):
         """
@@ -1076,6 +1126,10 @@ class InterviewScreen(Screen):
 
                     # Clear barge-in flags before this LLM turn
                     self.session_state.interrupt_event.clear()
+                    self._think_logged = False
+                    self._speak_started = False
+                    self._speak_chunk_buffer = ""
+                    
                     _player = get_default_player()
                     if _player:
                         _player.interrupt_event.clear()
@@ -1111,7 +1165,8 @@ class InterviewScreen(Screen):
                             messages_for_llm,
                             custom_system_prompt=sys_prompt,
                             speaker_player=get_default_player(),
-                            session_state=self.session_state
+                            session_state=self.session_state,
+                            ui_callback=self._llm_ui_callback
                         )
                     finally:
                         # Always drain audio queue + stop watcher, even on exception
@@ -1149,17 +1204,11 @@ class InterviewScreen(Screen):
                     active_tone = getattr(self.session_state, "current_tone", "direct")
                     active_speed = getattr(self.session_state, "tts_speed", 1.0)
                     
-                    self.append_ui_text(
-                        f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}  |  "
-                        f"[color=00ccff]🎭 [Tone]:[/color] {active_tone} ({active_speed:.2f}x)"
-                    )
-                    if was_barge_in:
-                        self.append_ui_text("[color=ff3333]⚡ [Candidate Barged In — Hardware Flush][/color]")
-
                     current_ttft = getattr(Benchmark, 'last_ttft_ms', 0.0)
                     current_ttfa = getattr(Benchmark, 'last_ttfa_ms', 0.0)
 
-                    if think_text:
+                    if think_text and not getattr(self, "_think_logged", False):
+                        # Fallback in case callback didn't fire
                         safe_think = think_text.replace("[", "&#91;").replace("]", "&#93;").replace("&", "&amp;")
                         grey_italic = f"[i][color=888888]🧠 [Eva thinking...]: {safe_think}[/color][/i]"
                         self.append_ui_text(grey_italic)
@@ -1168,7 +1217,21 @@ class InterviewScreen(Screen):
                             f.write(f"[{timestamp}] [Eva thinking...]: {think_text}\n")
 
                     full_eva_reply = speak_content
-                    self.log_and_display_turn("Eva", speak_content)
+                    # Log to file, but skip UI append since ui_callback handled it
+                    self.log_and_display_turn("Eva", speak_content, skip_ui=True)
+                    self.append_ui_chunk("\n") # Add final newline for the speak block
+                    
+                    self.append_ui_text(
+                        f"[color=ff8800]📊 [Branch Taken]:[/color] {branch_taken}  |  "
+                        f"[color=00ccff]🎭 [Tone]:[/color] {active_tone} ({active_speed:.2f}x)"
+                    )
+                    if was_barge_in:
+                        self.append_ui_text("[color=ff3333]⚡ [Candidate Barged In — Hardware Flush][/color]")
+
+                    def _cleanup_tags(dt):
+                        if "transcript_display" in self.ids:
+                            self.ids.transcript_display.text = self.ids.transcript_display.text.replace("</speak>", "").replace("<speak>", "")
+                    Clock.schedule_once(_cleanup_tags)
 
                     if self.session_logger:
                         self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()

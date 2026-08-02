@@ -241,7 +241,8 @@ def stream_llm_response(
     custom_system_prompt: str | dict[str, str] | None = None,
     max_retries: int = 3,
     speaker_player=None,
-    session_state=None
+    session_state=None,
+    ui_callback=None
 ) -> tuple[str, str]:
     """
     Returns (think_text, speak_text).
@@ -252,6 +253,7 @@ def stream_llm_response(
     :param max_retries: Number of retry attempts on failure.
     :param speaker_player: Optional PersistentSpeaker instance to stream clauses to.
     :param session_state: Optional SessionState for the speaker.
+    :param ui_callback: Optional callback to stream UI updates (event_type, content).
     :return: A tuple containing (think_text, speak_text).
     """
     if custom_system_prompt:
@@ -321,6 +323,15 @@ def stream_llm_response(
                                     session_state.current_tone = detected_tone
                                     session_state.tts_speed = get_speed_for_tone(detected_tone)
                                 token = speak_match.group(2)
+                                
+                                if ui_callback:
+                                    think_raw = raw_output[:speak_match.start()]
+                                    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|$)'
+                                    t_match = re.search(think_pattern, think_raw, re.DOTALL | re.IGNORECASE)
+                                    think_t = t_match.group(1).strip() if t_match else think_raw.replace("<think>", "").replace("</think>", "").strip()
+                                    if think_t:
+                                        ui_callback("think", think_t)
+                                    ui_callback("speak_start", "")
 
                         if in_speak_block:
                             clean_token = token
@@ -329,6 +340,9 @@ def stream_llm_response(
                                 in_speak_block = False
 
                             speak_buffer += clean_token
+                            
+                            if ui_callback and clean_token:
+                                ui_callback("speak_chunk", clean_token)
 
                             parts = clause_regex.split(speak_buffer)
                             if len(parts) > 1:
