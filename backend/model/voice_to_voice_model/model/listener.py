@@ -25,6 +25,7 @@ import time
 import os
 import sys
 import warnings
+import collections
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)
@@ -37,7 +38,7 @@ from faster_whisper import WhisperModel
 
 try:
     from .benchmark import Benchmark
-    from .config import WHISPER_MODEL, auto_select_mic_device
+    from .config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
     from .prompts import WHISPER_INITIAL_PROMPT
     from .session_state import SessionState
 except ImportError:
@@ -45,13 +46,14 @@ except ImportError:
         from model.voice_to_voice_model.model.benchmark import Benchmark
         from model.voice_to_voice_model.model.config import (
             WHISPER_MODEL,
+            MIC_DEVICE_INDEX,
             auto_select_mic_device,
         )
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
-        from config import WHISPER_MODEL, auto_select_mic_device
+        from config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
         from prompts import WHISPER_INITIAL_PROMPT
         from session_state import SessionState
 
@@ -71,7 +73,7 @@ print("Models loaded successfully!", flush=True)
 
 # Auto-select the best available physical microphone at startup.
 # Stored globally so both listen_and_transcribe() and BargeInWatcher use the same device.
-MIC_DEVICE = auto_select_mic_device()
+MIC_DEVICE = MIC_DEVICE_INDEX if MIC_DEVICE_INDEX is not None else auto_select_mic_device()
 
 # Known Whisper hallucinations on silence or background static
 WHISPER_HALLUCINATION_PATTERNS = {
@@ -116,13 +118,26 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         native_rate = 16000
     CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
-    stream = sd.InputStream(
-        samplerate=native_rate,
-        channels=CHANNELS,
-        dtype='float32',
-        blocksize=CHUNK_NATIVE,
-        device=MIC_DEVICE,
-    )
+    try:
+        # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
+        stream = sd.InputStream(
+            samplerate=RATE,
+            channels=CHANNELS,
+            dtype='float32',
+            blocksize=CHUNK,
+            device=MIC_DEVICE,
+        )
+        native_rate = RATE
+        CHUNK_NATIVE = CHUNK
+    except sd.PortAudioError:
+        # Fallback Method A: WASAPI strictly requires native rate, so we do manual decimation
+        stream = sd.InputStream(
+            samplerate=native_rate,
+            channels=CHANNELS,
+            dtype='float32',
+            blocksize=CHUNK_NATIVE,
+            device=MIC_DEVICE,
+        )
     stream.start()
 
     is_ptt = bool(state and getattr(state, "input_mode", "VAD") == "PTT")
@@ -132,6 +147,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         print("\n[Listening...] Speak into your microphone now.", flush=True)
 
     audio_buffer = []
+    pre_speech_buffer = collections.deque(maxlen=15)  # 480ms ring buffer
     has_spoken = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
@@ -178,12 +194,11 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 resampled_pcm, _ = audioop.ratecv(pcm16.tobytes(), 2, 1, native_rate, RATE, None)
                 original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
-            # 2. Process the raw frame for VAD (DC offset removal only)
+            # 2. Process the raw frame for VAD
             vad_frame = original_frame.copy()
             if len(vad_frame) < CHUNK:
                 vad_frame = np.pad(vad_frame, (0, CHUNK - len(vad_frame)), mode='edge')
 
-            vad_frame = vad_frame - np.mean(vad_frame)  # DC offset removal
             frame_peak = float(np.max(np.abs(vad_frame)))
 
             # Apply a constant volume boost for the output recording (Whisper + WAV)
@@ -210,11 +225,14 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             speech_prob = out[0, 0]
 
             # 3b. Full-Duplex Barge-In Detection
-            # VAD runs continuously even during agent speech. When speech_prob > 0.65,
+            # Calculate RMS early to use it as a fallback for broken VAD microphones.
+            rms = np.sqrt(np.mean(proc_frame ** 2))
+            
+            # VAD runs continuously even during agent speech. When speech_prob > 0.65 OR rms >= 0.015,
             # we fire the interrupt (with cooldown) and FALL THROUGH to accumulate the
             # barge-in audio so the candidate's interrupted speech is captured for STT.
             if state and state.is_agent_speaking.is_set():
-                if speech_prob > 0.65:
+                if speech_prob > 0.65 or rms >= 0.015:
                     now = time.monotonic()
                     cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
                     last_t = getattr(state, 'last_interrupt_time', 0.0)
@@ -243,7 +261,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     continue
 
             # 4. Speech Start/End Decision Logic
-            rms = np.sqrt(np.mean(proc_frame ** 2))
             _diag_frame_counter += 1
 
             # Periodic VAD diagnostic: print live VAD prob + RMS every ~2s (60 frames * 32ms)
@@ -269,6 +286,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms debounce
                         print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
                         has_spoken = True
+                        audio_buffer.extend(pre_speech_buffer)
                         if state:
                             state.is_candidate_speaking.set()
                         silence_frames_counter = 0
@@ -293,10 +311,12 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     )
                 })
 
-            # Accumulate gain-boosted audio while speech is active for Whisper
+            # Accumulate clean, un-clipped audio while speech is active for Whisper
             if has_spoken:
-                audio_buffer.append(proc_frame.copy())
+                audio_buffer.append(vad_frame.copy())
                 total_frames_counter += 1
+            else:
+                pre_speech_buffer.append(vad_frame.copy())
                 
                 # Warning near timeout (around 50s)
                 if total_frames_counter == 1562 and ui_callback:
@@ -336,14 +356,35 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     # Combine accumulated (already DC-offset + auto-gain processed) frames
     audio_array = np.concatenate(audio_buffer)
 
-    # Final whole-utterance gain pass: ensures consistent level for Whisper.
-    # 15x cap (was 10x) provides extra headroom for quiet voices.
-    audio_array = audio_array - np.mean(audio_array)  # re-center
+    # IIR high-pass filter to remove per-chunk DC drift without creating
+    # step discontinuities at chunk boundaries.
+    # y[n] = alpha * (y[n-1] + x[n] - x[n-1]), alpha=0.995 -> ~5Hz cutoff at 16kHz
+    alpha = 0.995
+    filtered = np.empty_like(audio_array)
+    filtered[0] = 0.0
+    for i in range(1, len(audio_array)):
+        filtered[i] = alpha * (filtered[i-1] + audio_array[i] - audio_array[i-1])
+    audio_array = filtered
+
     utterance_peak = float(np.max(np.abs(audio_array)))
     if utterance_peak > 0.0001:
         final_gain = min(0.9 / utterance_peak, 15.0)  # 15x cap for utterance-level normalisation
         audio_array = audio_array * final_gain
-    print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f})", flush=True)
+    print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f}, gain={final_gain:.1f}x)", flush=True)
+
+    # DIAGNOSTIC: Save the exact audio Whisper receives to a WAV file for analysis
+    try:
+        import wave as _wave
+        _diag_path = os.path.join(os.path.dirname(__file__), "_whisper_input_dump.wav")
+        with _wave.open(_diag_path, 'wb') as _wf:
+            _wf.setnchannels(1)
+            _wf.setsampwidth(2)
+            _wf.setframerate(16000)
+            _pcm = (np.clip(audio_array, -1.0, 1.0) * 32767).astype(np.int16)
+            _wf.writeframes(_pcm.tobytes())
+        print(f"[DIAG] Saved Whisper input to: {_diag_path}", flush=True)
+    except Exception as _e:
+        print(f"[DIAG] Could not save diagnostic WAV: {_e}", flush=True)
 
     # Generate transcription using Faster-Whisper.
     # vad_filter=False: Whisper's built-in VAD is deliberately disabled because it
@@ -677,14 +718,31 @@ class BargeInWatcher:
 
         # Open an independent sounddevice input stream for concurrent mic monitoring
         try:
+            # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
             stream = sd.InputStream(
-                samplerate=native_rate,
+                samplerate=RATE,
                 channels=1,
                 dtype="float32",
-                blocksize=CHUNK_NATIVE,
+                blocksize=CHUNK,
                 device=MIC_DEVICE,
             )
+            native_rate = RATE
+            CHUNK_NATIVE = CHUNK
             stream.start()
+        except sd.PortAudioError:
+            try:
+                # Fallback Method A: WASAPI strictly requires native rate
+                stream = sd.InputStream(
+                    samplerate=native_rate,
+                    channels=1,
+                    dtype="float32",
+                    blocksize=CHUNK_NATIVE,
+                    device=MIC_DEVICE,
+                )
+                stream.start()
+            except Exception as exc:
+                print(f"[BargeInWatcher] Could not open mic stream: {exc}", flush=True)
+                return
         except Exception as exc:
             print(f"[BargeInWatcher] Could not open mic stream: {exc}", flush=True)
             return

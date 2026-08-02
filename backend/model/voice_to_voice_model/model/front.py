@@ -1118,12 +1118,30 @@ class InterviewScreen(Screen):
                         _player2 = get_default_player()
                         if _player2:
                             import time as _t
+                            import threading as _th
+                            
+                            _join_done = _th.Event()
+                            def _wait_for_queue_join():
+                                try:
+                                    _player2.audio_queue.join()
+                                except Exception:
+                                    pass
+                                finally:
+                                    _join_done.set()
+                                    
+                            _join_thread = _th.Thread(target=_wait_for_queue_join, daemon=True)
+                            _join_thread.start()
+                            
                             while (
-                                not _player2.audio_queue.empty()
+                                not _join_done.is_set()
                                 and not self.session_state.interrupt_event.is_set()
                                 and self.is_running
                             ):
                                 _t.sleep(0.05)
+                                
+                            # Post-drain OS hardware buffer guard
+                            if not self.session_state.interrupt_event.is_set() and self.is_running:
+                                _t.sleep(0.15)
                         _barge_watcher.stop()
                         self.session_state.is_agent_speaking.clear()
 
