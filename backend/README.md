@@ -101,6 +101,7 @@ python -m model.voice_to_voice_model.model.download_vad
 ```
 
 ### Step 7: Hugging Face Model Downloads (Faster-Whisper & Kokoro)
+
 The first time you run the Stage 3 Voice Model or hardware diagnostics (`listener.py` and `speaker.py`), the system will automatically download two Hugging Face models to your local cache:
 1. **Faster-Whisper (`Systran/faster-whisper-small`)**: ~500 MB (Used for Speech-to-Text). [View on Hugging Face](https://huggingface.co/Systran/faster-whisper-small)
 2. **Kokoro-82M (`hexgrad/Kokoro-82M`)**: ~350 MB (Used for Neural Text-to-Speech). [View on Hugging Face](https://huggingface.co/hexgrad/Kokoro-82M)
@@ -108,15 +109,18 @@ The first time you run the Stage 3 Voice Model or hardware diagnostics (`listene
 *Note: You must have an active internet connection on the very first run to fetch these weights into your Windows directory at `%USERPROFILE%\.cache\huggingface\hub\`. Subsequent runs will load these 100% offline from the local cache.*
 
 **Manual Pre-Download (Optional):**
+
 If you want to manually download these models before running the application, you can use the `huggingface-cli`. 
 
 First, ensure the CLI is installed in your activated virtual environment (it is included in `requirements.txt`, but can be installed manually):
-```cmd
+
+```bash
 pip install -U "huggingface_hub[cli]"
 ```
 
 Then, run the following commands to pre-download the models:
-```cmd
+
+```bash
 huggingface-cli download Systran/faster-whisper-small
 huggingface-cli download hexgrad/Kokoro-82M
 ```
