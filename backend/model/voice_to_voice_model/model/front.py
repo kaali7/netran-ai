@@ -8,21 +8,18 @@ Description: Multi-screen Kivy Desktop GUI application featuring:
 """
 
 import difflib
-from datetime import datetime, timezone
 import json
 import os
-import re
 import threading
 import time
 import wave
+from datetime import datetime, timezone
 
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.label import Label
 from kivy.uix.screenmanager import FadeTransition, Screen, ScreenManager
 
 # Set compact, well-proportioned desktop window dimensions
@@ -34,13 +31,19 @@ try:
     from .benchmark import Benchmark
     from .brain import TextSanitizer, generate_eva_response
     from .brain import preload as preload_brain
-    from .listener import ContinuousMicWriter, listen_and_transcribe, BargeInWatcher
+    from .listener import BargeInWatcher, ContinuousMicWriter, listen_and_transcribe
     from .question_manager import QuestionManager
     from .schemas import load_stage2_bundle
     from .session_logger import SessionLogger
-    from .speaker import preload_models as preload_speaker
-    from .speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
     from .session_state import SessionState
+    from .speaker import (
+        PersistentSpeaker,
+        force_stop_all,
+        get_default_player,
+        init_speaker_compat,
+        speak_text,
+    )
+    from .speaker import preload_models as preload_speaker
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
@@ -50,29 +53,40 @@ except ImportError:
         )
         from model.voice_to_voice_model.model.brain import preload as preload_brain
         from model.voice_to_voice_model.model.listener import (
+            BargeInWatcher,
             ContinuousMicWriter,
             listen_and_transcribe,
-            BargeInWatcher,
         )
         from model.voice_to_voice_model.model.question_manager import QuestionManager
         from model.voice_to_voice_model.model.schemas import load_stage2_bundle
         from model.voice_to_voice_model.model.session_logger import SessionLogger
+        from model.voice_to_voice_model.model.session_state import SessionState
+        from model.voice_to_voice_model.model.speaker import (
+            PersistentSpeaker,
+            force_stop_all,
+            get_default_player,
+            init_speaker_compat,
+            speak_text,
+        )
         from model.voice_to_voice_model.model.speaker import (
             preload_models as preload_speaker,
         )
-        from model.voice_to_voice_model.model.speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
-        from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
-        from brain import TextSanitizer, generate_eva_response
+        from brain import generate_eva_response
         from brain import preload as preload_brain
-        from listener import ContinuousMicWriter, listen_and_transcribe, BargeInWatcher
+        from listener import BargeInWatcher, ContinuousMicWriter, listen_and_transcribe
         from question_manager import QuestionManager
         from schemas import load_stage2_bundle
         from session_logger import SessionLogger
-        from speaker import preload_models as preload_speaker
-        from speaker import speak_text, force_stop_all, init_speaker_compat, PersistentSpeaker, get_default_player
         from session_state import SessionState
+        from speaker import (
+            force_stop_all,
+            get_default_player,
+            init_speaker_compat,
+            speak_text,
+        )
+        from speaker import preload_models as preload_speaker
 
 
 # Multi-Screen KV layout definition with responsive proportions
@@ -905,8 +919,8 @@ class InterviewScreen(Screen):
         This is the ONLY correct way to support barge-in — the mic must be
         monitored concurrently with playback, not sequentially after it.
         """
-        import time as _t
         import threading as _th
+        import time as _t
         player = get_default_player()
         if not player or not self.is_running:
             return
@@ -1072,7 +1086,9 @@ class InterviewScreen(Screen):
                     _barge_watcher.start()
 
                     Benchmark.start("ttft")
-                    from model.voice_to_voice_model.model.prompts import get_system_prompt
+                    from model.voice_to_voice_model.model.prompts import (
+                        get_system_prompt,
+                    )
                     sys_prompt_dict = get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
                     base_sys_prompt = sys_prompt_dict["content"]
                     

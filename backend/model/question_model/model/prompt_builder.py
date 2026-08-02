@@ -5,7 +5,7 @@ Description: Class-based Stage2PromptBuilder extracting Stage 1 market context a
 """
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 try:
     from .prompts import SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE
@@ -22,7 +22,7 @@ class Stage2PromptBuilder:
     """Class-based prompt builder formatting baseline instructions and context for Stage 2."""
 
     @staticmethod
-    def extract_job_context(job_input: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_job_context(job_input: dict[str, Any]) -> dict[str, Any]:
         """
         Extracts job metadata from both Stage 1 nested output JSON and legacy flat JD JSON.
         Returns a standardized dictionary with company, role, target_seniority, and rubric_json string.

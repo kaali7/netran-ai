@@ -4,7 +4,8 @@ Module: schemas.py
 Description: Enriched Pydantic v2 schemas for Stage 2 Adaptive Contextual & Behavioral Intelligence Engine.
 """
 
-from typing import List, Literal
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -23,16 +24,16 @@ class SkillGap(BaseModel):
 
 
 class ResumeAnalysis(BaseModel):
-    matched_skills: List[SkillMatch] = Field(default_factory=list, description="List of matched candidate skills with evidence.")
-    missing_or_gap_skills: List[SkillGap] = Field(default_factory=list, description="Identified skill gaps and probing strategy.")
-    resume_red_flags: List[str] = Field(default_factory=list, description="Potential resume warning signals or unexplained gaps.")
-    key_projects_to_probe: List[str] = Field(default_factory=list, description="Top candidate resume projects to deep-dive on.")
+    matched_skills: list[SkillMatch] = Field(default_factory=list, description="List of matched candidate skills with evidence.")
+    missing_or_gap_skills: list[SkillGap] = Field(default_factory=list, description="Identified skill gaps and probing strategy.")
+    resume_red_flags: list[str] = Field(default_factory=list, description="Potential resume warning signals or unexplained gaps.")
+    key_projects_to_probe: list[str] = Field(default_factory=list, description="Top candidate resume projects to deep-dive on.")
 
 
 class AnswerRubric(BaseModel):
-    poor_answer_indicators: List[str] = Field(description="Indicators of a superficial, weak, or incorrect answer.")
-    good_answer_indicators: List[str] = Field(description="Indicators of a solid, production-grade candidate response.")
-    bar_raiser_indicators: List[str] = Field(description="Indicators of an exceptional, senior/staff level answer.")
+    poor_answer_indicators: list[str] = Field(description="Indicators of a superficial, weak, or incorrect answer.")
+    good_answer_indicators: list[str] = Field(description="Indicators of a solid, production-grade candidate response.")
+    bar_raiser_indicators: list[str] = Field(description="Indicators of an exceptional, senior/staff level answer.")
 
 
 class QuestionItem(BaseModel):
@@ -42,7 +43,7 @@ class QuestionItem(BaseModel):
     difficulty: Literal["Junior", "Mid", "Senior", "Lead", "Staff"] = Field(description="Difficulty level for this question.")
     question_text: str = Field(description="Phrased technical interview question.")
     resume_context: str = Field(default="General candidate profile", description="Referenced candidate resume project or skill context.")
-    expected_keywords: List[str] = Field(default_factory=list, description="Core architectural concepts expected in response.")
+    expected_keywords: list[str] = Field(default_factory=list, description="Core architectural concepts expected in response.")
     rubric: AnswerRubric = Field(description="Evaluation rubric containing poor, good, and bar-raiser indicators.")
     followup_if_strong: str = Field(description="Advanced follow-up question if candidate gives a bar-raiser response.")
     followup_if_weak: str = Field(description="Simplifying diagnostic follow-up question if candidate struggles.")
@@ -55,11 +56,11 @@ class InterviewerBehavior(BaseModel):
     candidate_name: str = Field(default="Candidate", description="Candidate name.")
     target_role: str = Field(default="Target Role", description="Target role title.")
     interviewer_system_prompt: str = Field(description="Token-calibrated system prompt for Stage 3 Ollama Qwen2.5.")
-    behavior_rules: List[str] = Field(default_factory=list, description="Low-latency voice interaction rules.")
+    behavior_rules: list[str] = Field(default_factory=list, description="Low-latency voice interaction rules.")
 
 
 class Stage2Output(BaseModel):
     session_id: str = Field(description="Unique session identifier.")
     resume_analysis: ResumeAnalysis = Field(description="Skill match & risk analysis matrix.")
-    interview_questions: List[QuestionItem] = Field(description="Ordered array of 15 branching technical questions.")
+    interview_questions: list[QuestionItem] = Field(description="Ordered array of 15 branching technical questions.")
     interviewer_behavior: InterviewerBehavior = Field(description="Voice persona settings and runtime system prompt.")

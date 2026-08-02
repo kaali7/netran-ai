@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 import json
 
+
 class RubricGenerator:
     """Class-based rubric synthesizer leveraging Gemini to generate InterviewRubric."""
 

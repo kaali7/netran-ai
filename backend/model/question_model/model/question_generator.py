@@ -12,6 +12,6 @@ from .pipeline import (
 
 __all__ = [
     "Stage2Pipeline",
-    "generate_stage2_output",
     "generate_fallback_stage2_output",
+    "generate_stage2_output",
 ]

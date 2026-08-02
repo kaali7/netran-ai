@@ -43,7 +43,10 @@ try:
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
-        from model.voice_to_voice_model.model.config import WHISPER_MODEL, auto_select_mic_device
+        from model.voice_to_voice_model.model.config import (
+            WHISPER_MODEL,
+            auto_select_mic_device,
+        )
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
@@ -226,7 +229,9 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                             from .speaker import force_stop_all
                         except ImportError:
                             try:
-                                from model.voice_to_voice_model.model.speaker import force_stop_all
+                                from model.voice_to_voice_model.model.speaker import (
+                                    force_stop_all,
+                                )
                             except ImportError:
                                 from speaker import force_stop_all
                         force_stop_all()

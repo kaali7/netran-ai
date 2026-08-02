@@ -9,15 +9,36 @@ import json
 import os
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any
 
 try:
-    from .schemas import EvaluationMetrics, EvaluatedTechnicalSummary, SessionManifest, SessionMetadata, Telemetry, TurnManifest
+    from .schemas import (
+        EvaluatedTechnicalSummary,
+        EvaluationMetrics,
+        SessionManifest,
+        SessionMetadata,
+        Telemetry,
+        TurnManifest,
+    )
 except ImportError:
     try:
-        from model.voice_to_voice_model.model.schemas import EvaluationMetrics, EvaluatedTechnicalSummary, SessionManifest, SessionMetadata, Telemetry, TurnManifest
+        from model.voice_to_voice_model.model.schemas import (
+            EvaluatedTechnicalSummary,
+            EvaluationMetrics,
+            SessionManifest,
+            SessionMetadata,
+            Telemetry,
+            TurnManifest,
+        )
     except ImportError:
-        from schemas import EvaluationMetrics, EvaluatedTechnicalSummary, SessionManifest, SessionMetadata, Telemetry, TurnManifest
+        from schemas import (
+            EvaluatedTechnicalSummary,
+            EvaluationMetrics,
+            SessionManifest,
+            SessionMetadata,
+            Telemetry,
+            TurnManifest,
+        )
 
 
 class SessionLogger:
@@ -40,7 +61,7 @@ class SessionLogger:
         self.target_company = target_company
         self.session_start_perf = time.perf_counter()
         self.session_start_iso = datetime.now(timezone.utc).isoformat()
-        self.turns: List[TurnManifest] = []
+        self.turns: list[TurnManifest] = []
         self.total_barge_ins = 0
         os.makedirs(self.session_dir, exist_ok=True)
 
@@ -56,18 +77,18 @@ class SessionLogger:
         candidate_transcript: str,
         audio_start_sec: float,
         audio_end_sec: float,
-        turn_intent: Optional[str] = None,
+        turn_intent: str | None = None,
         silence_duration_before_answer_sec: float = 0.0,
         stt_latency_ms: float = 0.0,
         ttft_ms: float = 0.0,
         tts_ttfa_ms: float = 0.0,
         barge_in_reaction_time_ms: float = 0.0,
-        question_id: Optional[Union[int, str]] = None,
+        question_id: int | str | None = None,
         evaluation_branch_taken: str = "next_topic",
-        eva_reasoning: Optional[str] = None,
+        eva_reasoning: str | None = None,
         eva_tone_used: str = "direct",
-        eva_reply: Optional[str] = None,
-        evaluation_metrics: Optional[Dict[str, Any]] = None,
+        eva_reply: str | None = None,
+        evaluation_metrics: dict[str, Any] | None = None,
         was_barge_in: bool = False
     ):
         """Appends turn information to internal turn list using TurnManifest validation."""

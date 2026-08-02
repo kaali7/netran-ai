@@ -8,24 +8,36 @@ Description: Master class-based Stage4Pipeline orchestrator executing audio slic
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Dict, Any, Optional
+from typing import Any
 
 try:
-    from .config import Stage4Config
-    from .schemas import CandidateReportPayload, AudioBranchOutput, TechnicalBranchOutput
     from .audio_slicer import slice_audio
+    from .config import Stage4Config
     from .gemini_evaluator import GeminiMultimodalEvaluator
+    from .schemas import (
+        AudioBranchOutput,
+        CandidateReportPayload,
+        TechnicalBranchOutput,
+    )
 except ImportError:
     try:
-        from model.reports_model.model.config import Stage4Config
-        from model.reports_model.model.schemas import CandidateReportPayload, AudioBranchOutput, TechnicalBranchOutput
         from model.reports_model.model.audio_slicer import slice_audio
+        from model.reports_model.model.config import Stage4Config
         from model.reports_model.model.gemini_evaluator import GeminiMultimodalEvaluator
+        from model.reports_model.model.schemas import (
+            AudioBranchOutput,
+            CandidateReportPayload,
+            TechnicalBranchOutput,
+        )
     except ImportError:
-        from config import Stage4Config
-        from schemas import CandidateReportPayload, AudioBranchOutput, TechnicalBranchOutput
         from audio_slicer import slice_audio
+        from config import Stage4Config
         from gemini_evaluator import GeminiMultimodalEvaluator
+        from schemas import (
+            AudioBranchOutput,
+            CandidateReportPayload,
+            TechnicalBranchOutput,
+        )
 
 
 def render_markdown_report(report: CandidateReportPayload) -> str:
@@ -123,7 +135,7 @@ def render_markdown_report(report: CandidateReportPayload) -> str:
 class Stage4Pipeline:
     """Master pipeline execution class for Stage 4 (Post-Session Multimodal Evaluation & Report Generation)."""
 
-    def __init__(self, config: Optional[Stage4Config] = None):
+    def __init__(self, config: Stage4Config | None = None):
         self.config = config or Stage4Config.from_env()
 
     @staticmethod
@@ -219,9 +231,9 @@ class Stage4Pipeline:
 
     def run(
         self,
-        session_dir: Union[str, Path],
-        model_name: Optional[str] = None,
-        output_dir: Optional[Union[str, Path]] = None
+        session_dir: str | Path,
+        model_name: str | None = None,
+        output_dir: str | Path | None = None
     ) -> CandidateReportPayload:
         """
         Main execution method for Stage 4 Report Generation.
@@ -273,8 +285,8 @@ class Stage4Pipeline:
 
 # Backward compatibility wrapper
 def build_report(
-    session_dir: Union[str, Path],
+    session_dir: str | Path,
     model_name: str = "gemini-3.6-flash",
-    output_dir: Union[str, Path] = None
+    output_dir: str | Path = None
 ) -> CandidateReportPayload:
     return Stage4Pipeline().run(session_dir, model_name=model_name, output_dir=output_dir)

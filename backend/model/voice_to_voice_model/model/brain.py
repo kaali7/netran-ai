@@ -16,7 +16,6 @@ import logging
 import os
 import re
 import time
-from typing import Dict, Generator, List, Optional, Union, Tuple
 
 # Suppress HTTPX and HTTPCORE debug logs from flooding terminal output
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -25,12 +24,12 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 import ollama
 
 try:
-    from .config import OLLAMA_MODEL
     from .benchmark import Benchmark
+    from .config import OLLAMA_MODEL
 except ImportError:
     try:
-        from model.voice_to_voice_model.model.config import OLLAMA_MODEL
         from model.voice_to_voice_model.model.benchmark import Benchmark
+        from model.voice_to_voice_model.model.config import OLLAMA_MODEL
     except ImportError:
         OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
         from benchmark import Benchmark
@@ -41,12 +40,12 @@ except ImportError:
     try:
         from model.voice_to_voice_model.model.prompts import SYSTEM_PROMPT
     except ImportError:
-        from prompts import SYSTEM_PROMPT
+        pass
 
 
 MODEL_NAME = OLLAMA_MODEL
 
-TONE_SPEED_MAP: Dict[str, float] = {
+TONE_SPEED_MAP: dict[str, float] = {
     "empathetic": 0.92,
     "encouraging": 0.92,
     "curious": 1.05,
@@ -58,7 +57,7 @@ TONE_SPEED_MAP: Dict[str, float] = {
 }
 
 
-def get_speed_for_tone(tone: Optional[str], default_speed: float = 1.00) -> float:
+def get_speed_for_tone(tone: str | None, default_speed: float = 1.00) -> float:
     """
     Maps LLM tone attribute to Kokoro TTS synthesis speed factor with boundary clamping [0.88x, 1.08x].
     """
@@ -174,7 +173,7 @@ class TextSanitizer:
         return clean_text.strip()
 
 
-def parse_think_speak(raw: str) -> Tuple[str, str, str]:
+def parse_think_speak(raw: str) -> tuple[str, str, str]:
     """
     Splits LLM raw output into (think_text, speak_text, tone).
     Uses fuzzy matching and positional inference to handle heavily malformed LLM outputs.
@@ -238,12 +237,12 @@ def parse_think_speak(raw: str) -> Tuple[str, str, str]:
 
 
 def stream_llm_response(
-    conversation_history: List[Dict[str, str]],
-    custom_system_prompt: Optional[Union[str, Dict[str, str]]] = None,
+    conversation_history: list[dict[str, str]],
+    custom_system_prompt: str | dict[str, str] | None = None,
     max_retries: int = 3,
     speaker_player=None,
     session_state=None
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     Returns (think_text, speak_text).
     Streams speak tokens directly to speaker_player as they arrive.
@@ -359,8 +358,8 @@ def stream_llm_response(
                 elif not in_speak_block and speak_text.strip() and speak_text != "Got it, let's continue.":
                     speaker_player.speak_clause(speak_text, session_state, tone=detected_tone)
             
-            print(f"[Brain] Extracted THINK: {repr(think_text[:100])}...")
-            print(f"[Brain] Extracted SPEAK (tone={detected_tone}): {repr(speak_text[:100])}...\n", flush=True)
+            print(f"[Brain] Extracted THINK: {think_text[:100]!r}...")
+            print(f"[Brain] Extracted SPEAK (tone={detected_tone}): {speak_text[:100]!r}...\n", flush=True)
             return think_text, speak_text
 
         except Exception as e:
@@ -377,7 +376,7 @@ def stream_llm_response(
 generate_eva_response = stream_llm_response
 
 
-def preload(custom_system_prompt: Optional[str] = None):
+def preload(custom_system_prompt: str | None = None):
     """Preloads the Ollama LLM engine into memory to ensure instant first response."""
     print("Pre-heating Ollama LLM engine...", flush=True)
     try:

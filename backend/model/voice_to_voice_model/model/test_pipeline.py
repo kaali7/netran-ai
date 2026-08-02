@@ -23,21 +23,31 @@ for d in [str(current_dir), str(parent_dir), str(root_dir)]:
 
 try:
     from .question_manager import QuestionManager
-    from .schemas import InterviewQuestionInput, InterviewerBehaviorInput, Stage2SessionBundle, load_stage2_bundle
+    from .schemas import (
+        InterviewerBehaviorInput,
+        InterviewQuestionInput,
+        Stage2SessionBundle,
+        load_stage2_bundle,
+    )
     from .session_logger import SessionLogger
 except ImportError:
     try:
         from model.voice_to_voice_model.model.question_manager import QuestionManager
         from model.voice_to_voice_model.model.schemas import (
-            InterviewQuestionInput,
             InterviewerBehaviorInput,
+            InterviewQuestionInput,
             Stage2SessionBundle,
             load_stage2_bundle,
         )
         from model.voice_to_voice_model.model.session_logger import SessionLogger
     except ImportError:
         from question_manager import QuestionManager
-        from schemas import InterviewQuestionInput, InterviewerBehaviorInput, Stage2SessionBundle, load_stage2_bundle
+        from schemas import (
+            InterviewerBehaviorInput,
+            InterviewQuestionInput,
+            Stage2SessionBundle,
+            load_stage2_bundle,
+        )
         from session_logger import SessionLogger
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

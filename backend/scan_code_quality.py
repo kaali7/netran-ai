@@ -4,8 +4,8 @@ Module: scan_code_quality.py
 Description: Automated CLI quality scanner running Ruff, Pylint, Mypy, Bandit, and Radon.
 """
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 # Ensure UTF-8 output encoding on Windows stdout
@@ -17,9 +17,9 @@ PYTHON_EXE = sys.executable
 
 
 def run_check(name: str, cmd: list[str]) -> bool:
-    print(f"\n==========================================")
+    print("\n==========================================")
     print(f"Running Code Quality Audit: {name}")
-    print(f"==========================================")
+    print("==========================================")
     try:
         res = subprocess.run(cmd, cwd=str(BACKEND_DIR), text=True, capture_output=True, encoding="utf-8", errors="replace")
         if res.stdout:

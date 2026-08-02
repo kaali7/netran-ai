@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 import json
 
+
 class JDParser:
     """Class-based JD parser leveraging Gemini to extract structured role metadata."""
 

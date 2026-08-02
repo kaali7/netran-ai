@@ -19,7 +19,6 @@ import queue
 import re
 import threading
 import warnings
-from typing import Optional
 
 # Suppress PyTorch RNN and weight_norm deprecation noise
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.modules.rnn")
@@ -37,7 +36,10 @@ try:
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
-        from model.voice_to_voice_model.model.brain import TextSanitizer, get_speed_for_tone
+        from model.voice_to_voice_model.model.brain import (
+            TextSanitizer,
+            get_speed_for_tone,
+        )
         from model.voice_to_voice_model.model.config import KOKORO_MODEL
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
@@ -154,7 +156,7 @@ class PersistentSpeaker:
         if drained:
             print(f"[PersistentSpeaker] Drained {drained} queued audio chunks.", flush=True)
 
-    def stop_immediately(self, state: Optional[SessionState] = None):
+    def stop_immediately(self, state: SessionState | None = None):
         """
         Full-duplex barge-in hardware flush.
 
@@ -180,7 +182,7 @@ class PersistentSpeaker:
         elif _default_state:
             _default_state.is_agent_speaking.clear()
 
-    def speak_clause(self, clause: str, state: SessionState, voice_preset: str = "af_bella", tone: Optional[str] = None):
+    def speak_clause(self, clause: str, state: SessionState, voice_preset: str = "af_bella", tone: str | None = None):
         """
         Synthesize a single clause and enqueue audio chunks for playback.
 
@@ -261,8 +263,8 @@ class PersistentSpeaker:
 
 
 # ---- Backward-compatible wrapper for existing front.py code ----
-_default_player: Optional[PersistentSpeaker] = None
-_default_state: Optional[SessionState] = None
+_default_player: PersistentSpeaker | None = None
+_default_state: SessionState | None = None
 
 
 def init_speaker_compat(state: SessionState):

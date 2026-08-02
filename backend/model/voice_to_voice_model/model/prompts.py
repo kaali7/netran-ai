@@ -5,7 +5,6 @@ Description: Centralized system prompts, formatting rules, dynamic prompt builde
              and Whisper initial prompts for Stage 3 voice execution.
 """
 
-from typing import Dict, Optional
 
 # =====================================================================
 # 1. DEFAULT FALLBACK SYSTEM PROMPT
@@ -30,7 +29,7 @@ DEFAULT_EVA_SYSTEM_PROMPT = (
 )
 
 # Default system payload fallback
-SYSTEM_PROMPT: Dict[str, str] = {
+SYSTEM_PROMPT: dict[str, str] = {
     "role": "system",
     "content": DEFAULT_EVA_SYSTEM_PROMPT
 }
@@ -52,7 +51,7 @@ WHISPER_INITIAL_PROMPT = (
 # 3. DYNAMIC PROMPT BUILDERS
 # =====================================================================
 
-def get_system_prompt(custom_prompt_text: Optional[str] = None) -> Dict[str, str]:
+def get_system_prompt(custom_prompt_text: str | None = None) -> dict[str, str]:
     """
     Constructs the Ollama system prompt payload. Ingests Stage 2 system_prompt.txt 
     if provided and appends mandatory low-latency voice guardrails.

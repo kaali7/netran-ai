@@ -7,7 +7,6 @@ Description: State machine and dynamic branching engine tracking question progre
 """
 
 import re
-from typing import List, Optional, Tuple
 
 try:
     from .schemas import InterviewQuestionInput
@@ -23,7 +22,7 @@ class QuestionManager:
     Manages the question sequence state, computes transcript keyword coverage,
     and determines adaptive branching paths for Stage 3 voice interviews.
     """
-    def __init__(self, questions: List[InterviewQuestionInput]):
+    def __init__(self, questions: list[InterviewQuestionInput]):
         self.questions = questions
         self.current_index = 0
         # State phases: 'ICEBREAKER' -> 'TECHNICAL' -> 'LAST_QUESTION' -> 'COMPLETED'
@@ -31,13 +30,13 @@ class QuestionManager:
         self.icebreaker_turn_count = 0
         self.retries_on_current_q = 0
 
-    def get_current_question(self) -> Optional[InterviewQuestionInput]:
+    def get_current_question(self) -> InterviewQuestionInput | None:
         """Returns the current active question object or None if sequence is complete."""
         if 0 <= self.current_index < len(self.questions):
             return self.questions[self.current_index]
         return None
 
-    def get_next_question(self) -> Optional[InterviewQuestionInput]:
+    def get_next_question(self) -> InterviewQuestionInput | None:
         """Returns the next question object in sequence or None if at the end."""
         if self.current_index + 1 < len(self.questions):
             return self.questions[self.current_index + 1]
@@ -128,7 +127,7 @@ class QuestionManager:
 
         return "TECHNICAL_ANSWER"
 
-    def calculate_keyword_density(self, transcript: str, keywords: List[str]) -> float:
+    def calculate_keyword_density(self, transcript: str, keywords: list[str]) -> float:
         """Calculates match density of expected keywords in candidate transcript."""
         if not keywords:
             return 0.0
@@ -185,7 +184,7 @@ class QuestionManager:
             status = self.advance_question()
             return "interview_completed" if status == "completed" else "next_topic"
 
-    def format_prompt_context(self, branch_taken: str, candidate_transcript: str) -> Tuple[str, str]:
+    def format_prompt_context(self, branch_taken: str, candidate_transcript: str) -> tuple[str, str]:
         """
         Constructs natural LLM instructions for Qwen 2.5 3B and returns:
         (llm_prompt_string, logged_target_question_text)

@@ -4,12 +4,6 @@ Module: schemas.py
 Description: Pydantic v2 schemas (`ParsedJD`, `InterviewTopic`, `InterviewRubric`) enforcing JSON outputs.
 """
 
-from typing import Literal
-
-from pydantic import BaseModel, Field
-
-
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -61,9 +55,9 @@ class InterviewTopic(BaseModel):
 
 class InterviewRubric(BaseModel):
     roleOverview: str = Field(description="Summary of the role expectations and target candidate profile")
-    marketIntelligence: Optional[MarketIntelligence] = Field(default=None, description="Market demand, hiring landscape, and salary bands")
-    hrRecruiterLens: Optional[HRRecruiterLens] = Field(default=None, description="HR screening criteria, green flags, and red flags")
-    skillRequirements: Optional[SkillRequirements] = Field(default=None, description="Hard skills breakdown and soft skills evaluation matrix")
+    marketIntelligence: MarketIntelligence | None = Field(default=None, description="Market demand, hiring landscape, and salary bands")
+    hrRecruiterLens: HRRecruiterLens | None = Field(default=None, description="HR screening criteria, green flags, and red flags")
+    skillRequirements: SkillRequirements | None = Field(default=None, description="Hard skills breakdown and soft skills evaluation matrix")
     keyTechnicalPillars: list[str] = Field(description="3-5 critical technical pillars required for this role")
     expectedInterviewTopics: list[InterviewTopic] = Field(description="Structured list of interview topics and questions")
 
@@ -77,5 +71,5 @@ class Stage1Output(BaseModel):
     parsed_jd: ParsedJD = Field(description="Extracted JD metadata and search queries")
     search_context: list[dict[str, str]] = Field(default_factory=list, description="Retrieved web search snippets and sources")
     cached: bool = Field(default=False, description="True if loaded from SQLite cache")
-    execution_time_seconds: Optional[float] = Field(default=None, description="Pipeline execution time in seconds")
+    execution_time_seconds: float | None = Field(default=None, description="Pipeline execution time in seconds")
 

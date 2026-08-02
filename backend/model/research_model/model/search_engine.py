@@ -1,6 +1,5 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     from .config import Stage1Config

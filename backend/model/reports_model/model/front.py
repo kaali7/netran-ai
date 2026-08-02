@@ -31,10 +31,13 @@ Window.clearcolor = (0.07, 0.09, 0.15, 1)  # #121726 Deep Slate Dark
 Window.size = (1180, 820)
 
 try:
-    from model.reports_model.model.pipeline import Stage4Pipeline, render_markdown_report
+    from model.reports_model.model.pipeline import (
+        Stage4Pipeline,
+        render_markdown_report,
+    )
     from model.reports_model.model.schemas import CandidateReportPayload
 except ImportError:
-    from pipeline import Stage4Pipeline, render_markdown_report
+    from pipeline import Stage4Pipeline
     from schemas import CandidateReportPayload
 
 

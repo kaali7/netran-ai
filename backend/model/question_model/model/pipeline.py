@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict
+from typing import Any
 
 from google import genai
 from google.genai import types
@@ -79,7 +79,7 @@ class Stage2Pipeline:
     def run(
         self,
         session_id: str,
-        jd_input: str | Dict[str, Any],
+        jd_input: str | dict[str, Any],
         resume_path: str,
         target_seniority: str = "Senior",
         output_dir: str | None = None
@@ -89,7 +89,7 @@ class Stage2Pipeline:
         15 tiered branching questions with rubrics, and the interviewer behavior prompt.
         """
         # 1. Standardize job context from input (raw text, dict, or Stage 1 JSON)
-        job_dict: Dict[str, Any] = {}
+        job_dict: dict[str, Any] = {}
         if isinstance(jd_input, str):
             try:
                 parsed = json.loads(jd_input)
@@ -367,7 +367,7 @@ class Stage2Pipeline:
 # Backward compatibility alias
 def generate_stage2_output(
     session_id: str,
-    jd_text: str | Dict[str, Any],
+    jd_text: str | dict[str, Any],
     resume_path: str,
     target_seniority: str = "Senior",
     output_dir: str = None

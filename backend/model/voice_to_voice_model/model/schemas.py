@@ -8,15 +8,16 @@ Description: Pydantic v2 data contracts enforcing strict input validation for St
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
 class AnswerRubric(BaseModel):
     """Evaluation rubric indicators for a technical question."""
-    poor_answer_indicators: List[str] = Field(default_factory=list)
-    good_answer_indicators: List[str] = Field(default_factory=list)
-    bar_raiser_indicators: List[str] = Field(default_factory=list)
+    poor_answer_indicators: list[str] = Field(default_factory=list)
+    good_answer_indicators: list[str] = Field(default_factory=list)
+    bar_raiser_indicators: list[str] = Field(default_factory=list)
 
 
 class InterviewQuestionInput(BaseModel):
@@ -26,30 +27,30 @@ class InterviewQuestionInput(BaseModel):
     topic: str = "General Technical"
     difficulty: str = "Mid"
     question_text: str
-    resume_context: Optional[str] = None
-    expected_keywords: List[str] = Field(default_factory=list)
-    rubric: Optional[Union[AnswerRubric, Dict[str, Any]]] = None
-    followup_if_strong: Optional[str] = None
-    followup_if_weak: Optional[str] = None
+    resume_context: str | None = None
+    expected_keywords: list[str] = Field(default_factory=list)
+    rubric: AnswerRubric | dict[str, Any] | None = None
+    followup_if_strong: str | None = None
+    followup_if_weak: str | None = None
 
 
 class InterviewerBehaviorInput(BaseModel):
     """Schema for interviewer behavior guidelines ingested from Stage 2."""
     session_id: str = "default_session"
     persona: str = "Eva"
-    target_company: Optional[str] = None
-    candidate_name: Optional[str] = None
-    target_role: Optional[str] = None
+    target_company: str | None = None
+    candidate_name: str | None = None
+    target_role: str | None = None
     interviewer_system_prompt: str
-    behavior_rules: List[str] = Field(default_factory=list)
+    behavior_rules: list[str] = Field(default_factory=list)
 
 
 class Stage2SessionBundle(BaseModel):
     """Container loading all Stage 2 input artifacts for Stage 3 execution."""
     behavior: InterviewerBehaviorInput
-    questions: List[InterviewQuestionInput]
+    questions: list[InterviewQuestionInput]
     system_prompt: str
-    resume_analysis: Optional[Dict[str, Any]] = None
+    resume_analysis: dict[str, Any] | None = None
 
 
 class Telemetry(BaseModel):
@@ -64,7 +65,7 @@ class EvaluationMetrics(BaseModel):
     """Keyword density and evaluation branch metrics."""
     keyword_density_score: float = 0.0
     branch_taken: str = "next_topic"
-    matched_keywords: List[str] = Field(default_factory=list)
+    matched_keywords: list[str] = Field(default_factory=list)
 
 
 class TurnManifest(BaseModel):
@@ -79,19 +80,19 @@ class TurnManifest(BaseModel):
         "AUDIO_CHECK_OR_PAUSE",
         "BARGE_IN_INTERRUPTION"
     ] = "TECHNICAL_ANSWER"
-    question_id: Optional[Union[int, str]] = None
-    topic: Optional[str] = "General Technical"
-    question_text: Optional[str] = ""
+    question_id: int | str | None = None
+    topic: str | None = "General Technical"
+    question_text: str | None = ""
     candidate_transcript: str = ""
-    candidate_raw_transcript: Optional[str] = None
-    eva_internal_reasoning: Optional[str] = None
-    eva_tone_used: Optional[str] = "direct"
-    eva_spoken_reply: Optional[str] = None
+    candidate_raw_transcript: str | None = None
+    eva_internal_reasoning: str | None = None
+    eva_tone_used: str | None = "direct"
+    eva_spoken_reply: str | None = None
     audio_start_sec: float = 0.0
     audio_end_sec: float = 0.0
     silence_duration_before_answer_sec: float = 0.0
     evaluation_branch_taken: str = "next_topic"
-    evaluation_metrics: Optional[EvaluationMetrics] = None
+    evaluation_metrics: EvaluationMetrics | None = None
     telemetry: Telemetry = Field(default_factory=Telemetry)
 
     # Backward compatibility properties
@@ -104,22 +105,22 @@ class TurnManifest(BaseModel):
         return self.telemetry.llm_ttft_ms
 
     @property
-    def eva_reasoning(self) -> Optional[str]:
+    def eva_reasoning(self) -> str | None:
         return self.eva_internal_reasoning
 
     @property
-    def eva_reply(self) -> Optional[str]:
+    def eva_reply(self) -> str | None:
         return self.eva_spoken_reply
 
 
 class SessionMetadata(BaseModel):
     """Session metadata details."""
     session_id: str
-    candidate_name: Optional[str] = "Candidate"
-    target_role: Optional[str] = "Technical Role"
-    target_company: Optional[str] = "Netran AI"
+    candidate_name: str | None = "Candidate"
+    target_role: str | None = "Technical Role"
+    target_company: str | None = "Netran AI"
     start_time_iso: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    end_time_iso: Optional[str] = None
+    end_time_iso: str | None = None
     total_turns: int = 0
     total_barge_ins: int = 0
 
@@ -137,7 +138,7 @@ class EvaluatedTechnicalSummary(BaseModel):
 class SessionManifest(BaseModel):
     """Root container storing session metadata, chronological transcript turns, and evaluated technical summary."""
     session_metadata: SessionMetadata
-    turns: List[TurnManifest] = Field(default_factory=list)
+    turns: list[TurnManifest] = Field(default_factory=list)
     evaluated_technical_summary: EvaluatedTechnicalSummary = Field(default_factory=EvaluatedTechnicalSummary)
 
     # Backward compatibility properties & dict exports
@@ -154,10 +155,10 @@ class SessionManifest(BaseModel):
         return self.session_metadata.total_turns
 
     @property
-    def full_chronological_transcript(self) -> List[TurnManifest]:
+    def full_chronological_transcript(self) -> list[TurnManifest]:
         return self.turns
 
-    def model_dump(self, **kwargs) -> Dict[str, Any]:
+    def model_dump(self, **kwargs) -> dict[str, Any]:
         d = super().model_dump(**kwargs)
         d["session_id"] = self.session_metadata.session_id
         d["session_start_iso"] = self.session_metadata.start_time_iso
@@ -165,7 +166,7 @@ class SessionManifest(BaseModel):
         return d
 
 
-def load_stage2_bundle(dir_path: Union[str, Path]) -> Stage2SessionBundle:
+def load_stage2_bundle(dir_path: str | Path) -> Stage2SessionBundle:
     """
     Loads and validates Stage 2 output artifacts from a specified directory.
 

@@ -12,6 +12,6 @@ from .pipeline import (
 
 __all__ = [
     "Stage4Pipeline",
-    "render_markdown_report",
     "build_report",
+    "render_markdown_report",
 ]
