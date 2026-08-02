@@ -115,10 +115,10 @@ run.bat
 
 **Key Menu Options**:
 - **Option 1**: Launch Unified 5-Screen Netran AI Interview Workflow (Complete App).
-- **Options 2–6**: Run standalone stage tests (Stage 1 Research Kivy UI, Stage 2 Question CLI, Stage 3 Voice Kivy UI, Stage 4 Report UI/CLI).
-- **Options 7–9**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain).
-- **Options 10–12**: Install requirements, download VAD, run Code Audit Scanner.
-- **Options 13–17**: Maintenance tools to clean stage outputs, session folders, cache DB, and trash.
+- **Options 2–5**: Run standalone stage models (Stage 1 Research, Stage 2 Question, Stage 3 Voice, Stage 4 Report).
+- **Options 6–8**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain).
+- **Options 9–10**: Setup Tools (Install dependencies, Download VAD).
+- **Options 11–16**: Maintenance tools to clean stage outputs, session folders, cache DB, trash, and run Code Audit Scanner.
 
 ---
 
@@ -172,11 +172,12 @@ During development and testing, temporary test output files and session logs are
 - **SQLite Cache (`model/research_model/model/cache.db`)**: Stores cached JD rubrics.
 
 ### Clean Data Commands via `run.bat`:
-- Select **Option 13**: Deletes stage `test_output/` folders.
-- Select **Option 14**: Deletes active session folders in `model/sessions/`.
-- Select **Option 15**: Deletes SQLite `cache.db`.
-- Select **Option 16**: Deletes Python `__pycache__`, `.pyc` files, and `.log` files.
-- Select **Option 17**: Performs a **Full Deep Clean** returning the repository to pristine condition.
+- Select **Option 11**: Deletes stage `test_output/` and `test_process/` folders.
+- Select **Option 12**: Deletes active session folders in `model/sessions/`.
+- Select **Option 13**: Deletes SQLite `cache.db`.
+- Select **Option 14**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
+- Select **Option 15**: Performs a **Full Deep Clean** returning the repository to pristine condition.
+- Select **Option 16**: Run Code Quality Audit (Ruff, Bandit, Radon).
 
 ---
 
