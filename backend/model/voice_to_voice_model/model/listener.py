@@ -37,18 +37,18 @@ from faster_whisper import WhisperModel
 
 try:
     from .benchmark import Benchmark
-    from .config import WHISPER_MODEL
+    from .config import WHISPER_MODEL, auto_select_mic_device
     from .prompts import WHISPER_INITIAL_PROMPT
     from .session_state import SessionState
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
-        from model.voice_to_voice_model.model.config import WHISPER_MODEL
+        from model.voice_to_voice_model.model.config import WHISPER_MODEL, auto_select_mic_device
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
     except ImportError:
         from benchmark import Benchmark
-        from config import WHISPER_MODEL
+        from config import WHISPER_MODEL, auto_select_mic_device
         from prompts import WHISPER_INITIAL_PROMPT
         from session_state import SessionState
 
@@ -66,6 +66,10 @@ print(f"Loading Faster-Whisper model ({WHISPER_MODEL})...", flush=True)
 whisper_model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=4)
 print("Models loaded successfully!", flush=True)
 
+# Auto-select the best available physical microphone at startup.
+# Stored globally so both listen_and_transcribe() and BargeInWatcher use the same device.
+MIC_DEVICE = auto_select_mic_device()
+
 # Known Whisper hallucinations on silence or background static
 WHISPER_HALLUCINATION_PATTERNS = {
     "thank you.", "thanks for watching.", "subscribe to my channel.",
@@ -80,6 +84,11 @@ def is_valid_transcript(text: str) -> bool:
     clean = text.strip().lower()
     if not clean or clean in WHISPER_HALLUCINATION_PATTERNS:
         return False
+    
+    # Filter out pure underscore/punctuation hallucinations caused by heavy static
+    if all(char in "_ .-" for char in clean):
+        return False
+        
     words = clean.split()
     if len(words) < 2 and clean not in {"yes", "no", "sure", "ok", "correct", "yeah", "nope", "fastapi", "python"}:
         return False
@@ -98,11 +107,18 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     CHUNK = 512      # Silero VAD v4 requires EXACTLY 512 samples at 16kHz
     assert CHUNK == 512, f"[VAD Guard] Silero VAD requires exactly 512 samples at 16kHz, got {CHUNK}"
 
+    device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
+    native_rate = int(device_info.get("default_samplerate", 16000))
+    if native_rate <= 0:
+        native_rate = 16000
+    CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+
     stream = sd.InputStream(
-        samplerate=RATE,
+        samplerate=native_rate,
         channels=CHANNELS,
         dtype='float32',
-        blocksize=CHUNK
+        blocksize=CHUNK_NATIVE,
+        device=MIC_DEVICE,
     )
     stream.start()
 
@@ -116,6 +132,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     has_spoken = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
+    _diag_frame_counter = 0   # Periodic VAD diagnostic counter
     
     # Defaults if state isn't provided (for standalone tests) — 800ms default pause tolerance (25 frames * 32ms)
     max_silence_frames = 25 if state is None else max(8, state.pause_tolerance_ms // 32)
@@ -144,36 +161,39 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
 
             # 1. Read raw PCM data from the microphone
             try:
-                raw_data, overflowed = stream.read(CHUNK)
+                raw_data, overflowed = stream.read(CHUNK_NATIVE)
                 original_frame = raw_data.flatten()
             except Exception:
                 continue
 
-            # 2. Apply DC offset + auto-gain + Noise Gate to the raw frame
-            proc_frame = original_frame.copy()
-            if len(proc_frame) < CHUNK:
-                proc_frame = np.pad(proc_frame, (0, CHUNK - len(proc_frame)), 'constant')
+            if native_rate != RATE:
+                duration = len(original_frame) / native_rate
+                x_old = np.linspace(0, duration, len(original_frame))
+                x_new = np.linspace(0, duration, int(len(original_frame) * RATE / native_rate))
+                original_frame = np.interp(x_new, x_old, original_frame).astype(np.float32)
 
-            proc_frame = proc_frame - np.mean(proc_frame)  # DC offset removal
-            frame_peak = float(np.max(np.abs(proc_frame)))
+            # 2. Process the raw frame for VAD (DC offset removal only)
+            vad_frame = original_frame.copy()
+            if len(vad_frame) < CHUNK:
+                vad_frame = np.pad(vad_frame, (0, CHUNK - len(vad_frame)), mode='edge')
 
-            # Noise gate: 0.0005 threshold (was 0.002) allows quiet/distant voices through.
-            # Auto-gain cap: 40x (was 20x) — essential for laptop/built-in mics at distance.
+            vad_frame = vad_frame - np.mean(vad_frame)  # DC offset removal
+            frame_peak = float(np.max(np.abs(vad_frame)))
+
+            # Noise gate: 0.0005 threshold to zero-out pure static
             if frame_peak < 0.0005:
-                proc_frame = np.zeros_like(proc_frame)
-            else:
-                frame_gain = min(0.9 / frame_peak, 40.0)   # target 90% peak, cap at 40x
-                proc_frame = proc_frame * frame_gain
+                vad_frame = np.zeros_like(vad_frame)
+
+            # Apply a constant volume boost for the output recording (Whisper + WAV)
+            # DO NOT apply dynamic per-chunk auto-gain before Silero VAD, as it destroys RNN temporal continuity!
+            proc_frame = vad_frame * 3.0
+            proc_frame = np.clip(proc_frame, -1.0, 1.0)
 
             if mic_writer:
-                # Write the gain-boosted frame so recording.wav sounds clear
                 mic_writer.write_frame(proc_frame)
 
-            # Use the processed (DC + gain) frame for both VAD and accumulation
-            audio_frame = proc_frame.copy()
-
-            # Prepare VAD inputs: input shape must be [1, 512]
-            audio_input = np.expand_dims(audio_frame, axis=0)
+            # Prepare VAD inputs: input shape must be [1, 512]. Feed clean, un-gained audio to VAD.
+            audio_input = np.expand_dims(vad_frame, axis=0)
 
             # 3. Run Silero VAD v3 — 3 inputs: input, state, sr
             ort_inputs = {
@@ -219,12 +239,28 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     continue
 
             # 4. Speech Start/End Decision Logic
-            rms = np.sqrt(np.mean(audio_frame ** 2))
-            
+            rms = np.sqrt(np.mean(proc_frame ** 2))
+            _diag_frame_counter += 1
+
+            # Periodic VAD diagnostic: print live VAD prob + RMS every ~2s (60 frames * 32ms)
+            # This helps calibrate thresholds when speech is not being detected.
+            if _diag_frame_counter % 60 == 0 and not has_spoken:
+                print(
+                    f"[VAD Diag] prob={speech_prob:.3f}  rms={rms:.4f}  "
+                    f"(need: prob>=0.20+rms>=0.008 OR prob>=0.35 OR rms>=0.015 to trigger)",
+                    flush=True
+                )
+
             if not has_spoken:
-                # Require valid VAD probability (>= 0.35) AND sufficient RMS energy (>= 0.015), or strong VAD (>= 0.50).
-                # Eliminates false speech triggers on static background noise when VAD prob is 0.00.
-                if (speech_prob >= 0.35 and rms >= 0.015) or speech_prob >= 0.50:
+                # Lowered thresholds for laptop/built-in mic compatibility:
+                # Combined gate: VAD prob >= 0.20 AND RMS >= 0.008  (was 0.35 + 0.015)
+                # Strong gate:   VAD prob >= 0.35                   (was 0.50)
+                # Rationale: the BargeInWatcher threshold is already at 0.50 for barge-in;
+                # for initial speech start we use softer criteria since there's no
+                # concurrent agent audio to filter out. The RMS floor of 0.008 is still
+                # sufficient to reject pure background static near the 0.0005 noise gate.
+                # FALLBACK: If VAD fails due to corrupted audio but RMS is consistently high (>= 0.015).
+                if (speech_prob >= 0.20 and rms >= 0.008) or speech_prob >= 0.35 or rms >= 0.015:
                     speech_start_candidate_frames += 1
                     if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms debounce
                         print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
@@ -236,21 +272,24 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     speech_start_candidate_frames = 0
             else:
                 # Forgiving speech continuation threshold
-                if speech_prob > 0.20 or rms > 0.010:
+                if speech_prob > 0.15 or rms > 0.008:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
 
             if ui_callback:
-                display_rms = np.sqrt(np.mean(audio_frame ** 2))
+                display_rms = np.sqrt(np.mean(proc_frame ** 2))
                 ui_callback({
                     "type": "audio_level",
                     "rms": float(display_rms),
                     "vad_prob": float(speech_prob),
-                    "state": "Hearing you..." if has_spoken else "Waiting for speech..."
+                    "state": (
+                        "Hearing you..." if has_spoken
+                        else f"Waiting for speech...  VAD: {speech_prob:.2f}  RMS: {rms:.4f}"
+                    )
                 })
 
-            # Accumulate gain-boosted audio while speech is active
+            # Accumulate gain-boosted audio while speech is active for Whisper
             if has_spoken:
                 audio_buffer.append(proc_frame.copy())
                 total_frames_counter += 1
@@ -626,13 +665,20 @@ class BargeInWatcher:
         vad_state_local = np.zeros((2, 1, 128), dtype=np.float32)
         sr_scalar_local = np.array(RATE, dtype=np.int64)
 
+        device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
+        native_rate = int(device_info.get("default_samplerate", 16000))
+        if native_rate <= 0:
+            native_rate = 16000
+        CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+
         # Open an independent sounddevice input stream for concurrent mic monitoring
         try:
             stream = sd.InputStream(
-                samplerate=RATE,
+                samplerate=native_rate,
                 channels=1,
                 dtype="float32",
-                blocksize=CHUNK
+                blocksize=CHUNK_NATIVE,
+                device=MIC_DEVICE,
             )
             stream.start()
         except Exception as exc:
@@ -643,25 +689,30 @@ class BargeInWatcher:
             while not self._stop_event.is_set() and not self.state.should_stop.is_set():
                 # Read one 32ms frame from the microphone
                 try:
-                    raw_data, _ = stream.read(CHUNK)
+                    raw_data, _ = stream.read(CHUNK_NATIVE)
                 except Exception:
                     break
 
                 frame = raw_data.flatten()
-                if len(frame) < CHUNK:
-                    frame = np.pad(frame, (0, CHUNK - len(frame)), "constant")
 
-                # DC offset removal + noise gate + auto-gain (matches listen_and_transcribe sensitivity)
+                if native_rate != RATE:
+                    duration = len(frame) / native_rate
+                    x_old = np.linspace(0, duration, len(frame))
+                    x_new = np.linspace(0, duration, int(len(frame) * RATE / native_rate))
+                    frame = np.interp(x_new, x_old, frame).astype(np.float32)
+
+                if len(frame) < CHUNK:
+                    frame = np.pad(frame, (0, CHUNK - len(frame)), mode='edge')
+
+                # DC offset removal + noise gate
                 frame = frame - np.mean(frame)
                 peak = float(np.max(np.abs(frame)))
-                # Noise gate: 0.0005 (was 0.002) — allows quiet voices through
+                
+                # Noise gate: 0.0005 allows quiet voices through
                 if peak < 0.0005:
-                    continue  # Pure silence — skip VAD for this frame
-                # Auto-gain: 40x cap (was 20x) — amplifies quiet/distant mic
-                gain = min(0.9 / peak, 40.0)
-                frame = frame * gain
+                    frame = np.zeros_like(frame)
 
-                # Run Silero VAD v3 inference
+                # Feed un-gained frame to Silero VAD to preserve RNN continuity
                 audio_input = np.expand_dims(frame, axis=0)  # shape [1, 512]
                 ort_inputs = {
                     "input": audio_input,

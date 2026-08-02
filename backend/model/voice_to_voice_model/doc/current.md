@@ -90,7 +90,9 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Portable Snapshot Path Resolution**: `resolve_whisper_model_path()` dynamically detects local HuggingFace cache snapshots (`models--Systran--faster-whisper-small\snapshots\...`) using `%USERPROFILE%`, loading model weights directly from local disk. `resolve_kokoro_model_path()` uses the cached `"hexgrad/Kokoro-82M"` repository ID in offline mode.
 
 ### 4. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
-* **Audio Capture Engine**: Built using `sounddevice` running at 16kHz single-channel `float32`.
+* **Audio Capture Engine**: Built using `sounddevice` capturing at the device's **native sample rate** (e.g., 48kHz, 44.1kHz). 
+* **Real-time NumPy Interpolation**: Captured chunks are dynamically resampled in Python down to exactly 16kHz single-channel `float32` before hitting VAD/Whisper. This mathematically bypasses Windows KMixer muting bugs (e.g. Intel SST arrays outputting 0.0000 on DirectSound 16kHz) and WASAPI rigid-rate crashes (`PaErrorCode -9997`).
+* **Microphone Priority (`config.py`)**: Safely prioritizes **MME** for Bluetooth headsets (which handles their dynamic HFP sampling better) and **WASAPI** for built-in microphone arrays (which provides bit-perfect unaltered native streams).
 * **Per-Frame Noise Gate & Auto-Gain**: Zeroes out faint static (<0.0005 RMS), applies peak auto-gain up to **40x boost**, resolving quiet recordings.
 * **Continuous Mic Writer (`ContinuousMicWriter`)**: Writes gain-boosted 16kHz 16-bit Mono WAV frames directly to `recording.wav`.
 * **Strict Dual VAD+RMS Speech Gate**: Requires `(speech_prob >= 0.35 AND rms >= 0.015)` or `speech_prob >= 0.50` to trigger speech accumulation. Completely prevents false speech triggers on background static when VAD probability is 0.00.
@@ -165,6 +167,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Think/Speak UI Rendering**: Safely escapes Kivy markup from LLM reasoning, then displays LLM internal reasoning and dialog using color-coded markup labels. Ensures only the `<speak>` block is sent to Kokoro TTS and fed back into `conversation_history` context to prevent compounding errors.
 * **Permanent Context Anchor**: Extracts candidate background details during the ICEBREAKER phase into a `candidate_project_anchor`, dynamically prepending it to the system prompt so it is never purged.
 * **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time, relying on the permanent anchor to retain crucial context.
+* **`_eva_speak_blocking` Audio Drain Fix (v2)**: Replaced unreliable `audio_queue.empty()` poll with `audio_queue.join()` executed in a daemon thread polled every 50ms with interrupt bail-out. A mandatory **150ms post-drain OS hardware buffer guard** then ensures the PyAudio WASAPI/ALSA driver buffer fully completes playback before `listen_and_transcribe()` opens the microphone. This eliminates acoustic bleed-back (Eva's voice leaking into mic) triggering a false barge-in → `force_stop_all()` → session ending with 0 turns.
+* **`brain.py preload()` Fix**: Corrected `preload()` to call `stream_llm_response()` directly as a function call instead of iterating its `(think_text, speak_text)` tuple return value with `for _ in ...` (which wrongly treated the 2-element tuple as a generator).
 
 ---
 

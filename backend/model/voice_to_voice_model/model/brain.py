@@ -381,11 +381,13 @@ def preload(custom_system_prompt: Optional[str] = None):
     """Preloads the Ollama LLM engine into memory to ensure instant first response."""
     print("Pre-heating Ollama LLM engine...", flush=True)
     try:
-        for _ in stream_llm_response(
+        # stream_llm_response() returns a tuple (think_text, speak_text), NOT a generator.
+        # Calling it directly (with no speaker_player) warms up the Ollama model without
+        # dispatching any audio or modifying conversation state.
+        stream_llm_response(
             [{"role": "user", "content": "."}],
             custom_system_prompt=custom_system_prompt
-        ):
-            pass
+        )
     except Exception:
         pass
 

@@ -856,8 +856,13 @@ class InterviewScreen(Screen):
             if "vad_state_label" in self.ids:
                 self.ids.vad_state_label.text = data.get("state", "")
             if "volume_bar" in self.ids:
+                # Show VAD probability (the actual speech detection metric) instead of raw RMS.
+                # When speech is happening, VAD prob closely tracks speech energy.
+                vad_prob = data.get("vad_prob", 0.0)
                 rms = data.get("rms", 0.0)
-                self.ids.volume_bar.value = min(rms * 10, 1.0)
+                # Blend: use VAD prob as primary signal, RMS as secondary for visual continuity
+                display_val = max(vad_prob, min(rms * 5, 1.0))
+                self.ids.volume_bar.value = min(display_val, 1.0)
         Clock.schedule_once(_update)
 
     def log_and_display_turn(self, speaker, text):
@@ -886,14 +891,22 @@ class InterviewScreen(Screen):
              OWN sounddevice input stream and runs Silero VAD every 32ms.
           3. Calls player.speak_clause() which synthesizes and queues audio
              (non-blocking for playback — _play_loop plays in its own thread).
-          4. Polls the audio queue in a 50ms loop until the queue empties or
-             BargeInWatcher fires interrupt_event (candidate barged in).
-          5. Stops the watcher, clears agent-speaking flag, and returns.
+          4. Waits for audio_queue.join() in a daemon thread — blocks until
+             _play_loop has fully processed (task_done()) every queued chunk.
+             Polls every 50ms with interrupt_event / should_stop bail-out.
+          5. After join completes, waits an additional 150ms post-drain guard
+             to let the OS PyAudio hardware buffer physically finish playing
+             before opening the microphone. Without this guard, listen_and_
+             transcribe() opens the mic while Eva's voice is still audible
+             from the speakers, causing acoustic bleed-back to trigger a
+             false barge-in → force_stop_all() → session ends with 0 turns.
+          6. Stops the watcher, clears agent-speaking flag, and returns.
 
         This is the ONLY correct way to support barge-in — the mic must be
         monitored concurrently with playback, not sequentially after it.
         """
         import time as _t
+        import threading as _th
         player = get_default_player()
         if not player or not self.is_running:
             return
@@ -914,13 +927,43 @@ class InterviewScreen(Screen):
             # Synthesize text and enqueue audio chunks (non-blocking for playback)
             player.speak_clause(text, self.session_state)
 
-            # Wait for audio queue to drain or barge-in interrupt
+            # --- DRAIN FIX ---
+            # audio_queue.empty() is unreliable: it returns True between Kokoro synthesis
+            # chunks while _play_loop is still mid-write to PyAudio. This caused the old
+            # drain loop to exit prematurely, opening the mic while Eva was still speaking.
+            #
+            # Solution: audio_queue.join() — blocks until every item's task_done() has been
+            # called by _play_loop, guaranteeing all chunks were fully dequeued and written.
+            # Run join() in a daemon thread so we can poll with interrupt bail-out.
+            _join_done = _th.Event()
+
+            def _wait_for_queue_join():
+                try:
+                    player.audio_queue.join()
+                except Exception:
+                    pass
+                finally:
+                    _join_done.set()
+
+            _join_thread = _th.Thread(target=_wait_for_queue_join, daemon=True)
+            _join_thread.start()
+
+            # Poll every 50ms with interrupt and stop bail-out
             while (
-                not player.audio_queue.empty()
+                not _join_done.is_set()
                 and not self.session_state.interrupt_event.is_set()
                 and self.is_running
             ):
                 _t.sleep(0.05)
+
+            # Post-drain OS hardware buffer guard: PyAudio OS buffer holds ~21ms at
+            # 512 frames_per_buffer. Even after Python queue is empty, the OS driver
+            # buffer still needs time to physically play out. 150ms provides safe
+            # clearance for the speaker audio to fully finish before the mic opens,
+            # preventing acoustic bleed-back from triggering a false barge-in.
+            if not self.session_state.interrupt_event.is_set() and self.is_running:
+                _t.sleep(0.15)
+
         finally:
             watcher.stop()
             self.session_state.is_agent_speaking.clear()
