@@ -197,6 +197,11 @@ class QuestionManager:
             return "interview_completed" if status == "completed" else "next_topic"
 
     def format_prompt_context(self, branch_taken: str, candidate_transcript: str) -> tuple[str, str]:
+        llm_prompt, target_q = self._format_prompt_context_internal(branch_taken, candidate_transcript)
+        llm_prompt += "\n\nFORMAT REQUIREMENT: You MUST respond starting EXACTLY with TONE: <tone> and SPEAK: <text>"
+        return llm_prompt, target_q
+
+    def _format_prompt_context_internal(self, branch_taken: str, candidate_transcript: str) -> tuple[str, str]:
         """
         Constructs natural LLM instructions for Qwen 2.5 3B and returns:
         (llm_prompt_string, logged_target_question_text)
@@ -273,7 +278,7 @@ class QuestionManager:
         llm_prompt = (
             f"Candidate Answer: '{candidate_transcript}'\n"
             f"Instruction: {instruction}\n"
-            f"Constraint: Sound natural and concise. Keep <speak> under 35 words."
+            f"Constraint: Sound natural and concise. Keep SPEAK: under 35 words."
         )
 
         return llm_prompt, target_q

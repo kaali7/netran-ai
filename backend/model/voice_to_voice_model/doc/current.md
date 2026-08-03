@@ -51,7 +51,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 │ • Checks interrupt_event on every LLM token — aborts generation         │
 │ • Skips clause dispatch when interrupt_event is set                     │
 │ • Ollama Timeout + 3x Exponential Backoff Retry                        │
-│ • Structured XML Output (<think> / <speak> tags)                       │
+│ • Structured Output (TONE: / SPEAK: format)                            │
 │ • Full Response Buffering & Regex Parsing                              │
 │ • Token Cap (num_predict: 380) + Temperature Tuning (0.65 / 0.85 top_p)│
 └─────────────────────────────────────────────────────────────────────────┘
@@ -114,9 +114,9 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - Natural spoken cadence with contractions ("I'm", "let's", "it's", "that's") and short vocal anchors ("Ah, got it", "Hmm", "I see").
   - Strict prevention of prompt artifact leakage (`(Think?)`, `[Action]`) into the spoken text.
   - Strict limitation to **exactly one question per turn**.
-  - Strict `<think>` reasoning budget (hidden from candidate).
-  - Mandatory Call-To-Action (CTA) handoff rule: Every `<speak>` payload MUST end with a terminal question mark (`?`) or explicit turn handoff question.
-  - Mandatory `<speak tone="...">` tag selection from Tone Taxonomy (`empathetic`, `encouraging`, `curious`, `probing`, `direct`, `technical`, `warm`, `icebreaker`).
+  - Fast two-line output format (`TONE:` / `SPEAK:`) to eliminate parsing overhead and `<think>` blocks.
+  - Mandatory Call-To-Action (CTA) handoff rule: Every `SPEAK:` payload MUST end with a terminal question mark (`?`) or explicit turn handoff question.
+  - Mandatory `TONE:` attribute selection from Tone Taxonomy (`empathetic`, `encouraging`, `curious`, `probing`, `direct`, `technical`, `warm`, `icebreaker`).
 * **Tuned Params**: `num_predict: 380` (expanded token headroom to prevent truncation mid-sentence), `temperature: 0.65` (lower variance for crisp CTA adherence), `top_p: 0.85` (grammatical sentence endings), `repeat_penalty: 1.15`.
 * **Tone-to-Speed Parameter Mapping Matrix (`get_speed_for_tone`)**:
   - `empathetic` / `encouraging`: `0.92x` (reassuring, unhurried cadence).
@@ -124,14 +124,14 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - `warm` / `icebreaker`: `0.96x` (approachable, conversational rapport building).
   - `direct` / `technical`: `1.00x` (baseline professional delivery).
   - Speed boundary strictly clamped between `0.88x` and `1.08x`.
-* **Software Guardrail Safety Net**: `parse_think_speak()` inspects the final character of `<speak>` output. If terminal punctuation (`?`, `.`, `!`) is missing due to a model cutoff, it automatically appends `"... What are your thoughts on that?"` before passing text to `speaker.py`.
-* **Think/Speak Split Architecture**: 
-  - System prompt rigorously enforces `<think>` and `<speak tone="...">` XML tags, forbidding filler responses and colon-based artifacts.
-  - Responses are fully buffered to correctly parse XML blocks (with fuzzy regex and positional fallback parsing).
+* **Software Guardrail Safety Net**: `stream_llm_response` inspects the final character of the generated output. If terminal punctuation (`?`, `.`, `!`) is missing due to a model cutoff, it automatically appends `"... What are your thoughts on that?"` before passing text to `speaker.py`.
+* **Low-Latency Stream Architecture**: 
+  - System prompt rigorously enforces a two-line `TONE:` and `SPEAK:` format, skipping Chain-of-Thought (CoT) to immediately stream audio.
+  - Responses are parsed line-by-line without waiting for heavy XML blocks to close.
 * **Interrupt-Aware Token Loop (v2)**: `stream_llm_response` checks `session_state.interrupt_event` on **every token**. When set (candidate barge-in), LLM generation is aborted immediately. Clause dispatch is also gated — no clauses are sent to the speaker after an interrupt.
-* **Sub-Second Clause Streaming & TTFA**: `stream_llm_response` scans the raw LLM token stream for `<speak>` blocks, detects the tone attribute early to set `session_state.current_tone` and `session_state.tts_speed`, and dynamically splits on punctuation boundaries (`[,?!.\n]`). Natural clauses are immediately dispatched to `PersistentSpeaker` to hide generation latency, achieving sub-250ms Time-To-First-Audio (TTFA).
+* **Sub-Second Clause Streaming & TTFA**: `stream_llm_response` scans the raw LLM token stream for the `TONE:` line, sets `session_state.current_tone` and `session_state.tts_speed` early, and immediately streams all tokens following `SPEAK:` to the clause splitter on punctuation boundaries (`[,?!.\n]`). Natural clauses are dispatched to `PersistentSpeaker` to hide generation latency, achieving sub-250ms Time-To-First-Audio (TTFA).
 * **Prosodic Regex TextSanitizer (`TextSanitizer.clean_for_tts`)**:
-  - Strips residual XML tags like `<think>` and action tags (`[Clears Throat]`, `(Sighs)`).
+  - Strips residual action tags (`[Clears Throat]`, `(Sighs)`) and cleans fallback tokens.
   - Preserves backticks text content without wiping code identifiers (e.g. ``asyncio.sleep(1)``).
   - Tone-specific prosody: Injects soft opening ellipses (`"Ah, no worries..."`) for empathetic tones, natural breathing commas (`"Hey there,"`) for warm tones, and soft thinking pauses (`...`) for standard vocal anchors.
   - Forced Technical Micro-Pauses: Adds em-dashes (`--`) or breathing commas around complex technical terms ("FastAPI--with async", "PostgreSQL", "Kafka").
@@ -165,11 +165,11 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
     - Full-page output inspector displaying past `sess_<timestamp>` output folders.
     - Interactive WAV audio player with real-time `ProgressBar` and time tracking (`0:15 / 1:30`).
 * **SessionState Management**: Thread-safe `session_state.py` orchestrating cross-module events (Echo Gate, full-duplex barge-in interrupt).
-* **Think/Speak UI Rendering & Parallel Text Streaming**: Streams the LLM text output into the GUI character-by-character in real-time (`ui_callback`), exactly parallel with the TTS audio playback. Utilizes a rolling string buffer (`_speak_chunk_buffer`) inside `_llm_ui_callback` that dynamically intercepts and completely hides `<speak>` and `</speak>` XML tags across token chunk boundaries, guaranteeing a clean front-end display. Safely escapes Kivy markup from LLM reasoning, then displays LLM internal reasoning and dialog using color-coded markup labels. Ensures only the `<speak>` block is sent to Kokoro TTS and fed back into `conversation_history` context to prevent compounding errors.
+* **UI Rendering & Parallel Text Streaming**: Streams the LLM `SPEAK:` text output into the GUI character-by-character in real-time (`ui_callback`), exactly parallel with the TTS audio playback. The `_llm_ui_callback` receives direct streaming text without any XML parsing overhead, guaranteeing a clean front-end display. Displays spoken dialog using color-coded markup labels, and ensures only the clean spoken block is fed back into `conversation_history` context to prevent compounding context errors.
 * **Permanent Context Anchor**: Extracts candidate background details during the ICEBREAKER phase into a `candidate_project_anchor`, dynamically prepending it to the system prompt so it is never purged.
 * **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time, relying on the permanent anchor to retain crucial context.
 * **`_eva_speak_blocking` Audio Drain Fix (v2)**: Replaced unreliable `audio_queue.empty()` poll with `audio_queue.join()` executed in a daemon thread polled every 50ms with interrupt bail-out. A mandatory **150ms post-drain OS hardware buffer guard** then ensures the PyAudio WASAPI/ALSA driver buffer fully completes playback before `listen_and_transcribe()` opens the microphone. This eliminates acoustic bleed-back (Eva's voice leaking into mic) triggering a false barge-in → `force_stop_all()` → session ending with 0 turns.
-* **`brain.py preload()` Fix**: Corrected `preload()` to call `stream_llm_response()` directly as a function call instead of iterating its `(think_text, speak_text)` tuple return value with `for _ in ...` (which wrongly treated the 2-element tuple as a generator).
+* **`brain.py preload()` Fix**: Corrected `preload()` to call `stream_llm_response()` directly as a function call instead of iterating its tuple return value with `for _ in ...` (which wrongly treated the tuple as a generator).
 * **High-Fidelity Native OS Audio Capture Override**: Implemented `.env` controlled `MIC_DEVICE_INDEX` fallback. `listener.py` now attempts to open streams at exactly 16000Hz (Method B native OS resampling via MME/DirectSound) first, and falls back to manual decimation only if the hardware rejects it (e.g., WASAPI). Combined with a custom IIR high-pass filter (`alpha=0.995`) applied across the final utterance buffer, this completely eliminates 31Hz digital buzzing caused by chunk boundary DC discontinuities and mathematical aliasing.
 
 ---

@@ -82,7 +82,7 @@ You are Eva, a warm, articulate, and natural lead technical interviewer having a
 5. **Tone Selection:** Encouraging, peer-like, and collaborative. Select an appropriate tone attribute from the Tone Taxonomy below.
 
 ### TONE TAXONOMY
-Choose ONE tone attribute for the <speak tone="..."> tag matching the candidate's turn context:
+Choose ONE tone attribute for the TONE: line matching the candidate's turn context:
 - `empathetic` / `encouraging`: Candidate hesitates, stumbles, says "I don't know" or "skip", or gives a weak answer.
 - `curious` / `probing`: Candidate gives a strong answer; escalating to trade-offs, architecture, or edge cases.
 - `direct` / `technical`: Baseline introduction of a new technical topic or standard baseline question.
@@ -94,9 +94,10 @@ Choose ONE tone attribute for the <speak tone="..."> tag matching the candidate'
 - **Candidate Interrupts / Says "Wait":** Immediately yield ("Oh, take your time!"), pause, and let them speak.
 
 ### OUTPUT FORMAT REQUIREMENTS & STRICT DIRECTIVES
-1. **Strict <think> Budget (Max 30 Words):** Wrap internal reasoning in <think>...</think>. Keep it strictly under 30 words in 3 quick points: (1) Intent detected, (2) Evaluation/reaction, (3) Planned response and closing question.
-2. **Spoken Response Format (<speak tone="...">):** Wrap spoken text in <speak tone="[empathetic|encouraging|curious|probing|direct|technical|warm|icebreaker]">...</speak>.
-3. **MANDATORY CALL-TO-ACTION (CTA) HANDOFF:** Every single <speak> payload MUST end with a terminal question mark (?) or an explicit turn handoff question. NEVER end a turn with a passive statement.
+1. **Spoken Response Format:** You MUST respond in EXACTLY two lines. Do NOT include any thinking, reasoning, or XML tags.
+2. **Line 1 (TONE):** Start with "TONE: " followed by ONE tone attribute from the Tone Taxonomy (e.g., "TONE: empathetic").
+3. **Line 2 (SPEAK):** Start with "SPEAK: " followed by your 15-25 word response.
+4. **MANDATORY CALL-TO-ACTION (CTA) HANDOFF:** Every SPEAK payload MUST end with a terminal question mark (?) or an explicit turn handoff question. NEVER end a turn with a passive statement.
 """
 
 
@@ -106,19 +107,16 @@ class TextSanitizer:
         if not text:
             return ""
 
-        # 1. Extract only the content inside <speak> tags if present, including tone attribute
-        speak_match = re.search(r'<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>(.*?)</speak>', text, re.DOTALL | re.IGNORECASE)
-        if speak_match:
-            clean_text = speak_match.group(2)
-            if speak_match.group(1):
-                tone = speak_match.group(1).strip().lower()
-        else:
-            clean_text = text
+        clean_text = text
         
-        # 2. Strip leftover XML tags or action brackets
+        # Strip leftover XML tags or action brackets just in case
         clean_text = re.sub(r'<[^>]+>', '', clean_text)
         clean_text = re.sub(r'\[.*?\]|\(.*?\)', '', clean_text)
         clean_text = clean_text.replace('`', '')
+        
+        # Strip any leaked TONE: or SPEAK: artifacts
+        clean_text = re.sub(r'TONE:\s*\w+', '', clean_text, flags=re.IGNORECASE)
+        clean_text = re.sub(r'SPEAK:\s*', '', clean_text, flags=re.IGNORECASE)
         
         # 3. Tone-Specific Micro-Prosody & Conversational Anchors
         tone_lower = tone.strip().lower() if tone else "direct"
@@ -173,69 +171,6 @@ class TextSanitizer:
         return clean_text.strip()
 
 
-def parse_think_speak(raw: str) -> tuple[str, str, str]:
-    """
-    Splits LLM raw output into (think_text, speak_text, tone).
-    Uses fuzzy matching and positional inference to handle heavily malformed LLM outputs.
-    Applies software guardrail safety net to guarantee terminal punctuation handoffs.
-    """
-    raw = raw.strip()
-    think_text = ""
-    speak_text = ""
-    tone = "direct"
-    
-    # 1. Fuzzy match speak tag and tone attribute (catches <speak tone="curious">, speak:, [speak], peak>)
-    speak_pattern = r'(?:<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>|speak:|\[speak\]|peak>)(.*?)(?:</speak>|$)'
-    speak_match = re.search(speak_pattern, raw, re.DOTALL | re.IGNORECASE)
-    
-    # 2. Fuzzy match think tag
-    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|<speak(?:\s+tone=["\']?[a-zA-Z_-]+["\']?)?\s*>|speak:|\[speak\]|peak>|$)'
-    think_match = re.search(think_pattern, raw, re.DOTALL | re.IGNORECASE)
-    
-    if speak_match:
-        if speak_match.group(1):
-            tone = speak_match.group(1).strip().lower()
-        speak_text = speak_match.group(2).strip()
-    if think_match:
-        think_text = think_match.group(1).strip()
-        
-    # 3. Positional Inference (The Safety Net)
-    if speak_text and not think_text:
-        parts = re.split(r'(?:<speak(?:\s+tone=["\']?[a-zA-Z_-]+["\']?)?\s*>|speak:|\[speak\]|peak>)', raw, maxsplit=1, flags=re.IGNORECASE)
-        if len(parts) > 1:
-            think_text = re.sub(r'^(?:<think>|think:|\[think\])', '', parts[0], flags=re.IGNORECASE).strip()
-            
-    elif think_text and not speak_text:
-        parts = re.split(r'</think>', raw, maxsplit=1, flags=re.IGNORECASE)
-        if len(parts) > 1:
-            speak_text = parts[1].strip()
-        else:
-            parts = re.split(r'\n\s*\n', think_text)
-            if len(parts) > 1:
-                speak_text = parts[-1].strip()
-                think_text = "\n\n".join(parts[:-1]).strip()
-
-    # 4. Paragraph Inference (Complete failure of tags)
-    if not think_text and not speak_text:
-        parts = re.split(r'\n\s*\n', raw)
-        if len(parts) > 1:
-            speak_text = parts[-1].strip()
-            think_text = "\n\n".join(parts[:-1]).strip()
-        else:
-            speak_text = raw
-
-    # Cleanup and fallback
-    speak_text = re.sub(r'^(?:speak:\s*)', '', speak_text, flags=re.IGNORECASE).strip()
-    if not speak_text:
-        speak_text = "Got it, let's continue."
-    
-    # 5. Software Guardrail Safety Net: Enforce terminal punctuation handoff
-    if not speak_text.endswith(('?', '.', '!')):
-        speak_text = speak_text + "... What are your thoughts on that?"
-        
-    return think_text, speak_text, tone
-
-
 def stream_llm_response(
     conversation_history: list[dict[str, str]],
     custom_system_prompt: str | dict[str, str] | None = None,
@@ -284,7 +219,9 @@ def stream_llm_response(
 
             raw_output = ""
             clause_regex = re.compile(r'([,?!.\n])')
-            in_speak_block = False
+            line_buffer = ""
+            in_speak_mode = False
+            full_speak_text = ""
             speak_buffer = ""
             detected_tone = "direct"
             first_token_received = False
@@ -308,73 +245,89 @@ def stream_llm_response(
                         print("\n⛔ [Brain] LLM generation aborted — candidate barge-in.", flush=True)
                         break
 
-                    if speaker_player and session_state:
-                        if not in_speak_block:
-                            speak_match = re.search(
-                                r'(?:<speak(?:\s+tone=["\']?([a-zA-Z_-]+)["\']?)?\s*>|speak:|\[speak\]|peak>)(.*)',
-                                raw_output,
-                                flags=re.IGNORECASE | re.DOTALL
-                            )
-                            if speak_match:
-                                in_speak_block = True
-                                if speak_match.group(1):
-                                    extracted_tone = speak_match.group(1).strip().lower()
-                                    detected_tone = extracted_tone
+                    if not in_speak_mode:
+                        line_buffer += token
+                        
+                        has_newline = "\n" in line_buffer
+                        has_speak = "SPEAK:" in line_buffer.upper()
+                        too_long = len(line_buffer) > 60
+                        
+                        ready_to_speak = False
+                        if has_speak or too_long:
+                            ready_to_speak = True
+                        elif has_newline:
+                            # If there is text after a newline, assume the LLM forgot SPEAK:
+                            parts = line_buffer.split("\n", 1)
+                            if len(parts) > 1:
+                                after_newline = parts[1].lstrip()
+                                if len(after_newline) > 0 and not "SPEAK:".startswith(after_newline.upper()):
+                                    ready_to_speak = True
+                        
+                        if ready_to_speak:
+                            # 1. Parse TONE line
+                            tone_match = re.search(r"TONE:\s*([a-zA-Z_]+)", line_buffer, re.IGNORECASE)
+                            if tone_match:
+                                detected_tone = tone_match.group(1).lower()
+                                if session_state:
                                     session_state.current_tone = detected_tone
                                     session_state.tts_speed = get_speed_for_tone(detected_tone)
-                                token = speak_match.group(2)
-                                
-                                if ui_callback:
-                                    think_raw = raw_output[:speak_match.start()]
-                                    think_pattern = r'(?:<think>|think:|\[think\])(.*?)(?:</think>|$)'
-                                    t_match = re.search(think_pattern, think_raw, re.DOTALL | re.IGNORECASE)
-                                    think_t = t_match.group(1).strip() if t_match else think_raw.replace("<think>", "").replace("</think>", "").strip()
-                                    if think_t:
-                                        ui_callback("think", think_t)
-                                    ui_callback("speak_start", "")
 
-                        if in_speak_block:
-                            clean_token = token
-                            if "</speak>" in clean_token:
-                                clean_token = clean_token.split("</speak>")[0]
-                                in_speak_block = False
+                            # 2. Transition to speak mode
+                            in_speak_mode = True
+                            if ui_callback:
+                                ui_callback("speak_start", "")
 
-                            speak_buffer += clean_token
+                            # 3. Clean buffer and extract initial spoken text
+                            clean_buf = re.sub(r"TONE:\s*[a-zA-Z_]+\s*\n?", "", line_buffer, flags=re.IGNORECASE)
+                            clean_buf = re.sub(r"SPEAK:\s*", "", clean_buf, flags=re.IGNORECASE)
+                            initial_text = clean_buf.lstrip()
                             
-                            if ui_callback and clean_token:
-                                ui_callback("speak_chunk", clean_token)
+                            if initial_text:
+                                full_speak_text += initial_text
+                                if ui_callback:
+                                    ui_callback("speak_chunk", initial_text)
+                                speak_buffer += initial_text
+                                # Process initial clause if any
+                                parts = clause_regex.split(speak_buffer)
+                                if len(parts) > 1:
+                                    clause_to_speak = "".join(parts[:-1])
+                                    speak_buffer = parts[-1]
+                                    if speaker_player and session_state and clause_to_speak.strip() and not session_state.interrupt_event.is_set():
+                                        speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
+                    else:
+                        full_speak_text += token
+                        if ui_callback:
+                            ui_callback("speak_chunk", token)
 
-                            parts = clause_regex.split(speak_buffer)
-                            if len(parts) > 1:
-                                clause_to_speak = "".join(parts[:-1])
-                                speak_buffer = parts[-1]
+                        speak_buffer += token
+                        parts = clause_regex.split(speak_buffer)
+                        if len(parts) > 1:
+                            clause_to_speak = "".join(parts[:-1])
+                            speak_buffer = parts[-1]
 
-                                # Do not dispatch clause if interrupted
-                                if clause_to_speak.strip() and not session_state.interrupt_event.is_set():
-                                    speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
+                            # Do not dispatch clause if interrupted
+                            if speaker_player and session_state and clause_to_speak.strip() and not session_state.interrupt_event.is_set():
+                                speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
 
             print("\n") # Newline after streaming finishes
             
-            think_text, speak_text, parsed_tone = parse_think_speak(raw_output)
-            if parsed_tone and parsed_tone != "direct":
-                detected_tone = parsed_tone
+            # Flush remaining buffer
+            if speaker_player and session_state and speak_buffer.strip() and not session_state.interrupt_event.is_set():
+                speaker_player.speak_clause(speak_buffer.strip(), session_state, tone=detected_tone)
+
+            clean_speak_text = TextSanitizer.clean_for_tts(full_speak_text)
+            
+            # Software Guardrail Safety Net: Enforce terminal punctuation handoff
+            if clean_speak_text and not clean_speak_text.endswith(('?', '.', '!')):
+                clean_speak_text = clean_speak_text + "... What are your thoughts on that?"
+                if speaker_player and session_state and not session_state.interrupt_event.is_set():
+                     speaker_player.speak_clause("... What are your thoughts on that?", session_state, tone=detected_tone)
 
             if session_state:
                 session_state.current_tone = detected_tone
                 session_state.tts_speed = get_speed_for_tone(detected_tone)
             
-            if speaker_player and session_state:
-                if in_speak_block and speak_buffer.strip():
-                    residual_buf = speak_buffer.strip()
-                    if not residual_buf.endswith(('?', '.', '!')):
-                        residual_buf += "... What are your thoughts on that?"
-                    speaker_player.speak_clause(residual_buf, session_state, tone=detected_tone)
-                elif not in_speak_block and speak_text.strip() and speak_text != "Got it, let's continue.":
-                    speaker_player.speak_clause(speak_text, session_state, tone=detected_tone)
-            
-            print(f"[Brain] Extracted THINK: {think_text[:100]!r}...")
-            print(f"[Brain] Extracted SPEAK (tone={detected_tone}): {speak_text[:100]!r}...\n", flush=True)
-            return think_text, speak_text
+            return "", clean_speak_text
 
         except Exception as e:
             if attempt < max_retries - 1:
@@ -394,7 +347,7 @@ def preload(custom_system_prompt: str | None = None):
     """Preloads the Ollama LLM engine into memory to ensure instant first response."""
     print("Pre-heating Ollama LLM engine...", flush=True)
     try:
-        # stream_llm_response() returns a tuple (think_text, speak_text), NOT a generator.
+        # stream_llm_response() returns a tuple ("", speak_text), NOT a generator.
         # Calling it directly (with no speaker_player) warms up the Ollama model without
         # dispatching any audio or modifying conversation state.
         stream_llm_response(

@@ -85,7 +85,7 @@ class TurnManifest(BaseModel):
     question_text: str | None = ""
     candidate_transcript: str = ""
     candidate_raw_transcript: str | None = None
-    eva_internal_reasoning: str | None = None
+    eva_internal_reasoning: str | None = "N/A - CoT Disabled for Low Latency"
     eva_tone_used: str | None = "direct"
     eva_spoken_reply: str | None = None
     audio_start_sec: float = 0.0
