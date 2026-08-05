@@ -57,7 +57,7 @@ backend/
     │       ├── prompts.py     # Centralized Stage 2 system prompt templates (PLANNER_PROMPT_TEMPLATE, ANALYST_PROMPT_TEMPLATE)
     │       ├── question_generator.py # Backward compatibility alias for pipeline.py
     │       ├── resume_parser.py # PDF, DOCX, TXT, and JSON resume extractor
-    │       ├── schemas.py     # Pydantic v2 schemas (CandidateProfile, RoleFitScoring, ExtractedSkillMatch, WorkHistoryEntry, DetailedProjectAnalysis, ExperienceGapsAndRedFlags, PlannerOutput, ResumeAnalysis, QuestionItem, InterviewerBehavior, Stage2Output)
+    │       ├── schemas.py     # Pydantic v2 schemas (CandidateProfile, RoleFitScoring, ExtractedSkillMatch, WorkHistoryEntry, DetailedProjectAnalysis, ExperienceGapsAndRedFlags, PlannerOutput, ResumeAnalysis, QuestionItem, InterviewerBehavior [+whisper_domain_vocabulary], Stage2Output)
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
     ├── voice_to_voice_model/  # STAGE 3: Live Voice-to-Voice Streaming Loop
@@ -75,9 +75,9 @@ backend/
     │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── listener.py    # Silero VAD v3, auto-gain peak normalizer, Faster-Whisper STT
     │       ├── pipeline.py    # Stage 3 master pipeline entry point (WorkflowVoiceEngine)
-    │       ├── prompts.py     # Centralized Stage 3 system prompts (SYSTEM_PROMPT, WHISPER_INITIAL_PROMPT)
+    │       ├── prompts.py     # Centralized Stage 3 system prompts (SYSTEM_PROMPT, dynamic get_system_prompt() builder; WHISPER_INITIAL_PROMPT removed — now generated dynamically from Stage 2 whisper_domain_vocabulary)
     │       ├── question_manager.py # State machine & keyword density adaptive branching engine
-    │       ├── schemas.py     # Pydantic v2 schemas (InterviewQuestionInput, InterviewerBehaviorInput, Stage2SessionBundle, TurnManifest, SessionManifest)
+    │       ├── schemas.py     # Pydantic v2 schemas (InterviewQuestionInput, InterviewerBehaviorInput [+whisper_domain_vocabulary], Stage2SessionBundle, TurnManifest, SessionManifest)
     │       ├── session_logger.py # Monotonic timer & transcript.json logger
     │       ├── session_state.py  # Thread-safe cross-module state/event tracker (Echo Gate)
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
