@@ -1,44 +1,107 @@
 {
-  "matched_skills": [
+  "candidate_profile": {
+    "candidate_name": "Devon Miller",
+    "target_role": "Lead Fullstack AI Systems Engineer",
+    "years_of_experience": 6.5,
+    "current_company_or_status": "Synthetix AI Labs",
+    "core_identity_summary": "Lead Fullstack AI Systems Engineer specializing in Next.js 14, Python FastAPI, Server-Sent Events (SSE) token streaming, Pinecone vector search, and hybrid retrieval architecture.",
+    "soft_skills": [
+      "AI System Architecture",
+      "Fullstack LLM Engineering",
+      "API Performance Optimization",
+      "Technical Problem Solving"
+    ],
+    "key_achievements": [
+      "Architected enterprise Knowledge RAG Assistant using Next.js 14 App Router and SSE token streaming maintaining 60fps rendering.",
+      "Built Python backend REST and streaming services with FastAPI serving 100k+ active monthly users at Synthetix AI Labs.",
+      "Engineered hybrid vector search pipeline with Pinecone and Cohere semantic reranking, boosting retrieval precision by 38%.",
+      "Configured fallback routing across Gemini and OpenAI APIs with exponential backoff retries, ensuring 99.95% availability."
+    ],
+    "personal_traits_and_hobbies": {
+      "traits_detected": [
+        "Innovative",
+        "Resilient",
+        "Product-driven"
+      ],
+      "hobbies_or_interests": [
+        "LLM agent orchestrations",
+        "Open-source vector indexers"
+      ],
+      "icebreaker_probe_topic": "Connecting low-latency token streaming UX with backend vector search optimization."
+    }
+  },
+  "role_fit_scoring": {
+    "overall_jd_match_score": 96,
+    "technical_depth_score": 97,
+    "experience_seniority_score": 94,
+    "project_relevance_score": 97,
+    "clarity_and_impact_score": 95
+  },
+  "extracted_skill_overlap": [
     {
       "skill": "Next.js 14 & SSE Streaming",
       "resume_evidence": "Architected enterprise Knowledge RAG Assistant using Next.js 14 App Router and implemented Server-Sent Events (SSE) token streaming maintaining 60fps rendering.",
-      "proficiency_tier": "Production Master"
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
     },
     {
       "skill": "Python AsyncIO & FastAPI",
       "resume_evidence": "Built Python backend REST and streaming services with FastAPI, serving 100k+ active monthly users at Synthetix AI Labs.",
-      "proficiency_tier": "Production Master"
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
     },
     {
       "skill": "Vector Search & Hybrid Retrieval",
       "resume_evidence": "Built hybrid vector search pipeline with Pinecone and Cohere semantic reranking, boosting retrieval precision by 38%.",
-      "proficiency_tier": "Production Master"
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
     },
     {
       "skill": "Model Resilience & Fallback Routing",
       "resume_evidence": "Configured fallback routing across Gemini and OpenAI APIs with exponential backoff retries, ensuring 99.95% availability.",
-      "proficiency_tier": "Intermediate"
+      "proficiency_tier": "Intermediate",
+      "jd_requirement_level": "Important"
     }
   ],
-  "missing_or_gap_skills": [
+  "experience_and_work_history": [
     {
-      "missing_skill": "LLM Evaluation & Benchmarking Frameworks",
-      "jd_importance": "Critical",
-      "probing_strategy": "Probe how output accuracy and retrieval precision were measured (e.g., Ragas, TruLens, or custom LLM-as-a-judge pipelines) beyond unverified metrics."
-    },
-    {
-      "missing_skill": "Dynamic Context Window & Token Budget Management",
-      "jd_importance": "Secondary",
-      "probing_strategy": "Ask candidate to explain strategies for handling context window overflow during multi-turn chats with large retrieved document payloads."
+      "company_name": "Synthetix AI Labs",
+      "role": "Lead Fullstack AI Systems Engineer",
+      "tenure": "2022 - Present",
+      "impact_level": "High",
+      "key_responsibilities": "Led development of Knowledge RAG Assistant and multi-model fallback infrastructure.",
+      "verifiable_outcomes": ["Served 100k+ monthly active users", "Achieved 99.95% API availability via model failover"]
     }
   ],
-  "resume_red_flags": [
-    "Unverified metric claim of 'improving retrieval precision by 38%' without mentioning baseline datasets, evaluation metrics (e.g., Hit Rate@K, MRR), or testing methodology.",
-    "Absence of explicit LLM evaluation tooling (e.g., LangSmith, Ragas, Phoenix) despite leading production enterprise RAG systems."
+  "detailed_project_analysis": [
+    {
+      "project_name": "Enterprise Knowledge RAG Assistant",
+      "relevance_score": 10,
+      "tech_stack_used": ["Next.js 14", "FastAPI", "Pinecone", "Cohere", "Python"],
+      "architecture_type": "Fullstack AI Microservice & SSE Token Streaming",
+      "quantifiable_scale": "100k+ MAU, 60fps client stream rendering",
+      "suggested_interview_probes": ["Probe hybrid vector retrieval scoring and LLM evaluation benchmarking frameworks"]
+    }
   ],
-  "key_projects_to_probe": [
-    "Knowledge RAG Assistant with Next.js 14, FastAPI SSE streaming, and Cohere reranking at Synthetix AI Labs.",
-    "Fallback Model Routing System across Gemini and OpenAI APIs with exponential backoff at Synthetix AI Labs."
-  ]
+  "experience_gaps_and_red_flags": {
+    "technical_gaps": [
+      {
+        "missing_skill": "LLM Evaluation & Benchmarking Frameworks",
+        "jd_importance": "Critical",
+        "probing_strategy": "Probe how output accuracy and retrieval precision were measured (e.g., Ragas, TruLens, or custom LLM-as-a-judge pipelines)."
+      },
+      {
+        "missing_skill": "Dynamic Context Window & Token Budget Management",
+        "jd_importance": "Secondary",
+        "probing_strategy": "Ask candidate to explain strategies for handling context window overflow during multi-turn chats."
+      }
+    ],
+    "resume_red_flags": [
+      {
+        "flag_type": "Claim Verification",
+        "description": "Unverified metric claim of 'improving retrieval precision by 38%' without mentioning baseline datasets or Hit Rate@K metrics.",
+        "probe_question": "What testing methodology or benchmark dataset did you use to calculate the 38% precision improvement?"
+      }
+    ]
+  }
 }

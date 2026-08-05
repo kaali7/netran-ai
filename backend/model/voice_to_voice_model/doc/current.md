@@ -3,7 +3,7 @@
 ## 📌 Executive Summary
 The Netran AI Voice-to-Voice backend and desktop application run a real-time, low-latency cascaded voice processing pipeline comprising **Neural Voice Activity Detection (Silero VAD)**, **Speech-to-Text (Faster-Whisper)**, **Dynamic State Machine & Adaptive Branching (QuestionManager)**, **Streaming LLM Reasoning (Ollama Qwen2.5:3B)** with **Regex TextSanitizer**, and **Text-to-Speech (Kokoro-82M)**, integrated into a multi-screen dark-themed **Kivy Desktop GUI**.
 
-Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_questions.json`, `interviewer_behavior.json`, `system_prompt.txt`, `resume_analysis.json`) via `schemas.py` Pydantic contracts and exports consolidated session outputs (`recording.wav` + `session_manifest.json`) for downstream Stage 4 post-session evaluation engines.
+Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_questions.json`, `interviewer_behavior.json`, `resume_analysis.json`) via `schemas.py` Pydantic contracts and exports consolidated session outputs (`recording.wav` + `session_manifest.json`) for downstream Stage 4 post-session evaluation engines.
 
 ---
 
@@ -62,7 +62,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - `AnswerRubric`: `poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`.
   - `InterviewQuestionInput`: Validates `id`, `tier`, `topic`, `difficulty`, `question_text`, `expected_keywords`, `rubric`, `followup_if_strong`, `followup_if_weak`.
   - `InterviewerBehaviorInput`: Validates `session_id`, `persona`, `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, `behavior_rules`.
-  - `Stage2SessionBundle`: Ingests all 4 Stage 2 artifacts (`behavior`, `questions`, `system_prompt`, `resume_analysis`).
+  - `Stage2SessionBundle`: Ingests Stage 2 artifacts (`behavior`, `questions`, `system_prompt`, `resume_analysis`) with helper properties (`candidate_name`, `target_role`, `target_company`).
 * **Pydantic v2 Output Schemas (Phase 3 Event-Driven Logging)**:
   - `TurnManifest`: Captures `turn_id`, `timestamp_iso`, `turn_intent` (`TECHNICAL_ANSWER`, `ICEBREAKER`, `CANDIDATE_META_QUERY`, `SKIP_REQUEST`, `AUDIO_CHECK_OR_PAUSE`, `BARGE_IN_INTERRUPTION`), `question_id`, `topic`, `question_text`, `candidate_transcript`, `candidate_raw_transcript`, `eva_internal_reasoning`, `eva_tone_used`, `eva_spoken_reply`, `audio_start_sec`, `audio_end_sec`, `silence_duration_before_answer_sec`, `evaluation_branch_taken`, `evaluation_metrics` (`keyword_density_score`, `branch_taken`, `matched_keywords`), and `telemetry` (`stt_latency_ms`, `llm_ttft_ms`, `tts_ttfa_ms`, `barge_in_reaction_time_ms`).
   - `SessionMetadata`: Metadata details (`session_id`, `candidate_name`, `target_role`, `target_company`, `start_time_iso`, `end_time_iso`, `total_turns`, `total_barge_ins`).

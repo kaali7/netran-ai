@@ -52,6 +52,18 @@ class Stage2SessionBundle(BaseModel):
     system_prompt: str
     resume_analysis: dict[str, Any] | None = None
 
+    @property
+    def candidate_name(self) -> str:
+        return self.behavior.candidate_name or "Candidate"
+
+    @property
+    def target_role(self) -> str:
+        return self.behavior.target_role or "Technical Role"
+
+    @property
+    def target_company(self) -> str:
+        return self.behavior.target_company or "Target Company"
+
 
 class Telemetry(BaseModel):
     """Timing and latency metrics for a single turn."""
