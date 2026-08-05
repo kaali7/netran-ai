@@ -216,7 +216,7 @@ class QuestionManager:
             )
             instruction = (
                 f"React warmly and professionally to the candidate's last response (or request to finish). "
-                f"Then conclude the interview smoothly by saying exactly: '{closing_text}'"
+                f"Then conclude the interview smoothly by saying: '{closing_text}'"
             )
             return f"Candidate Final Answer: '{candidate_transcript}'\nInstruction: {instruction}", closing_text
 
@@ -226,7 +226,7 @@ class QuestionManager:
         if branch_taken == "icebreaker_response":
             instruction = (
                 "React warmly to the candidate's introduction in 1 short sentence, "
-                f"then smoothly pivot to ask exactly this question: '{target_logged_q}'"
+                f"then smoothly pivot to ask this question in your own natural words: '{target_logged_q}'"
             )
             return f"Candidate Intro: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
 
@@ -253,7 +253,7 @@ class QuestionManager:
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
                 f"The candidate wants to skip or doesn't know the answer.\n"
-                f"Briefly reassure them empathetically (e.g., 'No worries at all!'), then smoothly pivot to ask exactly this question: '{target_q}'"
+                f"Briefly reassure them empathetically (e.g., 'No worries at all!'), then smoothly pivot to ask this question in your own natural words: '{target_q}'"
             )
             return f"Candidate Answer: '{candidate_transcript}'\nInstruction: {instruction}", target_q
 
@@ -261,18 +261,21 @@ class QuestionManager:
         if branch_taken == "strong_followup":
             target_q = current_q.followup_if_strong if (current_q and current_q.followup_if_strong) else target_logged_q
             instruction = (
-                f"Briefly validate their answer in 1 warm sentence, then ask this follow-up question exactly: '{target_q}'"
+                f"Briefly validate their answer in 1 warm sentence, then ask this follow-up question in your own words: '{target_q}'. "
+                f"CRITICAL: Ask ONLY this single question. Do NOT add any bridging questions of your own."
             )
         elif branch_taken == "weak_followup":
             target_q = current_q.followup_if_weak if (current_q and current_q.followup_if_weak) else target_logged_q
             instruction = (
-                f"Briefly acknowledge sympathetically that this topic is tricky, then ask this simplifying follow-up exactly: '{target_q}'"
+                f"Acknowledge sympathetically that this topic is tricky, then ask this simplifying follow-up in your own words: '{target_q}'. "
+                f"CRITICAL: Ask ONLY this single question. Do NOT add any extra questions."
             )
         else:  # standard next_topic
             next_q = self.get_current_question()
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
-                f"Briefly react to their answer in 1 sentence, then smoothly transition to ask exactly this question: '{target_q}'"
+                f"Acknowledge their previous answer smoothly, then transition to ask this question in your own words: '{target_q}'. "
+                f"CRITICAL: Ask ONLY this single question. Do NOT add any bridging questions of your own."
             )
 
         llm_prompt = (

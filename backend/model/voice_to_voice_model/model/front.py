@@ -1022,14 +1022,15 @@ class InterviewScreen(Screen):
 
             # --- TURN 1: INITIATE CONVERSATION ---
             if self.llm_enabled:
-                initial_greeting = (
-                    "Hello! I am Eva, your technical interviewer today. "
-                    "Before we dive into technical questions, could you briefly introduce yourself and tell me what you've been working on recently?"
-                )
                 if self.question_manager and self.question_manager.get_current_question():
                     q1 = self.question_manager.get_current_question()
+                    initial_greeting = f"Hello! I am Eva, your technical interviewer today. {q1.question_text}"
                     self.current_question_text = q1.question_text
                 else:
+                    initial_greeting = (
+                        "Hello! I am Eva, your technical interviewer today. "
+                        "Before we dive into technical questions, could you briefly introduce yourself and tell me what you've been working on recently?"
+                    )
                     self.current_question_text = initial_greeting
 
                 self.log_and_display_turn("Eva", initial_greeting)

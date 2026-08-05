@@ -82,7 +82,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - **Match $\ge$ 50% & `followup_if_strong`**: Triggers `"strong_followup"` branch (escalates to architectural trade-offs and edge cases).
   - **Match $<$ 20% & `followup_if_weak`**: Triggers `"weak_followup"` branch (asks simplifying diagnostic probes).
   - **Otherwise / Interview Completion**: Triggers `"next_topic"` or `"interview_completed"` branch and advances question pointer safely.
-* **Natural Conversational Context & Prompt Bridging**: `format_prompt_context()` constructs conversational LLM instructions (e.g., reacting warmly before pivoting) rather than rigid numbered lists. This enforces a smooth 1-question pivot and eliminates "schizophrenic turns" where Eva would ask two disjointed questions in the same breath.
+* **Natural Conversational Context & Prompt Bridging**: `format_prompt_context()` constructs conversational LLM instructions using the candidate's answer as a bridge. It explicitly forbids the LLM from appending extra bridging questions of its own (`CRITICAL: Ask ONLY this single question`), eliminating "schizophrenic turns" where Eva would ask two disjointed questions in the same breath.
 * **Single Source of Truth Session Completion**: `front.py` synchronizes `self.question_count` directly from `self.question_manager.current_index + 1`. Follow-ups and icebreakers no longer trigger premature `self.question_count >= self.MAX_QUESTIONS` cutoffs. The session only wraps up when `QuestionManager` evaluates the candidate's final technical answer and returns `interview_completed`.
 
 ### 3. Configuration & 100% Offline Local Model Loading ([config.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/config.py))
@@ -130,11 +130,9 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - Responses are parsed line-by-line without waiting for heavy XML blocks to close.
 * **Interrupt-Aware Token Loop (v2)**: `stream_llm_response` checks `session_state.interrupt_event` on **every token**. When set (candidate barge-in), LLM generation is aborted immediately. Clause dispatch is also gated — no clauses are sent to the speaker after an interrupt.
 * **Sub-Second Clause Streaming & TTFA**: `stream_llm_response` scans the raw LLM token stream for the `TONE:` line, sets `session_state.current_tone` and `session_state.tts_speed` early, and immediately streams all tokens following `SPEAK:` to the clause splitter on punctuation boundaries (`[,?!.\n]`). Natural clauses are dispatched to `PersistentSpeaker` to hide generation latency, achieving sub-250ms Time-To-First-Audio (TTFA).
-* **Prosodic Regex TextSanitizer (`TextSanitizer.clean_for_tts`)**:
-  - Strips residual action tags (`[Clears Throat]`, `(Sighs)`) and cleans fallback tokens.
-  - Preserves backticks text content without wiping code identifiers (e.g. ``asyncio.sleep(1)``).
-  - Tone-specific prosody: Injects soft opening ellipses (`"Ah, no worries..."`) for empathetic tones, natural breathing commas (`"Hey there,"`) for warm tones, and soft thinking pauses (`...`) for standard vocal anchors.
-  - Forced Technical Micro-Pauses: Adds em-dashes (`--`) or breathing commas around complex technical terms ("FastAPI--with async", "PostgreSQL", "Kafka").
+* **Prosodic Regex TextSanitizer (`TextSanitizer.clean_for_tts` & `clean_for_ui`)**:
+  - `clean_for_ui`: Strips XML, brackets, and action tags (`[Clears Throat]`) exclusively for clean Kivy UI transcript logging without affecting natural punctuation.
+  - `clean_for_tts`: Injects tone-specific prosody (soft opening ellipses for empathetic tones, natural breathing commas for warm tones) and Forced Technical Micro-Pauses (em-dashes or commas around complex technical terms like `asyncio`).
   - **Kokoro Pitch Spike Elimination**: Automatically replaces exclamation marks `!` with soft periods `.` to ensure smooth, natural TTS delivery without forced artificial pitch spikes.
 
 ### 6. Text-to-Speech Playback ([speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/speaker.py))

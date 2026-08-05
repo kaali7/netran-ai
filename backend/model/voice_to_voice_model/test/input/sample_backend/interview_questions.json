@@ -2,62 +2,62 @@
   {
     "id": 1,
     "tier": "Tier 1 (Warmup)",
-    "topic": "Asynchronous Python & Microservices Architecture",
+    "topic": "Resume Project Experience",
+    "difficulty": "Entry",
+    "question_text": "I see you've been working on a Resume Builder project recently. Could you walk me through the high-level architecture of that project and explain the biggest technical challenge you faced while building it?",
+    "resume_context": "Candidate built a Resume Builder project recently.",
+    "expected_keywords": [
+      "architecture",
+      "challenge",
+      "database",
+      "frontend",
+      "backend"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Provides a very shallow description with no technical depth",
+        "Cannot explain any specific challenges"
+      ],
+      "good_answer_indicators": [
+        "Clearly outlines the tech stack used",
+        "Describes a specific problem and how they solved it"
+      ],
+      "bar_raiser_indicators": [
+        "Explains architectural trade-offs made during the project",
+        "Discusses scaling or performance optimizations"
+      ]
+    },
+    "followup_if_strong": "That sounds like a solid approach. If you had to scale this project to handle 10,000 concurrent users, what architectural changes would you prioritize?",
+    "followup_if_weak": "Could you break down the specific technologies you used for the frontend and the backend?"
+  },
+  {
+    "id": 2,
+    "tier": "Tier 1 (Warmup)",
+    "topic": "Asynchronous Python",
     "difficulty": "Mid",
-    "question_text": "In Python's asyncio event loop, how are synchronous blocking I/O calls handled when executing within a FastAPI endpoint, and what happens if a synchronous time.sleep or blocking DB query is executed directly inside an async def path?",
+    "question_text": "In Python's asyncio event loop, how are synchronous blocking I/O calls handled when executing within a FastAPI endpoint?",
     "resume_context": "Candidate claims expertise in high-concurrency AsyncIO frameworks and FastAPI microservices.",
     "expected_keywords": [
       "event loop thread",
-      "blocking execution",
       "run_in_executor",
       "ThreadPoolExecutor",
-      "asyncio.sleep",
-      "event loop starvation"
+      "blocking execution"
     ],
     "rubric": {
       "poor_answer_indicators": [
         "Claims asyncio automatically multi-threads Python code",
-        "Does not recognize that blocking calls freeze the entire single-threaded event loop"
+        "Does not recognize that blocking calls freeze the single-threaded event loop"
       ],
       "good_answer_indicators": [
         "Explains that blocking calls stall the event loop for all concurrent requests",
         "Suggests offloading synchronous blocking calls to run_in_executor or thread pools"
       ],
       "bar_raiser_indicators": [
-        "Explains internal mechanics of run_in_executor and thread pool limits in FastAPI synchronous def worker pools versus async def event loops"
+        "Explains internal mechanics of run_in_executor and thread pool limits in FastAPI synchronous def worker pools"
       ]
     },
     "followup_if_strong": "How does FastAPI internally handle normal synchronous 'def' endpoints versus 'async def' endpoints with respect to thread pools?",
-    "followup_if_weak": "What is the key functional difference between time.sleep(1) and asyncio.sleep(1) inside an async function?"
-  },
-  {
-    "id": 2,
-    "tier": "Tier 1 (Warmup)",
-    "topic": "High-Concurrency Python & Microservices Architecture",
-    "difficulty": "Mid",
-    "question_text": "What are the primary operational trade-offs between using gRPC over HTTP/2 versus traditional REST over HTTP/1.1 for high-throughput internal microservice communication?",
-    "resume_context": "Candidate integrated gRPC services over HTTP/2 for internal service-to-service communication at StreamLine Technologies.",
-    "expected_keywords": [
-      "multiplexing",
-      "Protobuf binary serialization",
-      "HTTP/2 connection reuse",
-      "head-of-line blocking",
-      "payload size"
-    ],
-    "rubric": {
-      "poor_answer_indicators": [
-        "Focuses only on JSON syntax differences",
-        "Unaware of HTTP/2 multiplexing or Protobuf binary framing"
-      ],
-      "good_answer_indicators": [
-        "Mentions Protobuf efficiency, smaller payload size, and HTTP/2 multiplexing eliminating TCP handshake overhead"
-      ],
-      "bar_raiser_indicators": [
-        "Discusses streaming capabilities, dynamic client stubs, gRPC load balancing nuances, and debugging complexity via Wireshark/gRPCurl"
-      ]
-    },
-    "followup_if_strong": "How do you handle client-side load balancing in gRPC across Kubernetes pods given long-lived persistent HTTP/2 connections?",
-    "followup_if_weak": "Why is binary serialization like Protobuf faster than JSON serialization for microservice communication?"
+    "followup_if_weak": "What happens to the event loop if you put a time.sleep(10) directly inside an async function?"
   },
   {
     "id": 3,

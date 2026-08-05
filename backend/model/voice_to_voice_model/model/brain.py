@@ -103,20 +103,25 @@ Choose ONE tone attribute for the TONE: line matching the candidate's turn conte
 
 class TextSanitizer:
     @staticmethod
+    def clean_for_ui(text: str) -> str:
+        """Strips XML, brackets, and action tags for clean transcript logging."""
+        if not text:
+            return ""
+        clean_text = text
+        clean_text = re.sub(r'<[^>]+>', '', clean_text)
+        clean_text = re.sub(r'\[.*?\]|\(.*?\)', '', clean_text)
+        clean_text = clean_text.replace('`', '')
+        clean_text = re.sub(r'TONE:\s*\w+', '', clean_text, flags=re.IGNORECASE)
+        clean_text = re.sub(r'SPEAK:\s*', '', clean_text, flags=re.IGNORECASE)
+        return clean_text.strip()
+
+    @staticmethod
     def clean_for_tts(text: str, tone: str = "direct") -> str:
         if not text:
             return ""
 
-        clean_text = text
-        
-        # Strip leftover XML tags or action brackets just in case
-        clean_text = re.sub(r'<[^>]+>', '', clean_text)
-        clean_text = re.sub(r'\[.*?\]|\(.*?\)', '', clean_text)
-        clean_text = clean_text.replace('`', '')
-        
-        # Strip any leaked TONE: or SPEAK: artifacts
-        clean_text = re.sub(r'TONE:\s*\w+', '', clean_text, flags=re.IGNORECASE)
-        clean_text = re.sub(r'SPEAK:\s*', '', clean_text, flags=re.IGNORECASE)
+        # First apply UI cleaning
+        clean_text = TextSanitizer.clean_for_ui(text)
         
         # 3. Tone-Specific Micro-Prosody & Conversational Anchors
         tone_lower = tone.strip().lower() if tone else "direct"
@@ -327,7 +332,8 @@ def stream_llm_response(
                 session_state.current_tone = detected_tone
                 session_state.tts_speed = get_speed_for_tone(detected_tone)
             
-            return "", clean_speak_text
+            ui_safe_text = TextSanitizer.clean_for_ui(full_speak_text)
+            return "", ui_safe_text
 
         except Exception as e:
             if attempt < max_retries - 1:
