@@ -65,7 +65,7 @@ backend/
     │   │   ├── current.md     # Stage 3 technical implementation status
     │   │   └── prd.md         # Stage 3 Product Requirements Document
     │   ├── test/              # Stage 3 test harness input/output directories
-    │   │   ├── input/         # Stage 2 preset inputs (interview_questions.json, interviewer_behavior.json, system_prompt.txt, resume_analysis.json)
+    │   │   ├── input/         # Stage 2 preset inputs (interview_questions.json, interviewer_behavior.json, resume_analysis.json)
     │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> recording.wav & session_manifest.json )
     │   └── model/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
@@ -73,7 +73,6 @@ backend/
     │       ├── config.py      # Stage 3 configuration loader (Stage3Config)
     │       ├── download_vad.py # Downloader utility for Silero VAD ONNX model weights
     │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
-    │       ├── interview_scripts.json # Pre-scripted calibration tracks for Script Mode
     │       ├── listener.py    # Silero VAD v3, auto-gain peak normalizer, Faster-Whisper STT
     │       ├── pipeline.py    # Stage 3 master pipeline entry point (WorkflowVoiceEngine)
     │       ├── prompts.py     # Centralized Stage 3 system prompts (SYSTEM_PROMPT, WHISPER_INITIAL_PROMPT)

@@ -31,7 +31,7 @@ class SessionState:
     # Updated by listener.py on each successful barge-in trigger.
     last_interrupt_time: float = 0.0
 
-    pause_tolerance_ms: int = 2000    # Default ⚡ Fast (800ms)
+    pause_tolerance_ms: int = 800      # Default ⚡ Fast Response (800ms / 0.8s)
     tts_speed: float = 1.00          # Dynamic Kokoro TTS synthesis speed factor
     current_tone: str = "direct"     # Master emotional tone attribute for turn synthesis
     selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset

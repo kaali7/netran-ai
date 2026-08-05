@@ -41,7 +41,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 │ • Filler word removed (LLM anchors serve as natural fillers)            │
 │ • Late Question Advance (evaluate before pointer increment)             │
 │ • System-Prompt-Anchored Sliding Context Window (Max 4 Turns)          │
-│ • Pause Tolerance Spinner (⚡ 1.0s / ⚖️ 1.6s / 🧠 2.2s)              │
+│ • Streamlined Preset & Question Limit Controls                          │
+│ • Fixed 800ms Fast Response Pause Tolerance                            │
 │ • Graceful Session Closure                                              │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │ Filtered Context
@@ -157,7 +158,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - Uses a **Premium Dark Theme Redesign** featuring deep charcoal backgrounds (`#121212`), elevated dark-gray rounded panels (`#1E1E24`), tactile solid-colored flat buttons, and vibrant color-coded chat tags (Eva in blue, User in teal, System in amber).
   - **`InterviewScreen`**:
     - Top Action Bar with prominent `📜 View Session Output History` button.
-    - Preset Selector, LLM/Calibration mode toggles, and Pause Tolerance spinner (1.0s, 1.6s, 2.2s).
+    - Streamlined Preset Selector (`sample_backend`, `sample_frontend`, `sample_fullstack`) and Question Limit Selector (5, 10, 15, All).
+    - Hard-coded default session settings: `800ms` Fast Response pause tolerance, `af_bella` Kokoro voice, and `Auto-VAD` mode.
     - Live VAD visualizer & volume diagnostics bar.
   - **`SessionHistoryScreen`**:
     - Full-page output inspector displaying past `sess_<timestamp>` output folders.

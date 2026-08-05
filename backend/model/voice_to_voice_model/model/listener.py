@@ -372,20 +372,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         audio_array = audio_array * final_gain
     print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f}, gain={final_gain:.1f}x)", flush=True)
 
-    # DIAGNOSTIC: Save the exact audio Whisper receives to a WAV file for analysis
-    try:
-        import wave as _wave
-        _diag_path = os.path.join(os.path.dirname(__file__), "_whisper_input_dump.wav")
-        with _wave.open(_diag_path, 'wb') as _wf:
-            _wf.setnchannels(1)
-            _wf.setsampwidth(2)
-            _wf.setframerate(16000)
-            _pcm = (np.clip(audio_array, -1.0, 1.0) * 32767).astype(np.int16)
-            _wf.writeframes(_pcm.tobytes())
-        print(f"[DIAG] Saved Whisper input to: {_diag_path}", flush=True)
-    except Exception as _e:
-        print(f"[DIAG] Could not save diagnostic WAV: {_e}", flush=True)
-
     # Generate transcription using Faster-Whisper.
     # vad_filter=False: Whisper's built-in VAD is deliberately disabled because it
     # re-applies a silence gate that strips out quiet/distant speech that our Silero

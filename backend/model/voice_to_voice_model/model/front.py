@@ -151,17 +151,6 @@ KV = """
                 color: 0.9, 0.9, 0.9, 1
                 on_text: root.on_preset_select(self.text)
 
-            ToggleButton:
-                id: mode_toggle
-                text: 'LLM Engine: ACTIVE'
-                state: 'down'
-                size_hint_y: None
-                height: '40dp'
-                font_size: '13sp'
-                background_normal: ''
-                background_color: 0.15, 0.45, 0.75, 1
-                on_press: root.toggle_llm_mode(self)
-
             Spinner:
                 id: limit_selector
                 text: '5 Questions (Fast Test)'
@@ -172,51 +161,6 @@ KV = """
                 background_normal: ''
                 background_color: 0.16, 0.16, 0.2, 1
                 on_text: root.on_limit_select(self.text)
-
-            Spinner:
-                id: pause_tolerance
-                text: '⚡ Fast Response (0.8s)'
-                values: ('⚡ Fast Response (0.8s)', '⚖️ Balanced (1.2s)', '🧠 Deep Thinker (1.8s)')
-                size_hint_y: None
-                height: '40dp'
-                font_size: '13sp'
-                background_normal: ''
-                background_color: 0.16, 0.16, 0.2, 1
-                on_text: root.on_pause_select(self.text)
-
-            Spinner:
-                id: voice_selector
-                text: '🎙️ Voice: af_bella'
-                values: ('🎙️ Voice: af_bella', '🎙️ Voice: af_nicole', '🎙️ Voice: am_adam', '🎙️ Voice: bf_emma')
-                size_hint_y: None
-                height: '40dp'
-                font_size: '13sp'
-                background_normal: ''
-                background_color: 0.16, 0.16, 0.2, 1
-                on_text: root.on_voice_select(self.text)
-
-            Spinner:
-                id: input_mode_selector
-                text: '🎙️ Mode: Auto-VAD'
-                values: ('🎙️ Mode: Auto-VAD', '🔴 Mode: Push-To-Talk')
-                size_hint_y: None
-                height: '40dp'
-                font_size: '13sp'
-                background_normal: ''
-                background_color: 0.16, 0.16, 0.2, 1
-                on_text: root.on_input_mode_select(self.text)
-
-            Spinner:
-                id: script_selector
-                text: 'Select Calibration Track'
-                values: ('React.js Core', 'Next.js & Server Architecture', 'TypeScript Essentials', 'Frontend Build Tools', 'CSS & Tailwind UI')
-                size_hint_y: None
-                height: '40dp'
-                font_size: '13sp'
-                disabled: True
-                background_normal: ''
-                background_color: 0.16, 0.16, 0.2, 1
-                on_text: root.on_track_select(self.text)
 
             ScrollView:
                 size_hint_y: 1.0
@@ -599,51 +543,20 @@ class InterviewScreen(Screen):
         self.current_question_text = ""
         self.last_eva_speech_end_sec = 0.0
 
-        # State variables for Script Calibration Mode & Stage 2 Bundle
+        # State variables for Stage 2 Bundle & Execution
         self.llm_enabled = True
-        self.calibration_scripts = {}
-        self.active_track = None
-        self.current_track_data = []
         self.stage2_bundle = None
         self.question_manager = None
         self.selected_preset_name = "sample_backend"
 
         self.session_state = SessionState()
+        self.session_state.pause_tolerance_ms = 800   # 0.8s Fast Response
+        self.session_state.selected_voice = "af_bella" # Kokoro Female American Voice
+        self.session_state.input_mode = "VAD"          # Auto-VAD
         self.tts_player = None
         self.candidate_project_anchor = ""
 
-        self._load_calibration_scripts()
         self._load_selected_preset(self.selected_preset_name)
-
-    def on_pause_select(self, text):
-        if "0.8s" in text:
-            self.session_state.pause_tolerance_ms = 800
-        elif "1.2s" in text or "1.0s" in text:
-            self.session_state.pause_tolerance_ms = 1200
-        elif "1.8s" in text or "2.2s" in text:
-            self.session_state.pause_tolerance_ms = 1800
-
-    def on_voice_select(self, text):
-        preset = text.replace("🎙️ Voice: ", "").strip()
-        self.session_state.selected_voice = preset
-        print(f"[GUI] Selected Kokoro voice preset: {preset}", flush=True)
-
-    def on_input_mode_select(self, text):
-        if "Push-To-Talk" in text or "PTT" in text:
-            self.session_state.input_mode = "PTT"
-            print("[GUI] Input Mode changed to Push-To-Talk (PTT)", flush=True)
-        else:
-            self.session_state.input_mode = "VAD"
-            print("[GUI] Input Mode changed to Auto-VAD", flush=True)
-
-    def _load_calibration_scripts(self):
-        script_dir = os.path.dirname(__file__)
-        json_path = os.path.join(script_dir, "interview_scripts.json")
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                self.calibration_scripts = json.load(f)
-        except Exception as e:
-            print(f"[Error loading scripts] {e}")
 
     def _load_selected_preset(self, preset_name: str):
         model_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
