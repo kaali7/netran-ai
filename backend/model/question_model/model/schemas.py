@@ -248,6 +248,10 @@ class InterviewerBehavior(BaseModel):
     target_role: str = Field(default="Target Role", description="Target role title.")
     interviewer_system_prompt: str = Field(description="Token-calibrated system prompt for Stage 3 Ollama Qwen2.5.")
     behavior_rules: list[str] = Field(default_factory=list, description="Low-latency voice interaction rules.")
+    whisper_domain_vocabulary: str = Field(
+        default="",
+        description="Comma-separated list of technical jargon extracted from resume/JD to aid STT accuracy."
+    )
 
 
 class PlannerOutput(BaseModel):

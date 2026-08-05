@@ -73,7 +73,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
      - **System Design & Advanced Architecture:** Questions 14–15
      - Includes `rubric` (`poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`), `followup_if_strong`, and `followup_if_weak`.
   3. **`interviewer_behavior.json`**:
-     - `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, `behavior_rules`.
+     - `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, `behavior_rules`, `whisper_domain_vocabulary` (15-25 technical terms extracted from resume/JD to enhance Stage 3 Whisper STT accuracy).
 
 ---
 

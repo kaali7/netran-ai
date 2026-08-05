@@ -920,10 +920,16 @@ class InterviewScreen(Screen):
             while self.is_running:
                 self.update_status("Listening to your response...")
                 turn_start_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
+                
+                whisper_prompt = "User is speaking in English in a clear conversational tone during a technical interview."
+                if self.stage2_bundle and self.stage2_bundle.behavior.whisper_domain_vocabulary:
+                    whisper_prompt += f" Technical terms: {self.stage2_bundle.behavior.whisper_domain_vocabulary}"
+
                 user_transcript = listen_and_transcribe(
                     ui_callback=self.update_audio_diagnostics, 
                     mic_writer=self.mic_writer,
-                    state=self.session_state
+                    state=self.session_state,
+                    whisper_prompt=whisper_prompt
                 )
                 turn_end_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
                 silence_gap_sec = max(0.0, turn_start_sec - self.last_eva_speech_end_sec)

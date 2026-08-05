@@ -39,7 +39,6 @@ from faster_whisper import WhisperModel
 try:
     from .benchmark import Benchmark
     from .config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
-    from .prompts import WHISPER_INITIAL_PROMPT
     from .session_state import SessionState
     from .turn_classifier import check_thought_completion
 except ImportError:
@@ -50,7 +49,6 @@ except ImportError:
             MIC_DEVICE_INDEX,
             auto_select_mic_device,
         )
-        from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
         from model.voice_to_voice_model.model.turn_classifier import (
             check_thought_completion,
@@ -58,7 +56,6 @@ except ImportError:
     except ImportError:
         from benchmark import Benchmark
         from config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
-        from prompts import WHISPER_INITIAL_PROMPT
         from session_state import SessionState
         from turn_classifier import check_thought_completion
 
@@ -105,7 +102,7 @@ def is_valid_transcript(text: str) -> bool:
     return True
 
 
-def _transcribe_audio_buffer(audio_buffer):
+def _transcribe_audio_buffer(audio_buffer, whisper_prompt=""):
     if not audio_buffer:
         return ""
     audio_array = np.concatenate(audio_buffer)
@@ -124,7 +121,7 @@ def _transcribe_audio_buffer(audio_buffer):
     segments, _ = whisper_model.transcribe(
         audio_array,
         language="en",
-        initial_prompt=WHISPER_INITIAL_PROMPT,
+        initial_prompt=whisper_prompt,
         beam_size=1,
         best_of=1,
         temperature=0.0,
@@ -137,7 +134,7 @@ def _transcribe_audio_buffer(audio_buffer):
     return "".join([segment.text for segment in segments]).strip()
 
 
-def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None):
+def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None, whisper_prompt=""):
     """
     Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
     respects the echo gate via SessionState, transcribes the speech using Faster-Whisper,
@@ -491,7 +488,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     segments, _ = whisper_model.transcribe(
         audio_array,
         language="en",
-        initial_prompt=WHISPER_INITIAL_PROMPT,
+        initial_prompt=whisper_prompt,
         beam_size=1,
         best_of=1,
         temperature=0.0,
@@ -628,7 +625,7 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
         segments, _ = whisper_model.transcribe(
             audio_to_transcribe,
             language="en",
-            initial_prompt=WHISPER_INITIAL_PROMPT,
+            initial_prompt="User is speaking in English in a clear conversational tone.",
             beam_size=1,
             best_of=1,
             temperature=0.0,

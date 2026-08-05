@@ -42,19 +42,7 @@ SYSTEM_PROMPT: dict[str, str] = {
 
 
 # =====================================================================
-# 2. FASTER-WHISPER DOMAIN VOCABULARY
-# =====================================================================
-
-WHISPER_INITIAL_PROMPT = (
-    "User is speaking in English in a clear conversational tone during a technical interview. "
-    "Technical terms: Python, asyncio, FastAPI, PostgreSQL, B-Tree, Redis, gRPC, Protobuf, HTTP/2, HTTP/1.1, "
-    "Docker, Kubernetes, Kafka, System Design, REST APIs, Microservices, Data Structures, "
-    "Algorithms, React.js, Next.js, TypeScript, Tailwind CSS, Cache-Aside, Token Bucket."
-)
-
-
-# =====================================================================
-# 3. DYNAMIC PROMPT BUILDERS
+# 2. DYNAMIC PROMPT BUILDERS
 # =====================================================================
 
 def get_system_prompt(custom_prompt_text: str | None = None) -> dict[str, str]:

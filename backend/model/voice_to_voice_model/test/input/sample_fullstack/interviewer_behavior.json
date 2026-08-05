@@ -11,5 +11,6 @@
     "No markdown, code formatting, bullet points, or list structures.",
     "Ask exactly one question at a time and wait.",
     "Execute dynamic branching (scaffold if weak, escalate if strong)."
-  ]
+  ],
+  "whisper_domain_vocabulary": "React, Next.js, TypeScript, Python, FastAPI, PyTorch, LangChain, LlamaIndex, Ollama, Vector DB, Qdrant, Pinecone, RAG, Embeddings, Docker, Kubernetes, WebSockets, REST API, GraphQL, PostgreSQL, Redis"
 }

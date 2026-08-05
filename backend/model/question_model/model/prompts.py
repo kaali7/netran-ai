@@ -76,6 +76,7 @@ For EACH question, supply:
 - `target_role`: "{target_role}"
 - `interviewer_system_prompt`: Include a complete, token-calibrated system prompt instructing Eva on how to stay in character, remain professional yet conversational, limit responses to one question at a time (MAX 25 WORDS), use vocal anchors, bridge candidate answers smoothly, and maintain a sharp CTA ending with a question mark.
 - `behavior_rules`: Array of conversational rules (e.g., "Never ask multi-part questions", "Acknowledge answer briefly before probing deeper").
+- `whisper_domain_vocabulary`: "A comma-separated string of 15-25 highly specific technical terms, acronyms, and jargon extracted from the candidate's resume and JD (e.g. 'PostgreSQL, FastAPI, B-Tree, asyncio, gRPC'). This acts as a hint for the Speech-to-Text engine to correctly transcribe domain-specific words."
 
 Return strictly valid JSON matching the PlannerOutput schema.
 """

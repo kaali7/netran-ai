@@ -11,5 +11,6 @@
     "Maintain authoritative, direct executive engineering tone.",
     "Execute dynamic branching: probe edge cases when candidate answers strongly; offer simplifying scaffolding when candidate stumbles.",
     "Always ask exactly one targeted technical follow-up or main question at a time."
-  ]
+  ],
+  "whisper_domain_vocabulary": "React, Next.js, TypeScript, JavaScript, CSS, HTML5, Webpack, Vite, Redux, Zustand, React Query, SSR, SSG, Virtual DOM, Micro-frontends, Web Workers, Core Web Vitals, LCP, CLS, FID, Tailwind CSS, Cypress, Jest"
 }

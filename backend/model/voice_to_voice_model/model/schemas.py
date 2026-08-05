@@ -43,6 +43,7 @@ class InterviewerBehaviorInput(BaseModel):
     target_role: str | None = None
     interviewer_system_prompt: str
     behavior_rules: list[str] = Field(default_factory=list)
+    whisper_domain_vocabulary: str = ""
 
 
 class Stage2SessionBundle(BaseModel):
