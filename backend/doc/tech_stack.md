@@ -51,7 +51,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * Low-latency clause-level streaming response generation during live interview conversations.
   * Zero external API cost and full privacy compliance.
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper)**
-  * Real-time streaming candidate voice transcription loaded 100% offline (`HF_HUB_OFFLINE=1`) from local disk cache snapshot.
+  * Real-time streaming candidate voice transcription loaded 100% offline (`HF_HUB_OFFLINE=1`) from local disk cache snapshot, dynamically weighted with `whisper_domain_vocabulary` extracted from the candidate's resume for enhanced technical accuracy.
 * **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
   * Ultra-low-latency speech start/stop detection with dual VAD+RMS speech gate (`listener.py`), processing audio chunks in microsecond frames.
   * Employs native Windows OS resampling (via MME `MIC_DEVICE_INDEX=0` override) and a custom Python IIR high-pass filter (`alpha=0.995`) to perfectly eliminate hardware DC drift and mathematical aliasing distortion before STT.

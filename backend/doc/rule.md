@@ -29,7 +29,7 @@ Before modifying any source code in a model stage:
 * **Outputs**: Must output a dedicated session directory `model/question_model/test/output/sess_<timestamp>/` containing **THREE session artifacts**:
   1. `resume_analysis.json`: Candidate skill overlap, experience gaps, project relevance scores, candidate highlights, and resume red flags.
   2. `interview_questions.json`: Array of 15 holistic interview questions (`id`, `tier`, `topic`, `difficulty`, `question_text`, `expected_keywords`, `rubric`, `followup_if_strong`, `followup_if_weak`) covering behavioral intro, role fit, work history, project deep dives, technical domain, and system design.
-  3. `interviewer_behavior.json`: Object containing `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, and low-latency voice streaming `behavior_rules`.
+  3. `interviewer_behavior.json`: Object containing `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, low-latency voice streaming `behavior_rules`, and STT-enhancing `whisper_domain_vocabulary`.
 
 ---
 
