@@ -41,6 +41,7 @@ try:
     from .config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
     from .prompts import WHISPER_INITIAL_PROMPT
     from .session_state import SessionState
+    from .turn_classifier import check_thought_completion
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
@@ -51,11 +52,15 @@ except ImportError:
         )
         from model.voice_to_voice_model.model.prompts import WHISPER_INITIAL_PROMPT
         from model.voice_to_voice_model.model.session_state import SessionState
+        from model.voice_to_voice_model.model.turn_classifier import (
+            check_thought_completion,
+        )
     except ImportError:
         from benchmark import Benchmark
         from config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
         from prompts import WHISPER_INITIAL_PROMPT
         from session_state import SessionState
+        from turn_classifier import check_thought_completion
 
 # Global setup
 VAD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")
@@ -100,6 +105,38 @@ def is_valid_transcript(text: str) -> bool:
     return True
 
 
+def _transcribe_audio_buffer(audio_buffer):
+    if not audio_buffer:
+        return ""
+    audio_array = np.concatenate(audio_buffer)
+    alpha = 0.995
+    filtered = np.empty_like(audio_array)
+    filtered[0] = 0.0
+    for i in range(1, len(audio_array)):
+        filtered[i] = alpha * (filtered[i - 1] + audio_array[i] - audio_array[i - 1])
+    audio_array = filtered
+
+    utterance_peak = float(np.max(np.abs(audio_array)))
+    if utterance_peak > 0.0001:
+        final_gain = min(0.9 / utterance_peak, 15.0)
+        audio_array = audio_array * final_gain
+
+    segments, _ = whisper_model.transcribe(
+        audio_array,
+        language="en",
+        initial_prompt=WHISPER_INITIAL_PROMPT,
+        beam_size=1,
+        best_of=1,
+        temperature=0.0,
+        condition_on_previous_text=False,
+        no_speech_threshold=0.6,
+        hallucination_silence_threshold=2.0,
+        vad_filter=False,
+        compression_ratio_threshold=2.4,
+    )
+    return "".join([segment.text for segment in segments]).strip()
+
+
 def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None):
     """
     Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
@@ -118,27 +155,75 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         native_rate = 16000
     CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
-    try:
-        # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
-        stream = sd.InputStream(
-            samplerate=RATE,
-            channels=CHANNELS,
-            dtype='float32',
-            blocksize=CHUNK,
-            device=MIC_DEVICE,
-        )
-        native_rate = RATE
-        CHUNK_NATIVE = CHUNK
-    except sd.PortAudioError:
-        # Fallback Method A: WASAPI strictly requires native rate, so we do manual decimation
-        stream = sd.InputStream(
-            samplerate=native_rate,
-            channels=CHANNELS,
-            dtype='float32',
-            blocksize=CHUNK_NATIVE,
-            device=MIC_DEVICE,
-        )
+    # Robust microphone initialization with retries (fixes race condition with BargeInWatcher)
+    import time
+    stream = None
+    native_rate = RATE
+    CHUNK_NATIVE = CHUNK
+    
+    for attempt in range(3):
+        try:
+            # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
+            stream = sd.InputStream(
+                samplerate=RATE,
+                channels=CHANNELS,
+                dtype='float32',
+                blocksize=CHUNK,
+                device=MIC_DEVICE,
+            )
+            native_rate = RATE
+            CHUNK_NATIVE = CHUNK
+            break
+        except sd.PortAudioError:
+            try:
+                # Fallback Method A: WASAPI strictly requires native rate
+                device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
+                native_rate = int(device_info.get("default_samplerate", 16000))
+                if native_rate <= 0:
+                    native_rate = 16000
+                CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+                
+                stream = sd.InputStream(
+                    samplerate=native_rate,
+                    channels=CHANNELS,
+                    dtype='float32',
+                    blocksize=CHUNK_NATIVE,
+                    device=MIC_DEVICE,
+                )
+                break
+            except Exception as e:
+                if attempt < 2:
+                    print(f"[VAD] Mic locked, retrying... ({e})")
+                    time.sleep(0.3)
+                else:
+                    raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
+                    
     stream.start()
+
+    audio_queue = queue.Queue()
+    stop_producer = threading.Event()
+
+    def mic_stream_producer():
+        """Producer Thread: Continuously drains audio hardware buffer."""
+        while not stop_producer.is_set():
+            try:
+                raw_data, overflowed = stream.read(CHUNK_NATIVE)
+                audio_queue.put(raw_data)
+            except Exception as err:
+                if not stream.active:
+                    break
+                print(f"[Producer Thread Warning] {err}", flush=True)
+
+    producer_thread = threading.Thread(target=mic_stream_producer, daemon=True)
+    producer_thread.start()
+
+    if ui_callback:
+        ui_callback({
+            "type": "audio_level",
+            "rms": 0.0,
+            "vad_prob": 0.0,
+            "state": "Listening... Speak into your microphone"
+        })
 
     is_ptt = bool(state and getattr(state, "input_mode", "VAD") == "PTT")
     if is_ptt:
@@ -149,6 +234,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     audio_buffer = []
     pre_speech_buffer = collections.deque(maxlen=15)  # 480ms ring buffer
     has_spoken = False
+    has_extended_silence = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
     _diag_frame_counter = 0   # Periodic VAD diagnostic counter
@@ -178,11 +264,11 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     state.force_speech_done.clear()
                     break
 
-            # 1. Read raw PCM data from the microphone
+            # 1. Read raw PCM data from Producer Queue
             try:
-                raw_data, overflowed = stream.read(CHUNK_NATIVE)
+                raw_data = audio_queue.get(timeout=0.1)
                 original_frame = raw_data.flatten()
-            except Exception:
+            except queue.Empty:
                 continue
 
             # Anti-aliased integer decimation for 48kHz -> 16kHz
@@ -331,6 +417,22 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             if has_spoken:
                 can_endpoint = total_frames_counter >= MIN_SPEECH_FRAMES
                 if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > MAX_RECORDING_FRAMES:
+                    # Tier 1 + Tier 2 Hybrid Thought Completion Check
+                    if not has_extended_silence and total_frames_counter <= MAX_RECORDING_FRAMES:
+                        interim_text = _transcribe_audio_buffer(audio_buffer)
+                        status = check_thought_completion(interim_text)
+                        if status == "INCOMPLETE":
+                            has_extended_silence = True
+                            if state:
+                                state.pause_tolerance_ms = 2300
+                            max_silence_frames = max(8, (state.pause_tolerance_ms if state else 2300) // 32)
+                            print(
+                                f"⏳ Candidate is thinking... extending wait time to {max_silence_frames * 32}ms "
+                                f"(interim transcript: '{interim_text}')",
+                                flush=True
+                            )
+                            continue
+
                     print(f"[Silence Detected ({silence_frames_counter * 32}ms). Processing speech...]")
                     if ui_callback:
                         ui_callback({
@@ -344,8 +446,17 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     break
 
     finally:
+        stop_producer.set()
         if state:
             state.is_candidate_speaking.clear()
+            state.pause_tolerance_ms = 800  # Reset back to default baseline (800ms)
+        if ui_callback:
+            ui_callback({
+                "type": "audio_level",
+                "rms": 0.0,
+                "vad_prob": 0.0,
+                "state": "Mic: Standby"
+            })
         # Clean up audio hardware streams immediately
         stream.stop()
         stream.close()
@@ -703,35 +814,47 @@ class BargeInWatcher:
         CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
         # Open an independent sounddevice input stream for concurrent mic monitoring
-        try:
-            # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
-            stream = sd.InputStream(
-                samplerate=RATE,
-                channels=1,
-                dtype="float32",
-                blocksize=CHUNK,
-                device=MIC_DEVICE,
-            )
-            native_rate = RATE
-            CHUNK_NATIVE = CHUNK
-            stream.start()
-        except sd.PortAudioError:
+        # Robust microphone initialization with retries (fixes race condition with main listener)
+        stream = None
+        for attempt in range(3):
             try:
-                # Fallback Method A: WASAPI strictly requires native rate
+                # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
                 stream = sd.InputStream(
-                    samplerate=native_rate,
+                    samplerate=RATE,
                     channels=1,
                     dtype="float32",
-                    blocksize=CHUNK_NATIVE,
+                    blocksize=CHUNK,
                     device=MIC_DEVICE,
                 )
-                stream.start()
+                native_rate = RATE
+                CHUNK_NATIVE = CHUNK
+                break
+            except sd.PortAudioError:
+                try:
+                    # Fallback Method A: WASAPI strictly requires native rate
+                    stream = sd.InputStream(
+                        samplerate=native_rate,
+                        channels=1,
+                        dtype="float32",
+                        blocksize=CHUNK_NATIVE,
+                        device=MIC_DEVICE,
+                    )
+                    break
+                except Exception as exc:
+                    if attempt < 2:
+                        print(f"[BargeInWatcher] Mic locked, retrying... ({exc})", flush=True)
+                        _time.sleep(0.3)
+                    else:
+                        print(f"[BargeInWatcher] Could not open mic stream after retries: {exc}", flush=True)
+                        return
             except Exception as exc:
-                print(f"[BargeInWatcher] Could not open mic stream: {exc}", flush=True)
-                return
-        except Exception as exc:
-            print(f"[BargeInWatcher] Could not open mic stream: {exc}", flush=True)
-            return
+                if attempt < 2:
+                    print(f"[BargeInWatcher] Mic locked, retrying... ({exc})", flush=True)
+                    _time.sleep(0.3)
+                else:
+                    print(f"[BargeInWatcher] Could not open mic stream after retries: {exc}", flush=True)
+                    return
+        stream.start()
 
         try:
             while not self._stop_event.is_set() and not self.state.should_stop.is_set():
@@ -772,7 +895,9 @@ class BargeInWatcher:
                 speech_prob = float(ort_outputs[0][0, 0])
 
                 # Barge-in detected: speech above threshold
-                if speech_prob > self.VAD_THRESHOLD:
+                # Use a combined probability and raw RMS check to support quiet laptop mics
+                rms = np.sqrt(np.mean(frame ** 2))
+                if (speech_prob > 0.25 and rms > 0.003) or speech_prob > 0.35 or rms > 0.01:
                     now = _time.monotonic()
                     cooldown = getattr(self.state, "interrupt_cooldown_sec", 0.3)
                     last_t = getattr(self.state, "last_interrupt_time", 0.0)

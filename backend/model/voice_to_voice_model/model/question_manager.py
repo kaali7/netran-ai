@@ -87,8 +87,9 @@ class QuestionManager:
         clean = (transcript or "").lower().strip()
 
         # 0. Candidate explicitly requesting to stop the interview
+        # Avoid standalone words like 'end' or 'stop' to prevent false positives with 'back-end', 'front-end', or 'stop working'
         stop_pattern = re.compile(
-            r"\b(stop|end|quit|terminate|bye|goodbye|stop the interview|i want to stop)\b", 
+            r"\b(quit|terminate|bye|goodbye|stop the interview|end the interview|i want to stop|i need to stop|let's stop)\b", 
             re.IGNORECASE
         )
         if stop_pattern.search(clean):

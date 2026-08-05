@@ -595,26 +595,6 @@ class InterviewScreen(Screen):
             self.MAX_QUESTIONS = 5
         self.update_question_label(self.question_count)
 
-    def toggle_llm_mode(self, toggle_btn):
-        if toggle_btn.state == 'down':
-            self.llm_enabled = True
-            toggle_btn.text = 'LLM Engine: ACTIVE'
-            self.ids.script_selector.disabled = True
-            self._update_preset_display()
-        else:
-            self.llm_enabled = False
-            toggle_btn.text = 'SCRIPT CALIBRATION MODE'
-            self.ids.script_selector.disabled = False
-            self._update_script_display()
-
-        self.update_question_label(self.question_count if self.llm_enabled else self.question_count + 1)
-
-    def on_track_select(self, text):
-        if text in self.calibration_scripts:
-            self.active_track = text
-            self.current_track_data = self.calibration_scripts[text]
-            self._update_script_display()
-
     def _update_preset_display(self):
         if self.llm_enabled and self.stage2_bundle:
             b = self.stage2_bundle
@@ -632,29 +612,6 @@ class InterviewScreen(Screen):
             if "target_script_label" in self.ids:
                 self.ids.target_script_label.text = "[Running in dynamic live mode via Qwen LLM.]"
 
-    def _update_script_display(self):
-        if self.llm_enabled:
-            self._update_preset_display()
-            return
-
-        if not self.active_track or not self.current_track_data:
-            if "target_script_label" in self.ids:
-                self.ids.target_script_label.text = "[Select a track from the dropdown above to view the script.]"
-            return
-
-        idx = self.question_count
-        if idx < len(self.current_track_data):
-            q_data = self.current_track_data[idx]
-            if "target_script_label" in self.ids:
-                self.ids.target_script_label.text = (
-                    f"[b]TRACK:[/b] {self.active_track}\n"
-                    f"[b]QUESTION {idx + 1}:[/b] {q_data['question']}\n\n"
-                    f"[b]TARGET ANSWER TO READ ALOUD:[/b]\n"
-                    f"[color=00ff00]{q_data['answer']}[/color]"
-                )
-        else:
-            if "target_script_label" in self.ids:
-                self.ids.target_script_label.text = "[Calibration track complete! Click Restart or select a new track.]"
 
     def _reset_buttons(self):
         if "start_btn" in self.ids:
@@ -663,6 +620,10 @@ class InterviewScreen(Screen):
             self.ids.stop_btn.disabled = True
         if "restart_btn" in self.ids:
             self.ids.restart_btn.disabled = False
+        if "vad_state_label" in self.ids:
+            self.ids.vad_state_label.text = "Mic: Offline"
+        if "volume_bar" in self.ids:
+            self.ids.volume_bar.value = 0.0
 
     def update_question_label(self, count):
         def _update(dt):
@@ -955,27 +916,6 @@ class InterviewScreen(Screen):
                 # TRUE FULL-DUPLEX: _eva_speak_blocking starts BargeInWatcher concurrently
                 self._eva_speak_blocking(initial_greeting)
 
-            else:
-                if not self.current_track_data:
-                    self.update_status("Error: No track selected")
-                    self.append_ui_text("[System]: Please select an interview track before starting calibration.\n")
-                    self.stop_interview()
-                    return
-
-                q_data = self.current_track_data[0]
-                self.current_question_text = q_data['question']
-                initial_greeting = f"Welcome to the {self.active_track} calibration. Here is your first question: {q_data['question']}"
-                self.log_and_display_turn("Eva", q_data['question'])
-                self.question_count = 0
-                self.update_question_label(self.question_count + 1)
-                Clock.schedule_once(lambda dt: self._update_script_display())
-                self.update_status("Eva is speaking...")
-                # TRUE FULL-DUPLEX: _eva_speak_blocking starts BargeInWatcher concurrently
-                self._eva_speak_blocking(initial_greeting)
-                
-                turn1_history = f"TONE: warm\nSPEAK: {initial_greeting}"
-                self.conversation_history.append({"role": "assistant", "content": turn1_history})
-
             # --- MAIN CYCLE LOOP ---
             while self.is_running:
                 self.update_status("Listening to your response...")
@@ -1155,72 +1095,6 @@ class InterviewScreen(Screen):
                             self._eva_speak_blocking(closing)
                         total_qs = len(self.question_manager.questions) if self.question_manager else self.MAX_QUESTIONS
                         self.append_ui_text(f"\n[System]: Session complete. All {total_qs} questions covered.")
-                        self.stop_interview()
-                        break
-
-                else:
-                    q_data = self.current_track_data[self.question_count]
-                    expected_answer = q_data['answer']
-
-                    spoken_clean = clean_transcript.lower().strip().replace(".", "").replace(",", "")
-                    expected_clean = expected_answer.lower().strip().replace(".", "").replace(",", "")
-                    accuracy = difflib.SequenceMatcher(None, expected_clean.split(), spoken_clean.split()).ratio() * 100
-
-                    self.log_and_display_turn("You", f"{clean_transcript}")
-                    self.log_and_display_turn("System", f"[Accuracy Check] Match Score: {accuracy:.2f}%")
-
-                    self.question_count += 1
-
-                    if self.question_count < len(self.current_track_data):
-                        Clock.schedule_once(lambda dt: self._update_script_display())
-                        self.update_question_label(self.question_count + 1)
-
-                        next_q_data = self.current_track_data[self.question_count]
-                        next_q = next_q_data['question']
-
-                        self.log_and_display_turn("Eva", next_q)
-                        self.update_status("Eva is speaking...")
-                        speak_text(next_q)
-                        if self.session_logger:
-                            self.last_eva_speech_end_sec = self.session_logger.elapsed_sec()
-
-                        if self.session_logger:
-                            stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
-                            turn_seq = len(self.session_logger.turns) + 1
-                            self.session_logger.log_turn(
-                                turn_id=turn_seq,
-                                topic=self.active_track or "Calibration",
-                                question_text=self.current_question_text,
-                                candidate_transcript=clean_transcript,
-                                audio_start_sec=turn_start_sec,
-                                audio_end_sec=turn_end_sec,
-                                silence_duration_before_answer_sec=silence_gap_sec,
-                                stt_latency_ms=stt_ms,
-                                ttft_ms=0.0,
-                                evaluation_branch_taken="next_topic",
-                                eva_tone_used="direct"
-                            )
-                        self.current_question_text = next_q
-                    else:
-                        if self.session_logger:
-                            stt_ms = getattr(Benchmark, "last_stt_ms", 0.0)
-                            turn_seq = len(self.session_logger.turns) + 1
-                            self.session_logger.log_turn(
-                                turn_id=turn_seq,
-                                topic=self.active_track or "Calibration",
-                                question_text=self.current_question_text,
-                                candidate_transcript=clean_transcript,
-                                audio_start_sec=turn_start_sec,
-                                audio_end_sec=turn_end_sec,
-                                silence_duration_before_answer_sec=silence_gap_sec,
-                                stt_latency_ms=stt_ms,
-                                ttft_ms=0.0,
-                                evaluation_branch_taken="next_topic",
-                                eva_tone_used="direct"
-                            )
-                        self.update_status("Calibration Complete!")
-                        self.append_ui_text("\n[System]: Calibration complete!")
-                        Clock.schedule_once(lambda dt: self._update_script_display())
                         self.stop_interview()
                         break
 
