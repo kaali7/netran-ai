@@ -172,8 +172,7 @@ def load_stage2_bundle(dir_path: str | Path) -> Stage2SessionBundle:
 
     Expected files:
     - interview_questions.json (Required)
-    - interviewer_behavior.json (Required)
-    - system_prompt.txt (Optional, fallback to interviewer_behavior system prompt)
+    - interviewer_behavior.json (Required, contains interviewer_system_prompt)
     - resume_analysis.json (Optional)
 
     :param dir_path: Directory path containing Stage 2 files.

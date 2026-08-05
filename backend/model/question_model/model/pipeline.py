@@ -14,20 +14,36 @@ from typing import Any
 from google import genai
 from google.genai import types
 
+from concurrent.futures import ThreadPoolExecutor
+
 try:
     from .cache import Stage2Cache
     from .config import Stage2Config
     from .prompt_builder import Stage2PromptBuilder
-    from .prompts import FALLBACK_SYSTEM_PROMPT_TEMPLATE, STAGE2_FULL_PROMPT_TEMPLATE
+    from .prompts import (
+        ANALYST_PROMPT_TEMPLATE,
+        FALLBACK_SYSTEM_PROMPT_TEMPLATE,
+        PLANNER_PROMPT_TEMPLATE,
+    )
     from .resume_parser import ResumeParser
     from .schemas import (
         AnswerRubric,
+        CandidateProfile,
+        DetailedProjectAnalysis,
+        ExperienceGapsAndRedFlags,
+        ExtractedSkillMatch,
         InterviewerBehavior,
+        PersonalTraitsAndHobbies,
+        PlannerOutput,
+        ProjectRelevance,
         QuestionItem,
+        RedFlagItem,
         ResumeAnalysis,
+        RoleFitScoring,
         SkillGap,
         SkillMatch,
         Stage2Output,
+        WorkHistoryEntry,
     )
 except ImportError:
     try:
@@ -35,33 +51,58 @@ except ImportError:
         from model.question_model.model.config import Stage2Config
         from model.question_model.model.prompt_builder import Stage2PromptBuilder
         from model.question_model.model.prompts import (
+            ANALYST_PROMPT_TEMPLATE,
             FALLBACK_SYSTEM_PROMPT_TEMPLATE,
-            STAGE2_FULL_PROMPT_TEMPLATE,
+            PLANNER_PROMPT_TEMPLATE,
         )
         from model.question_model.model.resume_parser import ResumeParser
         from model.question_model.model.schemas import (
             AnswerRubric,
+            CandidateProfile,
+            DetailedProjectAnalysis,
+            ExperienceGapsAndRedFlags,
+            ExtractedSkillMatch,
             InterviewerBehavior,
+            PersonalTraitsAndHobbies,
+            PlannerOutput,
+            ProjectRelevance,
             QuestionItem,
+            RedFlagItem,
             ResumeAnalysis,
+            RoleFitScoring,
             SkillGap,
             SkillMatch,
             Stage2Output,
+            WorkHistoryEntry,
         )
     except ImportError:
         from cache import Stage2Cache
         from config import Stage2Config
         from prompt_builder import Stage2PromptBuilder
-        from prompts import FALLBACK_SYSTEM_PROMPT_TEMPLATE, STAGE2_FULL_PROMPT_TEMPLATE
+        from prompts import (
+            ANALYST_PROMPT_TEMPLATE,
+            FALLBACK_SYSTEM_PROMPT_TEMPLATE,
+            PLANNER_PROMPT_TEMPLATE,
+        )
         from resume_parser import ResumeParser
         from schemas import (
             AnswerRubric,
+            CandidateProfile,
+            DetailedProjectAnalysis,
+            ExperienceGapsAndRedFlags,
+            ExtractedSkillMatch,
             InterviewerBehavior,
+            PersonalTraitsAndHobbies,
+            PlannerOutput,
+            ProjectRelevance,
             QuestionItem,
+            RedFlagItem,
             ResumeAnalysis,
+            RoleFitScoring,
             SkillGap,
             SkillMatch,
             Stage2Output,
+            WorkHistoryEntry,
         )
 
 logger = logging.getLogger(__name__)
@@ -135,60 +176,102 @@ class Stage2Pipeline:
             raise ValueError("GEMINI_API_KEY is not configured.")
 
         client = genai.Client(api_key=api_key)
-        prompt_instructions = self.prompt_builder.build_instructions(effective_seniority)
 
-        full_prompt = STAGE2_FULL_PROMPT_TEMPLATE.format(
+        planner_prompt = PLANNER_PROMPT_TEMPLATE.format(
             resume_text=resume_text,
             stage1_rubric_json=job_context["rubric_json"],
-            prompt_instructions=prompt_instructions
+            session_id=session_id,
+            company_name=job_context.get("company", "Target Company"),
+            candidate_name="Candidate",
+            target_role=job_context.get("role", "Target Role")
         )
 
-        logger.info("Calling Gemini 3.6 Flash for Stage 2 Synthesis...")
-        try:
-            response = None
+        analyst_prompt = ANALYST_PROMPT_TEMPLATE.format(
+            resume_text=resume_text,
+            stage1_rubric_json=job_context["rubric_json"]
+        )
+
+        logger.info("Executing dual Gemini 3.6 Flash calls (Planner & Analyst) in parallel...")
+
+        def _call_planner() -> PlannerOutput | None:
             last_err = None
             for attempt in range(1, 4):
                 try:
-                    response = client.models.generate_content(
+                    res = client.models.generate_content(
                         model=model,
-                        contents=full_prompt,
+                        contents=planner_prompt,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
-                            response_schema=Stage2Output,
+                            response_schema=PlannerOutput,
                             temperature=0.2,
                         )
                     )
-                    if response and response.text:
-                        break
+                    if res and res.text:
+                        return PlannerOutput.model_validate_json(res.text)
                 except Exception as e:
                     last_err = e
-                    logger.warning(f"Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
+                    logger.warning(f"Planner Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
                     if attempt < 3:
                         time.sleep(3 * attempt)
+            logger.warning(f"Planner call failed after 3 attempts: {last_err}")
+            return None
 
-            if not response or not response.text:
-                logger.warning(f"Gemini API quota exhausted or unavailable ({last_err}). Utilizing fallback generator.")
-                stage2_output = self.generate_fallback_output(
-                    session_id=session_id,
-                    company=job_context.get("company", "Target Company"),
-                    role=job_context.get("role", "Target Role"),
-                    target_seniority=effective_seniority
-                )
-            else:
-                stage2_output = Stage2Output.model_validate_json(response.text)
-                stage2_output.session_id = session_id
+        def _call_analyst() -> ResumeAnalysis | None:
+            last_err = None
+            for attempt in range(1, 4):
+                try:
+                    res = client.models.generate_content(
+                        model=model,
+                        contents=analyst_prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=ResumeAnalysis,
+                            temperature=0.2,
+                        )
+                    )
+                    if res and res.text:
+                        return ResumeAnalysis.model_validate_json(res.text)
+                except Exception as e:
+                    last_err = e
+                    logger.warning(f"Analyst Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
+                    if attempt < 3:
+                        time.sleep(3 * attempt)
+            logger.warning(f"Analyst call failed after 3 attempts: {last_err}")
+            return None
 
-            # Save to SQLite cache
-            self.cache.set(jd_text_for_hash, resume_text, effective_seniority, stage2_output)
+        planner_res: PlannerOutput | None = None
+        analyst_res: ResumeAnalysis | None = None
 
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                future_planner = executor.submit(_call_planner)
+                future_analyst = executor.submit(_call_analyst)
+                planner_res = future_planner.result()
+                analyst_res = future_analyst.result()
         except Exception as e:
-            logger.warning(f"Gemini generation exception ({e}). Utilizing fallback generator.")
-            stage2_output = self.generate_fallback_output(
-                session_id=session_id,
-                company=job_context.get("company", "Target Company"),
-                role=job_context.get("role", "Target Role"),
-                target_seniority=effective_seniority
-            )
+            logger.warning(f"Parallel execution exception ({e}). Utilizing fallback generator.")
+
+        fallback_obj = self.generate_fallback_output(
+            session_id=session_id,
+            company=job_context.get("company", "Target Company"),
+            role=job_context.get("role", "Target Role"),
+            target_seniority=effective_seniority
+        )
+
+        final_questions = planner_res.interview_questions if (planner_res and planner_res.interview_questions) else fallback_obj.interview_questions
+        final_behavior = planner_res.interviewer_behavior if (planner_res and planner_res.interviewer_behavior) else fallback_obj.interviewer_behavior
+        final_behavior.session_id = session_id
+        final_analysis = analyst_res if analyst_res else fallback_obj.resume_analysis
+
+        stage2_output = Stage2Output(
+            session_id=session_id,
+            resume_analysis=final_analysis,
+            interview_questions=final_questions,
+            interviewer_behavior=final_behavior
+        )
+
+        # Save to SQLite cache
+        self.cache.set(jd_text_for_hash, resume_text, effective_seniority, stage2_output)
 
         if output_dir:
             self.save_artifacts(output_dir, session_id, effective_seniority, stage2_output)
@@ -198,11 +281,10 @@ class Stage2Pipeline:
     @staticmethod
     def save_artifacts(output_dir: str, session_id: str, target_seniority: str, stage2_output: Stage2Output):
         """
-        Saves all 4 Stage 2 session artifacts into output_dir:
+        Saves the 3 core Stage 2 session artifacts into output_dir:
         1. resume_analysis.json
         2. interview_questions.json
-        3. interviewer_behavior.json
-        4. system_prompt.txt
+        3. interviewer_behavior.json (contains interviewer_system_prompt)
         """
         os.makedirs(output_dir, exist_ok=True)
 
@@ -221,11 +303,6 @@ class Stage2Pipeline:
         with open(behavior_path, "w", encoding="utf-8") as f:
             json.dump(stage2_output.interviewer_behavior.model_dump(), f, indent=2)
 
-        # 4. system_prompt.txt
-        prompt_path = os.path.join(output_dir, "system_prompt.txt")
-        with open(prompt_path, "w", encoding="utf-8") as f:
-            f.write(stage2_output.interviewer_behavior.interviewer_system_prompt)
-
         logger.info(f"Stage 2 output session artifacts saved to {output_dir}")
 
     @staticmethod
@@ -236,6 +313,8 @@ class Stage2Pipeline:
         target_seniority: str = "Senior"
     ) -> Stage2Output:
         """Generates structured fallback Stage2Output when LLM API is unavailable."""
+        from .schemas import ProjectRelevance
+
         fallback_system_prompt = FALLBACK_SYSTEM_PROMPT_TEMPLATE.format(
             company_name=company,
             role_title=role,
@@ -243,15 +322,77 @@ class Stage2Pipeline:
         )
 
         fallback_analysis = ResumeAnalysis(
-            matched_skills=[
-                SkillMatch(skill="Python / Modern Tech Stack", resume_evidence="Demonstrated on candidate projects", proficiency_tier="Production Master"),
-                SkillMatch(skill="REST / Microservices Architecture", resume_evidence="Built API microservices", proficiency_tier="Intermediate")
+            candidate_profile=CandidateProfile(
+                candidate_name="Candidate",
+                target_role=role,
+                years_of_experience=5.0,
+                current_company_or_status="Senior Software Engineer",
+                core_identity_summary="Experienced backend engineer specializing in distributed systems and high-throughput microservices.",
+                soft_skills=["Technical Leadership", "Problem Solving", "Cross-Functional Collaboration"],
+                key_achievements=["Built FastAPI microservice processing 35M+ daily requests", "Reduced PostgreSQL p99 latency by 45%"],
+                personal_traits_and_hobbies=PersonalTraitsAndHobbies(
+                    traits_detected=["Analytical", "Pragmatic", "Curious"],
+                    hobbies_or_interests=["Open Source Software", "System Architecture", "Chess"],
+                    icebreaker_probe_topic="How chess strategies mirror distributed system fault tolerance"
+                )
+            ),
+            role_fit_scoring=RoleFitScoring(
+                overall_jd_match_score=88,
+                technical_depth_score=90,
+                experience_seniority_score=85,
+                project_relevance_score=88,
+                clarity_and_impact_score=90
+            ),
+            extracted_skill_overlap=[
+                ExtractedSkillMatch(
+                    skill="Python / Microservices Stack",
+                    resume_evidence="Built scalable REST API services using FastAPI and PostgreSQL",
+                    proficiency_tier="Production Master",
+                    jd_requirement_level="Must-Have"
+                ),
+                ExtractedSkillMatch(
+                    skill="Event-Driven Architecture",
+                    resume_evidence="Deployed RabbitMQ and Kafka pipelines for async processing",
+                    proficiency_tier="Advanced",
+                    jd_requirement_level="Must-Have"
+                )
             ],
-            missing_or_gap_skills=[
-                SkillGap(missing_skill="High-Scale Distributed Caching", jd_importance="Critical", probing_strategy="Probe Redis cache-aside & TTL invalidation patterns.")
+            experience_and_work_history=[
+                WorkHistoryEntry(
+                    company_name="TechScale Solutions",
+                    role="Senior Backend Engineer",
+                    tenure="2022 - Present",
+                    impact_level="High",
+                    key_responsibilities="Designed high-throughput API gateway and event streaming services.",
+                    verifiable_outcomes=["Scaled request volume from 5M to 35M daily requests with zero downtime"]
+                )
             ],
-            resume_red_flags=["Vague metrics for database CPU reduction under load."],
-            key_projects_to_probe=["Primary backend microservice platform", "Data ingestion pipeline"]
+            detailed_project_analysis=[
+                DetailedProjectAnalysis(
+                    project_name="High-Throughput Microservices Platform",
+                    relevance_score=9,
+                    tech_stack_used=["Python", "FastAPI", "PostgreSQL", "Redis"],
+                    architecture_type="Microservices & Event-Driven",
+                    quantifiable_scale="35M+ daily requests, <50ms median latency",
+                    suggested_interview_probes=["Probe Redis cache invalidation strategies under high concurrency"]
+                )
+            ],
+            experience_gaps_and_red_flags=ExperienceGapsAndRedFlags(
+                technical_gaps=[
+                    SkillGap(
+                        missing_skill="Distributed Rate Limiting at API Gateway Layer",
+                        jd_importance="Critical",
+                        probing_strategy="Probe sliding window Redis rate limiters in FastAPI/API Gateways."
+                    )
+                ],
+                resume_red_flags=[
+                    RedFlagItem(
+                        flag_type="Claim Verification",
+                        description="Claims sub-35ms median response latency across 35M daily requests without specifying database cache hit ratio.",
+                        probe_question="What was your database read/write ratio and cache hit percentage to maintain sub-35ms median latency?"
+                    )
+                ]
+            )
         )
 
         fallback_rubric = AnswerRubric(
@@ -263,55 +404,139 @@ class Stage2Pipeline:
         fallback_questions = [
             QuestionItem(
                 id=1,
-                tier="Tier 1 (Warmup)",
-                topic="Architecture Foundations",
-                difficulty=target_seniority if target_seniority in ["Junior", "Mid", "Senior", "Lead", "Staff"] else "Senior",
-                question_text=f"Walk me through the high-level architecture of your primary project for the {role} position.",
-                resume_context="Warmup check on core project experience",
-                expected_keywords=["architecture", "microservices", "API", "database"],
+                tier="Intro & Behavioral",
+                topic="Personal Intro & Identity",
+                difficulty="Mid",
+                question_text=f"Welcome! To start off, please introduce yourself and tell us what key achievements defined your recent engineering work.",
+                resume_context="Candidate background and identity check",
+                expected_keywords=["background", "achievements", "engineering", "projects"],
                 rubric=fallback_rubric,
-                followup_if_strong="What was the single most difficult architectural bottleneck you encountered?",
-                followup_if_weak="What basic framework or libraries did you rely on for routing and data validation?"
+                followup_if_strong="What was the most rewarding aspect of those achievements?",
+                followup_if_weak="Could you briefly summarize your primary tech stack?"
             ),
             QuestionItem(
                 id=2,
-                tier="Tier 1 (Warmup)",
-                topic="Concurrency & Event Loop",
+                tier="Intro & Behavioral",
+                topic="Culture & Personality Probe",
+                difficulty="Mid",
+                question_text="Outside of pure coding, what hobbies or personal interests keep you curious and energized?",
+                resume_context="Evaluating communication style and culture fit",
+                expected_keywords=["hobbies", "passions", "learning", "collaboration"],
+                rubric=fallback_rubric,
+                followup_if_strong="How has that interest influenced your problem-solving style at work?",
+                followup_if_weak="What do you enjoy doing most in your downtime?"
+            ),
+            QuestionItem(
+                id=3,
+                tier="Role Alignment",
+                topic="Role Fit & Motivation",
+                difficulty=target_seniority if target_seniority in ["Junior", "Mid", "Senior", "Lead", "Staff"] else "Senior",
+                question_text=f"Why do you believe your skills make you a strong fit for this {role} position at {company}?",
+                resume_context="Evaluating candidate alignment with JD requirements",
+                expected_keywords=["fit", "motivation", "skills", "impact"],
+                rubric=fallback_rubric,
+                followup_if_strong="What specific engineering challenge here excites you the most?",
+                followup_if_weak="Which requirement in the job description aligns best with your past work?"
+            ),
+            QuestionItem(
+                id=4,
+                tier="Work Experience",
+                topic="Team Collaboration & Impact",
+                difficulty="Mid",
+                question_text="Tell me about a time you had an engineering disagreement with a teammate. How did you resolve it?",
+                resume_context="Past work experience and team interaction check",
+                expected_keywords=["collaboration", "resolution", "trade-offs", "communication"],
+                rubric=fallback_rubric,
+                followup_if_strong="How did that outcome improve your team's technical consensus long-term?",
+                followup_if_weak="What steps did you take to reach a compromise?"
+            ),
+            QuestionItem(
+                id=5,
+                tier="Work Experience",
+                topic="Organizational Impact & Delivery",
+                difficulty="Senior",
+                question_text="Describe a production incident where your service failed. How did you handle triage and root cause analysis?",
+                resume_context="Production responsibility and incident management check",
+                expected_keywords=["incident", "root cause", "post-mortem", "resilience"],
+                rubric=fallback_rubric,
+                followup_if_strong="What automated safeguards did you implement to ensure it never happens again?",
+                followup_if_weak="How did you communicate the outage to stakeholders?"
+            ),
+            QuestionItem(
+                id=6,
+                tier="Project Deep Dive",
+                topic="Project Architecture",
+                difficulty="Senior",
+                question_text="Walk me through the high-level architecture of your primary microservice platform project.",
+                resume_context="Deep dive into top resume project",
+                expected_keywords=["microservices", "architecture", "database", "API"],
+                rubric=fallback_rubric,
+                followup_if_strong="What was the single largest scale bottleneck you encountered in that design?",
+                followup_if_weak="What basic framework or libraries did you rely on?"
+            ),
+            QuestionItem(
+                id=7,
+                tier="Project Deep Dive",
+                topic="Project Implementation & Trade-offs",
+                difficulty="Senior",
+                question_text="In your data ingestion pipeline project, what trade-offs did you make between throughput and data consistency?",
+                resume_context="Technical trade-off evaluation on resume project",
+                expected_keywords=["trade-offs", "throughput", "consistency", "latency"],
+                rubric=fallback_rubric,
+                followup_if_strong="How would your design change if data volume doubled overnight?",
+                followup_if_weak="Did you prioritize speed or exactness in that pipeline?"
+            ),
+            QuestionItem(
+                id=8,
+                tier="Project Deep Dive",
+                topic="Technology Selection",
+                difficulty="Mid",
+                question_text="Why did you select your specific database choice over alternatives for that primary platform?",
+                resume_context="Evaluating technical decision-making on resume project",
+                expected_keywords=["database", "PostgreSQL", "schema", "indexing"],
+                rubric=fallback_rubric,
+                followup_if_strong="Under what workload conditions would that database choice fail?",
+                followup_if_weak="What features of that database were most useful?"
+            ),
+            QuestionItem(
+                id=9,
+                tier="Core Technical",
+                topic="Concurrency & Async Processing",
                 difficulty="Mid",
                 question_text="How does asynchronous execution process requests under high concurrency?",
                 resume_context="Verification of async task execution",
                 expected_keywords=["async", "await", "event loop", "non-blocking"],
                 rubric=fallback_rubric,
-                followup_if_strong="How do you handle CPU-bound tasks without blocking the main event loop?",
+                followup_if_strong="How do you handle CPU-bound tasks without blocking the event loop?",
                 followup_if_weak="What is the difference between synchronous and asynchronous code?"
             ),
             QuestionItem(
-                id=3,
-                tier="Tier 2 (Core Production)",
-                topic="Database Engineering",
+                id=10,
+                tier="Core Technical",
+                topic="Database Query Optimization",
                 difficulty="Senior",
                 question_text="How do you debug and optimize a slow database query using execution plans?",
                 resume_context="Database query optimization skills",
                 expected_keywords=["EXPLAIN ANALYZE", "B-Tree index", "sequential scan", "query plan"],
                 rubric=fallback_rubric,
-                followup_if_strong="How do partial indexes or composite indexes alter index scan choices in PostgreSQL?",
-                followup_if_weak="What is an index and why does it speed up SELECT queries?"
+                followup_if_strong="How do partial or composite indexes alter index scan choices in PostgreSQL?",
+                followup_if_weak="What is an index and why does it speed up queries?"
             ),
             QuestionItem(
-                id=4,
-                tier="Tier 2 (Core Production)",
+                id=11,
+                tier="Core Technical",
                 topic="Caching Strategies",
                 difficulty="Mid",
                 question_text="How do you prevent cache stampedes and thundering herd problems during traffic surges?",
                 resume_context="Redis caching patterns",
                 expected_keywords=["Redis", "Cache-Aside", "TTL jitter", "mutex lock"],
                 rubric=fallback_rubric,
-                followup_if_strong="How do you implement distributed locking via Redis or Redlock safely?",
+                followup_if_strong="How do you implement distributed locking via Redis safely?",
                 followup_if_weak="What is TTL in a Redis cache?"
             ),
             QuestionItem(
-                id=5,
-                tier="Tier 2 (Core Production)",
+                id=12,
+                tier="Core Technical",
                 topic="Distributed Messaging",
                 difficulty="Mid",
                 question_text="Compare message delivery guarantees and ordering in Kafka vs RabbitMQ.",
@@ -321,26 +546,43 @@ class Stage2Pipeline:
                 followup_if_strong="How do you handle out-of-order event delivery in a distributed partition pipeline?",
                 followup_if_weak="What is a message broker and why use queues?"
             ),
-        ]
-
-        # Populate remaining 10 questions to guarantee 15 questions total
-        for qid in range(6, 16):
-            q_tier = "Tier 2 (Core Production)" if qid <= 12 else "Tier 3 (System Design)"
-            q_diff = "Senior" if qid >= 12 else "Mid"
-            fallback_questions.append(
-                QuestionItem(
-                    id=qid,
-                    tier=q_tier,
-                    topic=f"System Design Topic {qid}",
-                    difficulty=q_diff,
-                    question_text=f"Technical assessment question {qid} for {role}: How do you ensure high availability and resilience under peak traffic?",
-                    resume_context="General backend resilience check",
-                    expected_keywords=["resilience", "scalability", "load balancing", "failover"],
-                    rubric=fallback_rubric,
-                    followup_if_strong="How would you design zero-downtime database schema migrations?",
-                    followup_if_weak="How do health checks help load balancers detect failed nodes?"
-                )
+            QuestionItem(
+                id=13,
+                tier="Core Technical",
+                topic="API Security & Rate Limiting",
+                difficulty="Mid",
+                question_text="How do you design a distributed rate limiter at the API gateway layer to protect downstream services?",
+                resume_context="API gateway and security understanding",
+                expected_keywords=["rate limit", "sliding window", "Redis", "API Gateway"],
+                rubric=fallback_rubric,
+                followup_if_strong="How do you handle rate limit synchronization across multiple gateway nodes?",
+                followup_if_weak="What HTTP status code is returned when a client hits a rate limit?"
+            ),
+            QuestionItem(
+                id=14,
+                tier="System Design",
+                topic="High Availability & Resilience",
+                difficulty="Senior",
+                question_text="How do you design a fault-tolerant system that gracefully handles downstream microservice outages?",
+                resume_context="System design resilience check",
+                expected_keywords=["circuit breaker", "retries", "fallback", "bulkhead"],
+                rubric=fallback_rubric,
+                followup_if_strong="How do you avoid cascading failures when downstream services recover?",
+                followup_if_weak="What is a circuit breaker pattern in microservices?"
+            ),
+            QuestionItem(
+                id=15,
+                tier="System Design",
+                topic="Scalability & Distributed State",
+                difficulty="Senior",
+                question_text="How do you ensure zero-downtime database schema migrations for high-traffic multi-tenant systems?",
+                resume_context="Advanced distributed data engineering check",
+                expected_keywords=["zero-downtime", "dual-write", "schema migration", "backward-compatible"],
+                rubric=fallback_rubric,
+                followup_if_strong="How do you verify data consistency during the dual-write phase?",
+                followup_if_weak="Why can adding a column with a default value lock large tables?"
             )
+        ]
 
         fallback_behavior = InterviewerBehavior(
             session_id=session_id,

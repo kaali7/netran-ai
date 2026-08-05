@@ -199,16 +199,21 @@ def run_test():
         print("\n===================================================================")
         print("                 STAGE 2 EXECUTION SUCCESSFUL                     ")
         print("===================================================================")
+        cp = output.resume_analysis.candidate_profile
+        rfs = output.resume_analysis.role_fit_scoring
         print(f"Session ID: {output.session_id}")
-        print(f"Matched Resume Skills: {len(output.resume_analysis.matched_skills)}")
-        print(f"Identified Skill Gaps: {len(output.resume_analysis.missing_or_gap_skills)}")
-        print(f"Generated Question Tree: {len(output.interview_questions)} Tiered Questions")
+        print(f"Candidate Profile: {cp.candidate_name} ({cp.years_of_experience} yrs exp) — {cp.core_identity_summary}")
+        print(f"Role Fit Score: {rfs.overall_jd_match_score}% (Tech Depth: {rfs.technical_depth_score}%, Seniority: {rfs.experience_seniority_score}%)")
+        print(f"Extracted Skill Overlap: {len(output.resume_analysis.extracted_skill_overlap)}")
+        print(f"Work History Entries: {len(output.resume_analysis.experience_and_work_history)}")
+        print(f"Detailed Projects Analyzed: {len(output.resume_analysis.detailed_project_analysis)}")
+        print(f"Technical Gaps Identified: {len(output.resume_analysis.experience_gaps)}")
+        print(f"Generated Question Tree: {len(output.interview_questions)} Multi-Phase Questions")
         print(f"System Prompt Persona: {output.interviewer_behavior.persona}")
         print(f"Output Session Directory: {session_output_dir}")
         print("  ├── resume_analysis.json")
         print("  ├── interview_questions.json")
-        print("  ├── interviewer_behavior.json")
-        print("  └── system_prompt.txt\n")
+        print("  └── interviewer_behavior.json\n")
 
         print("--- FIRST QUESTION PREVIEW WITH RUBRICS & FOLLOW-UPS ---")
         if output.interview_questions:

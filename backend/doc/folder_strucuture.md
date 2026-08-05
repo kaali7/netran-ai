@@ -47,17 +47,17 @@ backend/
     │   │   └── prd.md         # Stage 2 Product Requirements Document
     │   ├── test/              # Stage 2 test harness input/output directories
     │   │   ├── input/         # Pre-saved dummy input subdirectories (sample_backend/, sample_frontend/, sample_fullstack/)
-    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> resume_analysis.json, interview_questions.json, interviewer_behavior.json, system_prompt.txt )
+    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> resume_analysis.json, interview_questions.json, interviewer_behavior.json )
     │   └── model/
-    │       ├── front.py       # Stage 2 Kivy Desktop GUI Client with Resume Matrix, Question Cards, Rubrics & Session History
-    │       ├── cache.py       # SQLite hash-based caching engine (cache.db) with schema recovery
+    │       ├── front.py       # Stage 2 Kivy Desktop GUI Client with Candidate Profile, Role Fit Scores, Question Cards, Rubrics & Session History
+    │       ├── cache.py       # SQLite hash-based caching engine (cache.db) with pre-root model migration recovery
     │       ├── config.py      # Stage 2 configuration loader (Stage2Config)
-    │       ├── pipeline.py    # Stage 2 master orchestrator pipeline (Stage2Pipeline) generating 4 session artifacts
+    │       ├── pipeline.py    # Stage 2 master orchestrator pipeline running dual parallel Planner & Analyst calls generating 3 session artifacts
     │       ├── prompt_builder.py # Stage2PromptBuilder with Stage 1 nested JSON extractor
-    │       ├── prompts.py     # Centralized Stage 2 system prompt templates
+    │       ├── prompts.py     # Centralized Stage 2 system prompt templates (PLANNER_PROMPT_TEMPLATE, ANALYST_PROMPT_TEMPLATE)
     │       ├── question_generator.py # Backward compatibility alias for pipeline.py
     │       ├── resume_parser.py # PDF, DOCX, TXT, and JSON resume extractor
-    │       ├── schemas.py     # Pydantic v2 schemas (SkillMatch, SkillGap, ResumeAnalysis, AnswerRubric, QuestionItem, InterviewerBehavior, Stage2Output)
+    │       ├── schemas.py     # Pydantic v2 schemas (CandidateProfile, RoleFitScoring, ExtractedSkillMatch, WorkHistoryEntry, DetailedProjectAnalysis, ExperienceGapsAndRedFlags, PlannerOutput, ResumeAnalysis, QuestionItem, InterviewerBehavior, Stage2Output)
     │       └── test_pipeline.py # Standalone Headless CLI test harness for Stage 2
     │
     ├── voice_to_voice_model/  # STAGE 3: Live Voice-to-Voice Streaming Loop

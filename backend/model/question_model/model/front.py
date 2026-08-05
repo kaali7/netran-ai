@@ -677,11 +677,26 @@ class Stage2ResultsScreen(Screen):
             an_title.bind(size=an_title.setter('text_size'))
             analysis_card.add_widget(an_title)
 
+            # Candidate Profile & Role Fit Scores
+            cp = ra.candidate_profile
+            rfs = ra.role_fit_scoring
+            prof_str = (
+                f"[b][color=60A5FA][Candidate Profile]:[/color][/b] {cp.candidate_name} ({cp.years_of_experience} yrs exp) — [i]{cp.core_identity_summary}[/i]\n"
+                f"[b][color=34D399][Role Fit Scores]:[/color][/b] Overall: [b]{rfs.overall_jd_match_score}%[/b] | Tech Depth: {rfs.technical_depth_score}% | Seniority: {rfs.experience_seniority_score}% | Project Fit: {rfs.project_relevance_score}%"
+            )
+            prof_lbl = self._create_auto_label(
+                prof_str,
+                font_size='13sp',
+                color=(0.95, 0.96, 1.0, 1),
+                markup=True
+            )
+            analysis_card.add_widget(prof_lbl)
+
             # Matched Skills
-            m_lines = [f"  • [b]{sm.skill}:[/b] {sm.resume_evidence} [color=34D399]({sm.proficiency_tier})[/color]" for sm in ra.matched_skills]
+            m_lines = [f"  • [b]{sm.skill}:[/b] {sm.resume_evidence} [color=34D399]({sm.proficiency_tier})[/color]" for sm in ra.extracted_skill_overlap]
             m_str = "\n".join(m_lines) if m_lines else "None identified"
             m_lbl = self._create_auto_label(
-                f"[b][color=34D399][+ Matched Technical Skills]:[/color][/b]\n{m_str}",
+                f"[b][color=34D399][+ Matched Technical Skills & Evidence]:[/color][/b]\n{m_str}",
                 font_size='13sp',
                 color=(0.95, 0.96, 1.0, 1),
                 markup=True
@@ -689,7 +704,7 @@ class Stage2ResultsScreen(Screen):
             analysis_card.add_widget(m_lbl)
 
             # Missing / Skill Gaps
-            g_lines = [f"  • [b]{sg.missing_skill}:[/b] {sg.probing_strategy} [color=FBBF24]({sg.jd_importance})[/color]" for sg in ra.missing_or_gap_skills]
+            g_lines = [f"  • [b]{sg.missing_skill}:[/b] {sg.probing_strategy} [color=FBBF24]({sg.jd_importance})[/color]" for sg in ra.experience_gaps]
             g_str = "\n".join(g_lines) if g_lines else "None identified"
             g_lbl = self._create_auto_label(
                 f"[b][color=FBBF24][- Missing / Skill Gaps & Probing Strategy]:[/color][/b]\n{g_str}",
@@ -699,20 +714,23 @@ class Stage2ResultsScreen(Screen):
             )
             analysis_card.add_widget(g_lbl)
 
-            # Red Flags & Key Projects
+            # Project Relevance & Candidate Highlights
+            pr_lines = [f"  • [b]{pr.project_name}[/b] (Score: {pr.relevance_score}/10): {pr.reasoning}" for pr in ra.project_relevance_scores]
+            pr_str = "\n".join(pr_lines) if pr_lines else "General Candidate Profile"
+            ch_str = "\n".join([f"  • {ch}" for ch in ra.candidate_highlights]) if ra.candidate_highlights else "None"
             rf_str = "\n".join([f"  • {rf}" for rf in ra.resume_red_flags]) if ra.resume_red_flags else "None detected"
-            kp_str = "  •  ".join(ra.key_projects_to_probe) if ra.key_projects_to_probe else "General Candidate Profile"
 
             extra_lbl = self._create_auto_label(
-                f"[b][color=FF6B6B][! Resume Warning Flags]:[/color][/b]\n{rf_str}\n\n"
-                f"[b][color=C084FC][* Top Resume Projects to Probe]:[/color][/b]  [color=E0F8FF]{kp_str}[/color]",
+                f"[b][color=C084FC][* Project Relevance Scores]:[/color][/b]\n{pr_str}\n\n"
+                f"[b][color=60A5FA][# Candidate Highlights]:[/color][/b]\n{ch_str}\n\n"
+                f"[b][color=FF6B6B][! Resume Warning Flags]:[/color][/b]\n{rf_str}",
                 font_size='13sp',
                 color=(0.95, 0.96, 1.0, 1),
                 markup=True
             )
             analysis_card.add_widget(extra_lbl)
 
-            Clock.schedule_once(lambda dt, card=analysis_card, m=m_lbl, g=g_lbl, e=extra_lbl: setattr(card, 'height', 75 + m.height + g.height + e.height))
+            Clock.schedule_once(lambda dt, card=analysis_card, p=prof_lbl, m=m_lbl, g=g_lbl, e=extra_lbl: setattr(card, 'height', 100 + p.height + m.height + g.height + e.height))
             self.content_box.add_widget(analysis_card)
 
         # ── 2. SYSTEM PROMPT CARD (`interviewer_behavior.json`) ──

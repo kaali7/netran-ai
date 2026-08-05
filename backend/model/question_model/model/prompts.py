@@ -22,58 +22,112 @@ Follow these STRICT rules for Eva's generated system prompt:
 5. SINGLE QUESTION RULE: Instruct Eva to ask EXACTLY ONE question at a time and blend it naturally into the conversation.
 """
 
-# Full prompt template sent to Gemini Flash for Stage 2 Question Tree & Prompt Synthesis
-STAGE2_FULL_PROMPT_TEMPLATE = """
-You are an Executive Technical Bar Raiser and Principal AI System Architect.
+# 1. PLANNER PROMPT: Generates interview_questions and interviewer_behavior
+PLANNER_PROMPT_TEMPLATE = """
+You are an expert Executive Technical Recruiter and System Architect at Netran AI.
+Your objective is to generate a comprehensive, multi-phase technical interview script and interviewer configuration based on the provided candidate Resume and Job Description (JD).
 
-Analyze the provided Candidate Resume against the target Job Description and Stage 1 Market Intelligence Rubric to generate a complete Stage 2 Assessment Artifact.
-
-### Candidate Resume:
+### INPUT DATA
+- Resume:
 \"\"\"
 {resume_text}
 \"\"\"
 
-### Stage 1 Job Description & Market Intelligence Rubric:
+- Job Description & Stage 1 Rubric:
 \"\"\"
 {stage1_rubric_json}
 \"\"\"
 
 ---
 
-### INSTRUCTIONS FOR GENERATION:
+### STRUCTURAL REQUIREMENTS
+Generate a JSON payload with TWO root objects: `interview_questions` and `interviewer_behavior`.
 
-Perform a deep synthesis and return strictly valid JSON conforming to the 3 core sections below:
+#### 1. `interview_questions` Array (Exactly 12-15 Questions):
+Structure the questions sequentially across these specific phases:
+- Phase 1: Personal & Icebreaker (Questions 1-2):
+  * Validate identity, soft skills, and personal motivation.
+  * Probe a personal trait, hobby, or non-resume interest to evaluate communication style and culture fit.
+- Phase 2: Self-Assessment & Fit (Question 3):
+  * Why the candidate believes they are a fit for this role and what drives their interest in the company.
+- Phase 3: Deep Dive into Resume Projects (Questions 4-7):
+  * Architecture, trade-offs, scale, and technical challenges based directly on projects listed in the resume.
+- Phase 4: Work Experience & Impact (Questions 8-10):
+  * Ownership, past team interactions, incident management, or technical leadership from work history.
+- Phase 5: JD Technical Probes & Gaps (Questions 11-15):
+  * Core domain technical questions derived from the Job Description.
 
-#### SECTION 1: RESUME ANALYSIS & GAP MATRIX (`resume_analysis`)
-1. Matched Skills: List core technical skills present on both the resume and Stage 1 requirements, citing exact resume evidence and rating proficiency ("Foundational", "Intermediate", "Production Master").
-2. Skill Gaps & Missing Requirements: Identify critical JD/Market skills absent or weak on the resume (e.g., missing gRPC or distributed caching) and specify concrete probing strategies.
-3. Resume Red Flags: Detect fluff, vague metrics, buzzword dumping, or unverified claims.
-4. Key Projects to Probe: Select the top 2-3 high-impact projects on the resume to anchor technical deep-dives.
+For EACH question, supply:
+- `id` (integer: 1 to 15)
+- `tier` ("ICEBREAKER", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "EXPERIENCE", "TECHNICAL")
+- `topic` (string)
+- `difficulty` ("easy", "medium", "hard", "Senior", "Lead")
+- `question_text` (Natural spoken technical interviewer phrasing)
+- `expected_keywords` (array of strings)
+- `rubric` containing (`poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`)
+- `followup_if_strong` (escalating trade-off/edge case question)
+- `followup_if_weak` (simplifying diagnostic question)
 
-#### SECTION 2: DYNAMIC BRANCHING QUESTION TREE (`interview_questions`)
-Generate EXACTLY 15 ordered technical questions stratified across 3 difficulty tiers:
-- Tier 1 (Warmup / Foundations): Questions 1–2 (Verify resume claims & basic concepts).
-- Tier 2 (Core Production & Internals): Questions 3–12 (Framework internals, DB optimization, concurrency, API design, debugging).
-- Tier 3 (Advanced / System Design): Questions 13–15 (Distributed systems, event pipelines, scalability, fault tolerance).
+#### 2. `interviewer_behavior` Object:
+- `session_id`: "{session_id}"
+- `persona`: "Eva - Senior Technical Interviewer"
+- `target_company`: "{company_name}"
+- `candidate_name`: "{candidate_name}"
+- `target_role`: "{target_role}"
+- `interviewer_system_prompt`: Include a complete, token-calibrated system prompt instructing Eva on how to stay in character, remain professional yet conversational, limit responses to one question at a time (MAX 25 WORDS), use vocal anchors, bridge candidate answers smoothly, and maintain a sharp CTA ending with a question mark.
+- `behavior_rules`: Array of conversational rules (e.g., "Never ask multi-part questions", "Acknowledge answer briefly before probing deeper").
 
-For EVERY question, provide:
-- `id` (1 to 15) and `tier` label
-- `topic` and `difficulty` ("Junior", "Mid", "Senior")
-- `question_text` (Clear, direct technical question)
-- `resume_context` (Why this was asked based on resume strength or identified skill gap)
-- `expected_keywords` (List of 4-6 key technical terms)
-- `rubric` containing:
-  * `poor_answer_indicators`: List of vague terms, wrong assumptions, or missing core concepts
-  * `good_answer_indicators`: Solid practical answer with correct terminology
-  * `bar_raiser_indicators`: Deep architectural understanding, trade-offs, and scale limits
-- `followup_if_strong`: Escalation question if candidate gives a bar-raiser answer
-- `followup_if_weak`: Scaffolding/simplifying probe if candidate hesitates or gives a shallow answer
+Return strictly valid JSON matching the PlannerOutput schema.
+"""
 
-#### SECTION 3: INTERVIEWER BEHAVIOR & SYSTEM PROMPT (`interviewer_behavior`)
-Generate the complete latency-optimized system prompt for 'Eva' based on these instructions:
-{prompt_instructions}
+# 2. ANALYST PROMPT: Generates detailed resume_analysis
+ANALYST_PROMPT_TEMPLATE = """
+You are a Principal Technical Talent Assessor. Perform a deep, quantitative, and qualitative forensic analysis comparing the candidate's Resume against the target Job Description (JD).
 
-Return strictly valid JSON matching the Stage2Output schema.
+### INPUT DATA
+- Resume:
+\"\"\"
+{resume_text}
+\"\"\"
+
+- Job Description & Stage 1 Rubric:
+\"\"\"
+{stage1_rubric_json}
+\"\"\"
+
+---
+
+### OUTPUT REQUIREMENTS
+Generate a strictly typed JSON payload for `resume_analysis` following this exact structure:
+
+1. `candidate_profile`:
+   - `candidate_name`: Candidate full name
+   - `target_role`: Target role from JD
+   - `years_of_experience`: Total estimated years of experience (float)
+   - `current_company_or_status`: Current employer or status
+   - `core_identity_summary`: 1-2 sentence core developer profile summary
+   - `soft_skills`: List of extracted soft skills
+   - `key_achievements`: List of quantifiable metrics and achievements
+   - `personal_traits_and_hobbies`: `traits_detected`, `hobbies_or_interests`, and `icebreaker_probe_topic` (connecting personal traits to engineering)
+
+2. `role_fit_scoring`:
+   - `overall_jd_match_score`: 0-100 score
+   - `technical_depth_score`: 0-100 score
+   - `experience_seniority_score`: 0-100 score
+   - `project_relevance_score`: 0-100 score
+   - `clarity_and_impact_score`: 0-100 score
+
+3. `extracted_skill_overlap`: List of items with `skill`, `resume_evidence`, `proficiency_tier` ("Production Master" | "Advanced" | "Intermediate" | "Foundational"), and `jd_requirement_level` ("Must-Have" | "Important" | "Nice-to-Have").
+
+4. `experience_and_work_history`: List of items with `company_name`, `role`, `tenure`, `impact_level` ("High" | "Medium" | "Low"), `key_responsibilities`, and `verifiable_outcomes`.
+
+5. `detailed_project_analysis`: List of items with `project_name`, `relevance_score` (1-10), `tech_stack_used`, `architecture_type`, `quantifiable_scale`, and `suggested_interview_probes`.
+
+6. `experience_gaps_and_red_flags`:
+   - `technical_gaps`: List of missing skills (`missing_skill`, `jd_importance`, `probing_strategy`).
+   - `resume_red_flags`: List of red flag items (`flag_type` ["Claim Verification" | "Infrastructure Depth" | "Employment Gap" | "General Warning"], `description`, `probe_question`).
+
+Return strictly valid JSON matching the ResumeAnalysis schema.
 """
 
 # Fallback system prompt template used when external LLM API is unavailable

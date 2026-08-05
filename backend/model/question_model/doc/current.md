@@ -47,32 +47,33 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 └─────────────────┘                                         │
                                                             ▼
                                            ┌────────────────────────────────┐
-                                           │  test/output/sess_<timestamp>/ │
-                                           ├────────────────────────────────┤
-                                           │ • resume_analysis.json         │
-                                           │ • interview_questions.json     │
-                                           │ • interviewer_behavior.json    │
-                                           │ • system_prompt.txt            │
-                                           └────────────────────────────────┘
+                                            │  test/output/sess_<timestamp>/ │
+                                            ├────────────────────────────────┤
+                                            │ • resume_analysis.json         │
+                                            │ • interview_questions.json     │
+                                            │ • interviewer_behavior.json    │
+                                            └────────────────────────────────┘
 ```
 
 ### Artifact Specifications
 
 - **Output Session Directory: `model/question_model/test/output/sess_<timestamp>/`**
   1. **`resume_analysis.json`**:
-     - `matched_skills`: `skill`, `resume_evidence`, `proficiency_tier`.
-     - `missing_or_gap_skills`: `missing_skill`, `jd_importance`, `probing_strategy`.
+     - `extracted_skill_overlap`: `skill`, `resume_evidence`, `proficiency_tier`.
+     - `experience_gaps`: `missing_skill`, `jd_importance`, `probing_strategy`.
+     - `project_relevance_scores`: `project_name`, `relevance_score`, `reasoning`.
+     - `candidate_highlights`: Top candidate achievements, strengths, and green flags.
      - `resume_red_flags`: Warning signals or unverified claims.
-     - `key_projects_to_probe`: Top candidate projects to anchor technical deep-dives.
-  2. **`interview_questions.json`**: Array of 15 structured questions categorized into:
-     - **Tier 1 (Warmup / Foundations):** Questions 1–2
-     - **Tier 2 (Core Production & Architecture):** Questions 3–12
-     - **Tier 3 (Advanced / System Design):** Questions 13–15
+  2. **`interview_questions.json`**: Array of 15 structured holistic questions categorized into:
+     - **Personal & Behavioral Intro:** Questions 1–2 (Identity & culture/personality probe)
+     - **Role Alignment & Fit:** Question 3
+     - **Work Experience & History:** Questions 4–5
+     - **Project Deep Dives:** Questions 6–8
+     - **Core Technical Domain:** Questions 9–13
+     - **System Design & Advanced Architecture:** Questions 14–15
      - Includes `rubric` (`poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`), `followup_if_strong`, and `followup_if_weak`.
   3. **`interviewer_behavior.json`**:
      - `session_id`, `persona` ("Eva"), `target_company`, `candidate_name`, `target_role`, `interviewer_system_prompt`, `behavior_rules`.
-  4. **`system_prompt.txt`**:
-     - Plain text system prompt extracted for direct ingestion by Stage 3 Ollama `qwen2.5:3b`.
 
 ---
 
