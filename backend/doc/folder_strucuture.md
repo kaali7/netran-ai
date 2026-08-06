@@ -23,6 +23,7 @@ backend/
 │   ├── current.md             # Current operational state & component synthesis
 │   ├── folder_strucuture.md   # Detailed directory structure (this file)
 │   ├── rule.md                # Mandatory project rules & agent directives
+│   ├── task_completion.md     # Task verification and sync record
 │   └── tech_stack.md          # Technical stack architecture & dependencies
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )
 └── model/                     # Multi-stage AI pipeline core modules

@@ -20,7 +20,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
        │               │               │               │               │
        ▼               ▼               ▼               ▼               ▼
 ┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐
-│ Auth & User  ││  Ingestion   ││   Stage 1 & 2││   Stage 3:   ││   Stage 4:   │
+│ Auth & User  ││  Ingestion   ││ Stage 1 & 2  ││   Stage 3:   ││   Stage 4:   │
 │ Management   ││ Engine (Resume││ Research &   ││ Live Voice   ││ Evaluation   │
 │ (Bcrypt/JWT) ││ & JD Parsing)││ Question Tree││  (Local GPU) ││  (Multimodal)│
 └──────────────┘└──────────────┘└──────────────┘└──────────────┘└──────────────┘
@@ -53,7 +53,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 * **Data Persistence & Smart Caching Engine**: **SQLAlchemy / SQLModel + SQLite 3**
 * Persistent storage for user credentials, interview sessions, parsed JSON schemas, and stage output artifacts.
-* Native `JSON` column support to eliminate messy disk JSON files (`sessions/<session_id>/recording.wav` is the only file saved on disk).
+* **Session Artifacts Storage (`session_artifacts` table):** Native `JSON` columns storing `parsed_resume`, `parsed_jd`, `jd_detail` (deep web intelligence), `interview_behavior` (Eva persona rules), `question_tree`, `transcript`, and `evaluation_report` (`sessions/<session_id>/recording.wav` is the only binary file saved on disk).
 * **Input-Hash Deduplication (Smart SQLite Caching):** Uses SHA-256 fingerprinting (`Resume + JD`) to prevent redundant Gemini/LLM calls if a candidate re-submits or re-opens a session.
 * **Zero-Code Cloud Migration:** 100% compatible with PostgreSQL / Supabase by swapping the `DATABASE_URL` connection string in `.env`.
 
@@ -74,13 +74,13 @@ This document defines the complete technology stack powering **Netran AI**, an a
 * **Primary Cloud Intelligence**: **Google Gemini API (`google-genai` SDK)**
 * **Model**: `gemini-3.6-flash`
 * **Ingestion Engine**: Converts raw unstructured resume text and pasted JD text into standardized, strongly-typed JSON objects (`CandidateProfile` & `ParsedJD`).
-* **Stage 1 (JD Research & Intelligence Engine)**: Structural breakdown of Job Descriptions, tech stack extraction, and trusted web domain scraping synthesis.
-* **Stage 2 (Question & Prompt Engine)**: Generates 15-question stratified interview trees paired with custom system prompts for the **Eva** interviewer persona.
+* **Stage 1 (JD Research & Intelligence Engine)**: Conducts deep structural breakdown of JDs and Tavily web search synthesis to produce **`jd_detail`** (role context, market intelligence, company background).
+* **Stage 2 (Question & Prompt Engine)**: Synthesizes candidate match matrices, constructs the 15-question tree, and embeds **`interview_behavior`** (Eva's tone, system prompts, strictness level, and dynamic `whisper_domain_vocabulary`).
 * **Stage 4 (Reports Engine)**: 3-branch multimodal evaluation (Audio, Technical Transcript, Combined) with exponential backoff rate-limit handling.
 
 
 * **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
-* Low-latency streaming response generation during live conversations. Loaded 100% offline for complete data privacy.
+* Low-latency streaming response generation during live conversations, dynamically steered using `interview_behavior` and `jd_detail` loaded directly from SQLite.
 
 
 * **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (1.5B)**
@@ -88,7 +88,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper `small` int8)**
-* Real-time streaming transcription loaded offline (`HF_HUB_OFFLINE=1`), dynamically boosted with candidate-specific `whisper_domain_vocabulary` extracted from their resume.
+* Real-time streaming transcription loaded offline (`HF_HUB_OFFLINE=1`), dynamically boosted with candidate-specific `whisper_domain_vocabulary` extracted from Stage 2 `interview_behavior`.
 
 
 * **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
