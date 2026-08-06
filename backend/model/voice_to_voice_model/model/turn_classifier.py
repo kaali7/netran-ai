@@ -78,7 +78,6 @@ def check_thought_completion(transcript: str) -> str:
         return "INCOMPLETE"  # Safer to wait and give candidate more time
 
     # Default fallback if uncertain
-    return "INCOMPLETE"
 
 if __name__ == "__main__":
     test_cases = [

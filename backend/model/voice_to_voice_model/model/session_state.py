@@ -37,3 +37,4 @@ class SessionState:
     selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset
     input_mode: str = "VAD"          # Input mode: "VAD" or "PTT" (Push-To-Talk)
     ptt_active: threading.Event = field(default_factory=threading.Event)
+    last_vocal_anchor: str = ""      # Tracks last anchor to enforce anti-repetition rotation

@@ -113,6 +113,7 @@ def _transcribe_audio_buffer(audio_buffer, whisper_prompt=""):
         filtered[i] = alpha * (filtered[i - 1] + audio_array[i] - audio_array[i - 1])
     audio_array = filtered
 
+    final_gain = 1.0
     utterance_peak = float(np.max(np.abs(audio_array)))
     if utterance_peak > 0.0001:
         final_gain = min(0.9 / utterance_peak, 15.0)
@@ -153,7 +154,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
     # Robust microphone initialization with retries (fixes race condition with BargeInWatcher)
-    import time
     stream = None
     native_rate = RATE
     CHUNK_NATIVE = CHUNK
@@ -416,8 +416,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > MAX_RECORDING_FRAMES:
                     # Tier 1 + Tier 2 Hybrid Thought Completion Check
                     if not has_extended_silence and total_frames_counter <= MAX_RECORDING_FRAMES:
-                        interim_text = _transcribe_audio_buffer(audio_buffer)
-                        status = check_thought_completion(interim_text)
+                        _cached_interim_transcript = _transcribe_audio_buffer(audio_buffer)
+                        status = check_thought_completion(_cached_interim_transcript)
                         if status == "INCOMPLETE":
                             has_extended_silence = True
                             if state:
@@ -425,7 +425,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                             max_silence_frames = max(8, (state.pause_tolerance_ms if state else 2300) // 32)
                             print(
                                 f"⏳ Candidate is thinking... extending wait time to {max_silence_frames * 32}ms "
-                                f"(interim transcript: '{interim_text}')",
+                                f"(interim transcript: '{_cached_interim_transcript}')",
                                 flush=True
                             )
                             continue
@@ -474,31 +474,31 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         filtered[i] = alpha * (filtered[i-1] + audio_array[i] - audio_array[i-1])
     audio_array = filtered
 
+    final_gain = 1.0
     utterance_peak = float(np.max(np.abs(audio_array)))
     if utterance_peak > 0.0001:
         final_gain = min(0.9 / utterance_peak, 15.0)  # 15x cap for utterance-level normalisation
         audio_array = audio_array * final_gain
     print(f"[STT] Sending {len(audio_array)/16000:.1f}s audio to Whisper (peak={utterance_peak:.4f}, gain={final_gain:.1f}x)", flush=True)
 
-    # Generate transcription using Faster-Whisper.
-    # vad_filter=False: Whisper's built-in VAD is deliberately disabled because it
-    # re-applies a silence gate that strips out quiet/distant speech that our Silero
-    # VAD already approved and our auto-gain already amplified. Letting Whisper
-    # re-filter the audio causes quiet voices to produce empty transcripts.
-    segments, _ = whisper_model.transcribe(
-        audio_array,
-        language="en",
-        initial_prompt=whisper_prompt,
-        beam_size=1,
-        best_of=1,
-        temperature=0.0,
-        condition_on_previous_text=False,      # Prevents infinite phrase loops & repeated hallucinations
-        no_speech_threshold=0.6,               # Drops non-speech static segments
-        hallucination_silence_threshold=2.0,   # Drops long hallucinated silent segments
-        vad_filter=False,
-        compression_ratio_threshold=2.4,
-    )
-    transcript_text = "".join([segment.text for segment in segments]).strip()
+    if _cached_interim_transcript is not None:
+        transcript_text = _cached_interim_transcript
+    else:
+        # Generate transcription using Faster-Whisper.
+        segments, _ = whisper_model.transcribe(
+            audio_array,
+            language="en",
+            initial_prompt=whisper_prompt,
+            beam_size=1,
+            best_of=1,
+            temperature=0.0,
+            condition_on_previous_text=False,
+            no_speech_threshold=0.6,
+            hallucination_silence_threshold=2.0,
+            vad_filter=False,
+            compression_ratio_threshold=2.4,
+        )
+        transcript_text = "".join([segment.text for segment in segments]).strip()
 
     stt_ms = Benchmark.end("stt")
     Benchmark.last_stt_ms = stt_ms
@@ -518,7 +518,6 @@ def run_timed_test(rounds: int = 3, record_seconds: int = 8):
     Standalone timed test for the STT listener.
     Uses sounddevice for recording, then runs Silero VAD + Whisper for transcription.
     """
-    import time
     
     # Force UTF-8 output so the terminal does not crash on Windows cp1252
     try:
@@ -785,7 +784,7 @@ class BargeInWatcher:
         """
         self._stop_event.set()
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=0.8)
+            self._thread.join(timeout=0.08)
 
     def _watch_loop(self):
         """
@@ -873,8 +872,7 @@ class BargeInWatcher:
                 if len(frame) < CHUNK:
                     frame = np.pad(frame, (0, CHUNK - len(frame)), mode='edge')
 
-                # DC offset removal
-                frame = frame - np.mean(frame)
+                # DC offset removal removed to comply with Rule 11 (preserve Silero temporal continuity)
                 peak = float(np.max(np.abs(frame)))
 
                 # Feed un-gained frame to Silero VAD to preserve RNN continuity

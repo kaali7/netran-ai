@@ -66,7 +66,14 @@ def get_system_prompt(custom_prompt_text: str | None = None) -> dict[str, str]:
             "3. Ask exactly ONE question at a time. NEVER ask two questions in the same turn.\n"
             "4. When instructed to ask a question, rephrase it naturally in your own words. Use their previous answer as a conversational bridge to introduce the next question smoothly.\n"
             "5. The SPEAK block must always end with a question mark if you are asking a question.\n"
-            "6. The TONE attribute is REQUIRED. Choose one: empathetic, encouraging, curious, probing, direct, technical, warm, icebreaker."
+            "6. The TONE attribute is REQUIRED. Choose one: empathetic, encouraging, curious, probing, direct, technical, warm, icebreaker.\n\n"
+            "### PERSONALIZATION & NATURALNESS RULES\n"
+            "7. REFERENCE-GROUNDING: When asking a technical question, prefix with a specific fact from the candidate's actual stated work. NEVER ask a question in isolation.\n"
+            "   WRONG: 'How do you handle connection pooling?'\n"
+            "   RIGHT: 'You mentioned PgBouncer earlier — how did you tune its pool size for your 35M-request workload?'\n"
+            "8. ANCHOR ROTATION: NEVER use the same vocal anchor (e.g., 'Got it') two turns in a row. Rotate through: 'Right...', 'Interesting...', 'Ah, makes sense...', 'Hmm, nice.', 'Fair enough.'.\n"
+            "9. BRIDGE SPECIFICITY: Your conversational bridge MUST reference what the candidate JUST SAID — not a generic filler. Use their exact words back to them.\n"
+            "10. NATURAL SENTENCE VARIETY: Mix sentence lengths. Follow a long clause with a short, punchy follow-up question. E.g., 'Makes sense — so what happens when that cache expires?'"
         )
         full_content = base_text + voice_guardrails
     else:
@@ -76,6 +83,47 @@ def get_system_prompt(custom_prompt_text: str | None = None) -> dict[str, str]:
         "role": "system",
         "content": full_content
     }
+
+
+def build_resume_context_anchor(resume_analysis: dict | None) -> str:
+    """
+    Extracts candidate facts from resume_analysis.json and formats them into
+    a compact LLM system prompt injection block for conversational grounding.
+    Keeps token count under 400 to preserve context window budget.
+    """
+    if not resume_analysis:
+        return ""
+
+    profile = resume_analysis.get("candidate_profile", {})
+    name = profile.get("candidate_name", "the candidate")
+    summary = profile.get("core_identity_summary", "")
+    achievements = profile.get("key_achievements", [])[:3]  # Top 3 only
+    traits = profile.get("personal_traits_and_hobbies", {})
+    icebreaker_angle = traits.get("icebreaker_probe_topic", "")
+
+    skills = resume_analysis.get("extracted_skill_overlap", [])
+    skill_lines = [
+        f"- {s['skill']} ({s.get('proficiency_tier', 'experienced')})"
+        for s in skills[:5]
+    ]
+
+    gaps = resume_analysis.get("experience_gaps_and_red_flags", {})
+    gap_areas = gaps.get("gaps", [])[:2] if isinstance(gaps, dict) else []
+
+    anchor_parts = [
+        f"### CANDIDATE PROFILE: {name}",
+        f"Summary: {summary}" if summary else "",
+        "Key Achievements:",
+        *[f"  • {a}" for a in achievements],
+        "Confirmed Skills (from resume):",
+        *skill_lines,
+        f"Icebreaker angle: {icebreaker_angle}" if icebreaker_angle else "",
+        f"Known weaker areas: {', '.join(gap_areas)}" if gap_areas else "",
+        "",
+        "IMPORTANT: Reference these specific facts when bridging between questions.",
+        "Use the candidate's real project numbers (e.g., '35M requests/day') to make your questions feel grounded and personalized.",
+    ]
+    return "\n".join(p for p in anchor_parts if p)
 
 
 def build_question_evaluation_prompt(

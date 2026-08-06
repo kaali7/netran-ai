@@ -7,12 +7,12 @@ Description: Multi-screen Kivy Desktop GUI application featuring:
                 header Back-to-Interview button, and real-time audio playback engine with progress bar.
 """
 
-import difflib
 import json
 import os
 import threading
 import time
 import wave
+from model.voice_to_voice_model.model.prompts import get_system_prompt as _get_system_prompt
 from datetime import datetime, timezone
 
 from kivy.app import App
@@ -555,6 +555,8 @@ class InterviewScreen(Screen):
         self.session_state.input_mode = "VAD"          # Auto-VAD
         self.tts_player = None
         self.candidate_project_anchor = ""
+        self._cached_sys_prompt = None
+        self._last_anchor_hash = ""
 
         self._load_selected_preset(self.selected_preset_name)
 
@@ -821,7 +823,6 @@ class InterviewScreen(Screen):
 
         # Clear stale interrupt flags from previous turn
         self.session_state.interrupt_event.clear()
-        self.session_state.interrupt_event.clear()
         player.interrupt_event.clear()
 
         # Signal that Eva is speaking (BargeInWatcher uses this + its own stop_event)
@@ -881,6 +882,7 @@ class InterviewScreen(Screen):
 
     def _run_interview_pipeline(self):
         """Main automated hardware pipeline loop linking components."""
+        from model.voice_to_voice_model.model.prompts import build_resume_context_anchor
 
         try:
             preload_speaker()
@@ -894,15 +896,45 @@ class InterviewScreen(Screen):
             self.update_status("Eva is initializing speech channels...")
             self.append_ui_text("[color=ffcc00]⚙️ [System]:[/color] Voice pipeline connected.\n")
 
+            # Extract resume highlights at session start
+            self.resume_highlights = {}
+            if self.stage2_bundle and self.stage2_bundle.resume_analysis:
+                ra = self.stage2_bundle.resume_analysis
+                profile = ra.get("candidate_profile", {})
+                self.resume_highlights = {
+                    "key_achievements": profile.get("key_achievements", []),
+                    "core_identity_summary": profile.get("core_identity_summary", ""),
+                    "skill_overlap": [s["skill"] for s in ra.get("extracted_skill_overlap", [])[:5]],
+                }
+                # Inject static resume anchor
+                self.candidate_project_anchor = build_resume_context_anchor(ra)
+            else:
+                self.candidate_project_anchor = ""
+
             # --- TURN 1: INITIATE CONVERSATION ---
             if self.llm_enabled:
+                cand_name = getattr(self.stage2_bundle.behavior, "candidate_name", "Candidate") if self.stage2_bundle and self.stage2_bundle.behavior else "Candidate"
+                cand_first_name = cand_name.split()[0] if cand_name and cand_name != "Candidate" else "there"
+                
+                icebreaker_angle = ""
+                if self.stage2_bundle and self.stage2_bundle.resume_analysis:
+                    profile = self.stage2_bundle.resume_analysis.get("candidate_profile", {})
+                    traits = profile.get("personal_traits_and_hobbies", {})
+                    icebreaker_angle = traits.get("icebreaker_probe_topic", "")
+
                 if self.question_manager and self.question_manager.get_current_question():
                     q1 = self.question_manager.get_current_question()
-                    initial_greeting = f"Hello! I am Eva, your technical interviewer today. {q1.question_text}"
-                    self.current_question_text = q1.question_text
+                    
+                    # Strip any greeting from the original question text globally to prevent replays
+                    import re
+                    clean_q1_text = re.sub(r'^(Hi|Hello|Hey)\b[^!\.]*[!\.]\s*(Welcome[!\.]?\s*)?', '', q1.question_text, flags=re.IGNORECASE).strip()
+                    q1.question_text = clean_q1_text
+                    
+                    initial_greeting = f"Hi {cand_first_name}! I'm Eva, your technical interviewer today. {clean_q1_text}"
+                    self.current_question_text = initial_greeting
                 else:
                     initial_greeting = (
-                        "Hello! I am Eva, your technical interviewer today. "
+                        f"Hi {cand_first_name}! I'm Eva, your technical interviewer today. "
                         "Before we dive into technical questions, could you briefly introduce yourself and tell me what you've been working on recently?"
                     )
                     self.current_question_text = initial_greeting
@@ -946,9 +978,13 @@ class InterviewScreen(Screen):
                         branch_taken = self.question_manager.evaluate_transcript(clean_transcript)
                         
                         if branch_taken == "icebreaker_response":
-                            self.candidate_project_anchor = f"CANDIDATE BACKGROUND: {clean_transcript}"
+                            self.candidate_project_anchor += f"\n\nCANDIDATE SELF-INTRO (ICEBREAKER): {clean_transcript}"
 
-                        llm_prompt, target_question = self.question_manager.format_prompt_context(branch_taken, clean_transcript)
+                        llm_prompt, target_question = self.question_manager.format_prompt_context(
+                            branch_taken, 
+                            clean_transcript,
+                            resume_highlights=self.resume_highlights
+                        )
                         prompt_ctx = llm_prompt
 
                     self.log_and_display_turn("You", clean_transcript)
@@ -971,14 +1007,14 @@ class InterviewScreen(Screen):
                     _barge_watcher = BargeInWatcher(self.session_state, on_barge_in=force_stop_all)
                     _barge_watcher.start()
 
-                    Benchmark.start("ttft")
-                    from model.voice_to_voice_model.model.prompts import (
-                        get_system_prompt,
-                    )
-                    sys_prompt_dict = get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
-                    base_sys_prompt = sys_prompt_dict["content"]
+                    anchor_hash = hash(self.candidate_project_anchor)
+                    if self._cached_sys_prompt is None or anchor_hash != self._last_anchor_hash:
+                        sys_prompt_dict = _get_system_prompt(self.stage2_bundle.system_prompt if self.stage2_bundle else None)
+                        base_sys_prompt = sys_prompt_dict["content"]
+                        self._cached_sys_prompt = f"{base_sys_prompt}\n\n{self.candidate_project_anchor}" if self.candidate_project_anchor else base_sys_prompt
+                        self._last_anchor_hash = anchor_hash
                     
-                    sys_prompt = f"{base_sys_prompt}\n\n{self.candidate_project_anchor}" if self.candidate_project_anchor else base_sys_prompt
+                    sys_prompt = self._cached_sys_prompt
 
                     MAX_HISTORY_MESSAGES = 8
                     if len(self.conversation_history) > MAX_HISTORY_MESSAGES:
@@ -1004,8 +1040,8 @@ class InterviewScreen(Screen):
                         # Always drain audio queue + stop watcher, even on exception
                         _player2 = get_default_player()
                         if _player2:
-                            import time as _t
-                            import threading as _th
+                            _t = time
+                            _th = threading
                             
                             _join_done = _th.Event()
                             def _wait_for_queue_join():

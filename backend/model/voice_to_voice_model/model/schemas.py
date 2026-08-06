@@ -91,7 +91,8 @@ class TurnManifest(BaseModel):
         "CANDIDATE_META_QUERY",
         "SKIP_REQUEST",
         "AUDIO_CHECK_OR_PAUSE",
-        "BARGE_IN_INTERRUPTION"
+        "BARGE_IN_INTERRUPTION",
+        "END_INTERVIEW_REQUEST"
     ] = "TECHNICAL_ANSWER"
     question_id: int | str | None = None
     topic: str | None = "General Technical"

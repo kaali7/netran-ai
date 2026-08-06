@@ -89,7 +89,7 @@ class QuestionManager:
         # 0. Candidate explicitly requesting to stop the interview
         # Avoid standalone words like 'end' or 'stop' to prevent false positives with 'back-end', 'front-end', or 'stop working'
         stop_pattern = re.compile(
-            r"\b(quit|terminate|bye|goodbye|stop the interview|end the interview|i want to stop|i need to stop|let's stop)\b", 
+            r"\b(quit|terminate|bye|goodbye|stop the interview|stop this interview|end the interview|i want to stop|i need to stop|let's stop)\b", 
             re.IGNORECASE
         )
         if stop_pattern.search(clean):
@@ -197,12 +197,22 @@ class QuestionManager:
             status = self.advance_question()
             return "interview_completed" if status == "completed" else "next_topic"
 
-    def format_prompt_context(self, branch_taken: str, candidate_transcript: str) -> tuple[str, str]:
-        llm_prompt, target_q = self._format_prompt_context_internal(branch_taken, candidate_transcript)
+    def format_prompt_context(
+        self, 
+        branch_taken: str, 
+        candidate_transcript: str,
+        resume_highlights: dict | None = None
+    ) -> tuple[str, str]:
+        llm_prompt, target_q = self._format_prompt_context_internal(branch_taken, candidate_transcript, resume_highlights)
         llm_prompt += "\n\nFORMAT REQUIREMENT: You MUST respond starting EXACTLY with TONE: <tone> and SPEAK: <text>"
         return llm_prompt, target_q
 
-    def _format_prompt_context_internal(self, branch_taken: str, candidate_transcript: str) -> tuple[str, str]:
+    def _format_prompt_context_internal(
+        self, 
+        branch_taken: str, 
+        candidate_transcript: str,
+        resume_highlights: dict | None = None
+    ) -> tuple[str, str]:
         """
         Constructs natural LLM instructions for Qwen 2.5 3B and returns:
         (llm_prompt_string, logged_target_question_text)
@@ -235,7 +245,7 @@ class QuestionManager:
         if branch_taken == "interviewer_meta":
             instruction = (
                 f"The candidate asked a meta question: '{candidate_transcript}'. "
-                f"Answer warmly in 1 short sentence, reassure them, and ask if they are ready to return to: '{target_logged_q}'."
+                f"Answer their question directly and warmly in 1 short sentence (you are Eva, an AI technical interviewer), then ask if they are ready to return to: '{target_logged_q}'."
             )
             return f"Instruction: {instruction}", target_logged_q
 
@@ -261,8 +271,15 @@ class QuestionManager:
         # 6. TECHNICAL EVALUATION BRANCHES
         if branch_taken == "strong_followup":
             target_q = current_q.followup_if_strong if (current_q and current_q.followup_if_strong) else target_logged_q
+            resume_ref = ""
+            if resume_highlights:
+                relevant_achievement = resume_highlights.get("key_achievements", [None])[0]
+                if relevant_achievement:
+                    resume_ref = f" (Note: their resume confirms: '{relevant_achievement[:80]}...')"
             instruction = (
-                f"Briefly validate their answer in 1 warm sentence, then ask this follow-up question in your own words: '{target_q}'. "
+                f"The candidate just said: '{candidate_transcript[:60]}...'.{resume_ref}\n"
+                f"Briefly validate their answer in 1 warm sentence referencing what they just said, "
+                f"then ask this follow-up question in your own words: '{target_q}'.\n"
                 f"CRITICAL: Ask ONLY this single question. Do NOT add any bridging questions of your own."
             )
         elif branch_taken == "weak_followup":
@@ -275,8 +292,9 @@ class QuestionManager:
             next_q = self.get_current_question()
             target_q = next_q.question_text if next_q else target_logged_q
             instruction = (
-                f"Acknowledge their previous answer smoothly, then transition to ask this question in your own words: '{target_q}'. "
-                f"CRITICAL: Ask ONLY this single question. Do NOT add any bridging questions of your own."
+                f"The candidate just said: '{candidate_transcript[:60]}...'.\n"
+                f"Briefly acknowledge their point (1 sentence), then naturally pivot to ask this question in your own words: '{target_q}'.\n"
+                f"CRITICAL: Ask ONLY this single question."
             )
 
         llm_prompt = (

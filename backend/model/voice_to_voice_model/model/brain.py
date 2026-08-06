@@ -76,22 +76,6 @@ You are Eva, a warm, articulate, and natural lead technical interviewer having a
 2. **Concise Spoken Turns:** Keep every spoken response short (1 to 2 sentences max, 15–25 words). Never output long written lists, multi-bullet points, or textbook lectures.
 3. **Contextual Bridging:** NEVER ask isolated textbook questions out of nowhere. Always acknowledge what the candidate just said OR connect the question to their background project.
 4. **Structural Spoken Template:** Structure every spoken response in 3 micro-phases:
-   - **Vocal Anchor (1–3 words):** Start with natural opening feedback ("Ah, got it...", "Hmm, good point...", "Right...").
-   - **Core Answer / Follow-up (15–25 words):** Provide concise feedback or context in 1 to 2 complete sentences.
-   - **Terminal Question (5–10 words):** Ask a direct, clear question handing the conversation back to the candidate.
-5. **Tone Selection:** Encouraging, peer-like, and collaborative. Select an appropriate tone attribute from the Tone Taxonomy below.
-
-### TONE TAXONOMY
-Choose ONE tone attribute for the TONE: line matching the candidate's turn context:
-- `empathetic` / `encouraging`: Candidate hesitates, stumbles, says "I don't know" or "skip", or gives a weak answer.
-- `curious` / `probing`: Candidate gives a strong answer; escalating to trade-offs, architecture, or edge cases.
-- `direct` / `technical`: Baseline introduction of a new technical topic or standard baseline question.
-- `warm` / `icebreaker`: Candidate introduction phase or casual conversational meta-questions ("Who created you?").
-
-### SPECIAL INTERACTION HANDLERS
-- **Candidate Says "I Don't Know" / "Skip":** Reassure them immediately ("No worries at all!", "All good, that's pretty niche anyway!"), normalize it, and pivot smoothly to a lighter concept.
-- **Candidate Asks Meta-Questions ("Who are you?"):** Answer warmly in 1 short sentence, reassure them, and ask if they are ready to continue.
-- **Candidate Interrupts / Says "Wait":** Immediately yield ("Oh, take your time!"), pause, and let them speak.
 
 ### OUTPUT FORMAT REQUIREMENTS & STRICT DIRECTIVES
 1. **Spoken Response Format:** You MUST respond in EXACTLY two lines. Do NOT include any thinking, reasoning, or XML tags.
@@ -228,6 +212,7 @@ def stream_llm_response(
             in_speak_mode = False
             full_speak_text = ""
             speak_buffer = ""
+            pending_clause_buffer = ""
             detected_tone = "direct"
             first_token_received = False
 
@@ -298,7 +283,14 @@ def stream_llm_response(
                                     clause_to_speak = "".join(parts[:-1])
                                     speak_buffer = parts[-1]
                                     if speaker_player and session_state and clause_to_speak.strip() and not session_state.interrupt_event.is_set():
-                                        speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
+                                        word_count = len(clause_to_speak.split())
+                                        ends_terminal = clause_to_speak.strip().endswith(('.', '?', '!'))
+                                        if ends_terminal or word_count >= 6:
+                                            full_dispatch = pending_clause_buffer + clause_to_speak
+                                            speaker_player.speak_clause(TextSanitizer.clean_for_tts(full_dispatch), session_state, tone=detected_tone)
+                                            pending_clause_buffer = ""
+                                        else:
+                                            pending_clause_buffer += clause_to_speak
                     else:
                         full_speak_text += token
                         if ui_callback:
@@ -312,13 +304,23 @@ def stream_llm_response(
 
                             # Do not dispatch clause if interrupted
                             if speaker_player and session_state and clause_to_speak.strip() and not session_state.interrupt_event.is_set():
-                                speaker_player.speak_clause(clause_to_speak, session_state, tone=detected_tone)
+                                word_count = len(clause_to_speak.split())
+                                ends_terminal = clause_to_speak.strip().endswith(('.', '?', '!'))
+                                if ends_terminal or word_count >= 6:
+                                    full_dispatch = pending_clause_buffer + clause_to_speak
+                                    speaker_player.speak_clause(TextSanitizer.clean_for_tts(full_dispatch), session_state, tone=detected_tone)
+                                    pending_clause_buffer = ""
+                                else:
+                                    pending_clause_buffer += clause_to_speak
 
             print("\n") # Newline after streaming finishes
             
-            # Flush remaining buffer
-            if speaker_player and session_state and speak_buffer.strip() and not session_state.interrupt_event.is_set():
-                speaker_player.speak_clause(speak_buffer.strip(), session_state, tone=detected_tone)
+            # Flush any remaining buffer text
+            if speak_buffer.strip() or pending_clause_buffer.strip():
+                if speaker_player and session_state and not session_state.interrupt_event.is_set():
+                    final_dispatch = pending_clause_buffer + speak_buffer
+                    if final_dispatch.strip():
+                        speaker_player.speak_clause(TextSanitizer.clean_for_tts(final_dispatch), session_state, tone=detected_tone)
 
             clean_speak_text = TextSanitizer.clean_for_tts(full_speak_text)
             
