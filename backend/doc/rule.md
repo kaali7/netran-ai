@@ -60,6 +60,7 @@ Before modifying any source code in a model stage:
 * Run tests/verifications to ensure zero syntax or runtime errors after editing code.
 * Only execute `git commit` when the USER explicitly requests/instructs to commit the changes (e.g., "commit changes", "commit current stage").
 * **Pre-Commit Documentation Check**: When the user requests to commit, FIRST check if any documentation files (e.g., `model/<stage_folder>/doc/current.md`, `doc/folder_strucuture.md`, `doc/tech_stack.md`, `doc/rule.md`) need to be updated for recent code/schema/architecture changes. If any documentation updates are pending, update those files FIRST before running `git commit`.
+* **Mandatory Task Completion Logging**: Whenever the user explicitly instructs to "commit the current stage" or "commit changes", you MUST update the `doc/task_completion.md` file to log a verification and sync record of the tasks you just completed BEFORE executing the `git commit`.
 * When committing upon user request, use standard Conventional Commit messages:
   - `feat(...)`: New features or UI components
   - `fix(...)`: Bug fixes or error resilience updates
