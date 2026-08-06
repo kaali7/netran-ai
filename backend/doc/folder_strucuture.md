@@ -19,6 +19,7 @@ backend/
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
 ├── skills-lock.json           # Locked agent skill registry
 ├── doc/                       # System-wide backend documentation
+│   ├── backend_plan.md        # Master FastAPI web backend architecture specification
 │   ├── current.md             # Current operational state & component synthesis
 │   ├── folder_strucuture.md   # Detailed directory structure (this file)
 │   ├── rule.md                # Mandatory project rules & agent directives
