@@ -62,6 +62,8 @@ backend/model/reports_model/
          │        └───────┬────────┘        │
          │                ▼                 │
          │         Combine Branch           │
+         │  (Progressive Cache Saving to    │
+         │         turn_cache.json)         │
          └────────────────┬─────────────────┘
                           │ CandidateReportPayload
                           ▼
@@ -86,7 +88,8 @@ Inside `test/output/sess_<timestamp>/` (or active `backend/sessions/<session_id>
    - **Candidate Upskilling Roadmap (`CandidateFeedback`):** Key strengths, primary growth areas, and recommended study topics.
    - **Context Fallback Grounding:** Automatic fallback notice when candidate resume or Stage 1 rubric is omitted.
 2. `evaluation_summary.md`: Human-readable Markdown summary with scorecards, pillar breakdowns, integrity alerts, growth roadmaps, and turn-by-turn telemetry notes.
-3. `turn_XX.wav`: Per-turn sliced audio clips.
+3. `turn_cache.json`: Progressively saved cache of `AudioBranchOutput` and `TechnicalBranchOutput` models. Enables instantaneous resume on failure and live GUI streaming during generation.
+4. `turn_XX.wav`: Per-turn sliced audio clips.
 
 ---
 

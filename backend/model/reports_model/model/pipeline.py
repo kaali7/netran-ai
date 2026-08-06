@@ -155,19 +155,31 @@ class Stage4Pipeline:
         resume_text = "Not Provided"
         rubric_text = "Not Provided"
         
-        resume_path = session_dir / "sample_resume.txt"
-        if not resume_path.exists():
-            resume_path = session_dir / "resume.txt"
-        if resume_path.exists():
-            with open(resume_path, "r", encoding="utf-8") as f:
-                resume_text = f.read()
+        resume_json_path = session_dir / "sample_resume.json"
+        if resume_json_path.exists():
+            with open(resume_json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                resume_text = data.get("resume_text", str(data))
+        else:
+            resume_path = session_dir / "sample_resume.txt"
+            if not resume_path.exists():
+                resume_path = session_dir / "resume.txt"
+            if resume_path.exists():
+                with open(resume_path, "r", encoding="utf-8") as f:
+                    resume_text = f.read()
 
-        rubric_path = session_dir / "sample_rubric.json"
-        if not rubric_path.exists():
-            rubric_path = session_dir / "stage1_rubric.json"
-        if rubric_path.exists():
-            with open(rubric_path, "r", encoding="utf-8") as f:
-                rubric_text = f.read()
+        jd_path = session_dir / "sample_job_detail.json"
+        if jd_path.exists():
+            with open(jd_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                rubric_text = json.dumps(data.get("rubric", data), indent=2)
+        else:
+            rubric_path = session_dir / "sample_rubric.json"
+            if not rubric_path.exists():
+                rubric_path = session_dir / "stage1_rubric.json"
+            if rubric_path.exists():
+                with open(rubric_path, "r", encoding="utf-8") as f:
+                    rubric_text = f.read()
                 
         return resume_text, rubric_text
 
@@ -177,16 +189,41 @@ class Stage4Pipeline:
         turns: list[dict[str, Any]],
         turn_clips: dict[int, Path],
         resume_text: str = "",
-        rubric_text: str = ""
+        rubric_text: str = "",
+        session_dir: Path | None = None
     ) -> tuple[list[AudioBranchOutput], list[TechnicalBranchOutput]]:
-        """Runs audio and technical branch evaluations per turn."""
+        """Runs audio and technical branch evaluations per turn with progressive caching."""
         import time
         audio_outputs = []
         technical_outputs = []
 
+        cache_file = session_dir / "turn_cache.json" if session_dir else None
+        cache_data = {}
+        if cache_file and cache_file.exists():
+            with open(cache_file, "r", encoding="utf-8") as f:
+                try:
+                    cache_data = json.load(f)
+                except Exception:
+                    cache_data = {}
+
         for turn in turns:
             t_id = turn.get("turn_id", 1)
+            t_id_str = str(t_id)
+
+            # --- CACHE HIT ---
+            if t_id_str in cache_data:
+                print(f"[Stage4Pipeline] Loading Turn {t_id} evaluation from cache.")
+                cached_turn = cache_data[t_id_str]
+                if "audio" in cached_turn:
+                    audio_outputs.append(AudioBranchOutput.model_validate(cached_turn["audio"]))
+                if "technical" in cached_turn:
+                    technical_outputs.append(TechnicalBranchOutput.model_validate(cached_turn["technical"]))
+                continue
+
+            # --- CACHE MISS ---
             clip_path = turn_clips.get(t_id)
+            aud_res = None
+            tec_res = None
 
             if clip_path and clip_path.exists():
                 aud_res = evaluator.evaluate_audio_branch(
@@ -207,6 +244,17 @@ class Stage4Pipeline:
                 jd_rubric_text=rubric_text
             )
             technical_outputs.append(tec_res)
+            
+            # --- PROGRESSIVE SAVE ---
+            cache_data[t_id_str] = {}
+            if aud_res:
+                cache_data[t_id_str]["audio"] = aud_res.model_dump()
+            if tec_res:
+                cache_data[t_id_str]["technical"] = tec_res.model_dump()
+                
+            if cache_file:
+                with open(cache_file, "w", encoding="utf-8") as f:
+                    json.dump(cache_data, f, indent=2)
             
             # Anti-Rate-Limit pacing for Free Tier (15 RPM)
             time.sleep(4)
@@ -250,7 +298,11 @@ class Stage4Pipeline:
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest_data = json.load(f)
 
-        session_id = manifest_data.get("session_id", session_dir.name)
+        if "session_metadata" in manifest_data:
+            session_id = manifest_data["session_metadata"].get("session_id", session_dir.name)
+        else:
+            session_id = manifest_data.get("session_id", session_dir.name)
+            
         turns = manifest_data.get("turns", [])
         print(f"[Stage4Pipeline] Starting processing for session: {session_id}")
 
@@ -264,7 +316,7 @@ class Stage4Pipeline:
         resume_text, rubric_text = self._load_session_context(session_dir)
 
         audio_outputs, technical_outputs = self._evaluate_turns(
-            evaluator, turns, turn_clips, resume_text, rubric_text
+            evaluator, turns, turn_clips, resume_text, rubric_text, session_dir
         )
 
         final_report = evaluator.evaluate_combine_branch(
