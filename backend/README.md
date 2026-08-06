@@ -15,7 +15,7 @@ The backend architecture comprises **4 core AI model stages** linked by a **Unif
    - Parses candidate resumes (`.pdf`, `.docx`, `.txt`) using `pypdf` and `python-docx`. Performs skill-gap cross-matching against the JD rubric to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and generates a 1-2 sentence latency-constrained system prompt for Stage 3.
 
 3. **Stage 3 — Live Voice-to-Voice Streaming Loop (`voice_to_voice_model`)**:
-   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (dual VAD+RMS speech gate), **Faster-Whisper** (`small` int8 model loaded 100% offline) for STT, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`recording.wav`) and millisecond-precision timing telemetry (`transcript.json`).
+   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (dual VAD+RMS speech gate), **Faster-Whisper** (`small` int8 model loaded 100% offline) for STT, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, a **Qwen2.5:1.5B**-powered hybrid turn-taking classifier, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`recording.wav`) and millisecond-precision timing telemetry (`transcript.json`).
 
 4. **Stage 4 — Post-Session Multimodal Evaluation Engine (`reports_model`)**:
    - Slices continuous audio into per-turn WAV clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps and runs a 3-branch **Gemini Multimodal Evaluation Engine** (Audio Branch, Technical Branch, Combine Branch) to output dual evaluation artifacts: `report.json` and `evaluation_summary.md`.
@@ -141,9 +141,9 @@ run.bat
 **Key Menu Options**:
 - **Option 1**: Launch Unified 5-Screen Netran AI Interview Workflow (Complete App).
 - **Options 2–5**: Run standalone stage models (Stage 1 Research, Stage 2 Question, Stage 3 Voice, Stage 4 Report).
-- **Options 6–8**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain).
-- **Options 9–10**: Setup Tools (Install dependencies, Download VAD).
-- **Options 11–16**: Maintenance tools to clean stage outputs, session folders, cache DB, trash, and run Code Audit Scanner.
+- **Options 6–10**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain, Turn Classifier, Question Manager).
+- **Options 11–12**: Setup Tools (Install dependencies, Download VAD).
+- **Options 13–18**: Maintenance tools to clean stage outputs, session folders, cache DB, trash, and run Code Audit Scanner.
 
 ---
 
@@ -153,30 +153,35 @@ Make sure your `.venv` is activated, then run:
 
 #### 1. Run Complete Combined 5-Screen Application
 ```cmd
-python -m model.workflow.model.app
+python -m model.workflow.model.front
 ```
 
 #### 2. Run Stage 1 (JD Research & Market Intel Desktop GUI)
 ```cmd
-python -m model.research_model.model.app
+python -m model.research_model.model.front
 ```
 
-#### 3. Run Stage 2 (Question Tree & System Prompt Generator CLI)
-```cmd
-python -m model.question_model.model.test_pipeline
-```
+#### 3. Run Stage 2 (Question Tree & System Prompt Generator)
+- **Kivy UI**:
+  ```cmd
+  python -m model.question_model.model.front
+  ```
+- **CLI Harness**:
+  ```cmd
+  python -m model.question_model.model.test_pipeline
+  ```
 
 #### 4. Run Stage 3 (Standalone Voice Interview Desktop GUI)
 ```cmd
-python -m model.voice_to_voice_model.model.main_app
+python -m model.voice_to_voice_model.model.front
 ```
 
-#### 5. Run Stage 4 (Post-Session Report Generator GUI / CLI)
-- **Kivy Test UI**:
+#### 5. Run Stage 4 (Post-Session Report Generator)
+- **Kivy UI**:
   ```cmd
-  python -m model.reports_model.model.test_ui
+  python -m model.reports_model.model.front
   ```
-- **CLI Test Pipeline**:
+- **CLI Harness**:
   ```cmd
   python -m model.reports_model.model.test_pipeline
   ```
@@ -197,12 +202,12 @@ During development and testing, temporary test output files and session logs are
 - **SQLite Cache (`model/research_model/model/cache.db`)**: Stores cached JD rubrics.
 
 ### Clean Data Commands via `run.bat`:
-- Select **Option 11**: Deletes stage `test_output/` and `test_process/` folders.
-- Select **Option 12**: Deletes active session folders in `model/sessions/`.
-- Select **Option 13**: Deletes SQLite `cache.db`.
-- Select **Option 14**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
-- Select **Option 15**: Performs a **Full Deep Clean** returning the repository to pristine condition.
-- Select **Option 16**: Run Code Quality Audit (Ruff, Bandit, Radon).
+- Select **Option 13**: Deletes stage `test/output/` and `test/process/` folders.
+- Select **Option 14**: Deletes active session folders in `model/sessions/` and `sessions/`.
+- Select **Option 15**: Deletes SQLite `cache.db` files.
+- Select **Option 16**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
+- Select **Option 17**: Performs a **Full Deep Clean** returning the repository to pristine condition.
+- Select **Option 18**: Run Code Quality Audit (Ruff, Bandit, Radon).
 
 ---
 
@@ -211,4 +216,6 @@ During development and testing, temporary test output files and session logs are
 Additional system documentation is available in the `doc/` directory:
 - [`doc/current.md`](file:///c:/kali/product/netran%20ai/backend/doc/current.md): Detailed current operational status & stage synthesis.
 - [`doc/folder_strucuture.md`](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md): Complete directory structure and file inventory.
-- [`model/overall_model_process.md`](file:///c:/kali/product/netran%20ai/backend/model/overall_model_process.md): High-level multi-stage process matrix.
+- [`doc/rule.md`](file:///c:/kali/product/netran%20ai/backend/doc/rule.md): Mandatory architectural rules and agent instructions.
+- [`doc/tech_stack.md`](file:///c:/kali/product/netran%20ai/backend/doc/tech_stack.md): Technical framework components.
+- [`model/workflow/doc/overall_model_process.md`](file:///c:/kali/product/netran%20ai/backend/model/workflow/doc/overall_model_process.md): High-level multi-stage process matrix.

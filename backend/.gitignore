@@ -13,6 +13,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
 
 # Database & Cache Files
 *.db
@@ -32,11 +33,17 @@ model/*/model/test_output/
 model/*/model/test/output/
 model/*/test/output/
 model/*/test_output/
+model/*/test/process/
 model/workflow/test/process/
 model/workflow/test/output/
 *.wav
 _temp_resume.txt
 turn_cache.json
+
+# Linters & Testing
+.ruff_cache/
+.pytest_cache/
+.coverage
 
 # IDE & Editor Settings
 .vscode/

@@ -6,20 +6,25 @@ This document details the complete, clean directory structure and file inventory
 
 ## 🏗️ Master Tree Overview
 
-```
+```text
 backend/
 ├── .env                       # Root environment secrets (GEMINI_API_KEY, TAVILY_API_KEY, OLLAMA_MODEL)
 ├── .gitignore                 # Git ignore rules (virtual environment, cache DB, WAV audio, test_output)
+├── .agents/                   # AI Agent custom instructions and tool skills
+│   ├── AGENTS.md              # AI Agent Workspace Rules
+│   └── skills/                # AI capability extensions (gemini-interactions-api)
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
 ├── run.bat                    # Interactive Windows batch launcher (12-option menu)
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
+├── skills-lock.json           # Locked agent skill registry
 ├── doc/                       # System-wide backend documentation
 │   ├── current.md             # Current operational state & component synthesis
-│   └── folder_strucuture.md   # Detailed directory structure (this file)
+│   ├── folder_strucuture.md   # Detailed directory structure (this file)
+│   ├── rule.md                # Mandatory project rules & agent directives
+│   └── tech_stack.md          # Technical stack architecture & dependencies
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )
 └── model/                     # Multi-stage AI pipeline core modules
-    ├── overall_model_process.md # High-level pipeline process matrix (Stage 1→4)
     ├── research_model/        # STAGE 1: JD Research & Market Intelligence Engine
     │   ├── doc/
     │   │   ├── current.md     # Stage 1 technical implementation status
@@ -66,7 +71,7 @@ backend/
     │   │   └── prd.md         # Stage 3 Product Requirements Document
     │   ├── test/              # Stage 3 test harness input/output directories
     │   │   ├── input/         # Stage 2 preset inputs (interview_questions.json, interviewer_behavior.json, resume_analysis.json)
-    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> recording.wav & session_manifest.json )
+    │   │   └── output/        # Generated session folders ( sess_<timestamp>/ -> recording.wav & transcript.json )
     │   └── model/
     │       ├── benchmark.py   # Latency telemetry recorder (stt_ms, ttft_ms, ttfa_ms)
     │       ├── brain.py       # Local Ollama Qwen2.5:3b streaming LLM engine with TextSanitizer regex
@@ -114,9 +119,10 @@ backend/
         │   ├── process/       # Middle processing & cache data (sess_<timestamp>/ -> Stage 1, 2, 3 intermediate artifacts & cache.db)
         │   └── output/        # Final workflow evaluation reports (sess_<timestamp>/ -> report.json & evaluation_summary.md)
         └── model/
-            ├── front.py       # Unified 5-Screen Kivy Desktop Application
             ├── config.py      # Master configuration & non-colliding sys.path injector
+            ├── front.py       # Unified 5-Screen Kivy Desktop Application
             ├── orchestrator.py # Master 4-stage pipeline execution coordinator
+            ├── run.bat        # Duplicate workflow launcher script
             ├── sample_data.py # Demo testing data provider (loads test/input/sample_session JSON files)
             ├── test_pipeline.py # Standalone Headless CLI test harness for Unified Workflow
             └── voice_engine.py # Stage 3 adapter with dynamic system prompt injection
@@ -133,7 +139,7 @@ backend/
 - **`scan_code_quality.py`**: Automated audit script ensuring docstring coverage, single requirements.txt usage, and clean directory hygiene.
 
 ### 2. `backend/doc/`
-- Contains system-level documentation covering the complete backend architecture (`current.md`) and directory structure (`folder_strucuture.md`).
+- Contains system-level documentation covering the complete backend architecture (`current.md`), directory structure (`folder_strucuture.md`), mandatory directives (`rule.md`), and the framework stack (`tech_stack.md`).
 
 ### 3. `backend/model/`
 - Contains all AI model subsystems organized cleanly into `research_model`, `question_model`, `voice_to_voice_model`, `reports_model`, and `workflow`.

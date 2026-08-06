@@ -50,6 +50,8 @@ This document defines the complete technology stack powering **Netran AI**, an a
 * **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
   * Low-latency clause-level streaming response generation during live interview conversations.
   * Zero external API cost and full privacy compliance.
+* **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (1.5B)**
+  * Lightweight inference model for hybrid conversational turn-classification during the real-time voice loop.
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper)**
   * Real-time streaming candidate voice transcription loaded 100% offline (`HF_HUB_OFFLINE=1`) from local disk cache snapshot, dynamically weighted with `whisper_domain_vocabulary` extracted from the candidate's resume for enhanced technical accuracy.
 * **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**

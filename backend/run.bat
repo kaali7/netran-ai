@@ -28,22 +28,24 @@ echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
 echo   6. Test Speech-to-Text ^& Silero VAD (listener.py)
 echo   7. Test Text-to-Speech Kokoro-82M (speaker.py)
 echo   8. Test Ollama Qwen2.5 Streaming Brain (brain.py)
+echo   9. Test Hybrid Turn Classifier (turn_classifier.py)
+echo  10. Test Conversation State Manager (question_manager.py)
 echo.
 echo  --- SETUP TOOLS ---
-echo   9. Install / Update Backend Dependencies (requirements.txt)
-echo  10. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  11. Install / Update Backend Dependencies (requirements.txt)
+echo  12. Download / Verify Silero VAD Model Weights (download_vad.py)
 echo.
 echo  --- MAINTENANCE ^& DATA CLEANING ---
-echo  11. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
-echo  12. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  13. Clean SQLite Research Cache Database (cache.db)
-echo  14. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
-echo  15. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
-echo  16. Run Code Quality Audit (scan_code_quality.py)
+echo  13. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
+echo  14. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
+echo  15. Clean SQLite Research Cache Database (cache.db)
+echo  16. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
+echo  17. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  18. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-16): "
+set /p choice="Enter your choice (0-18): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
@@ -53,14 +55,16 @@ if "%choice%"=="5" goto run_report_model
 if "%choice%"=="6" goto test_listener
 if "%choice%"=="7" goto test_speaker
 if "%choice%"=="8" goto test_brain
-if "%choice%"=="9" goto install_reqs
-if "%choice%"=="10" goto run_vad
-if "%choice%"=="11" goto clean_test_outputs
-if "%choice%"=="12" goto clean_sessions
-if "%choice%"=="13" goto clean_cache_db
-if "%choice%"=="14" goto clean_bytecode_trash
-if "%choice%"=="15" goto clean_full_deep
-if "%choice%"=="16" goto run_quality_audit
+if "%choice%"=="9" goto test_classifier
+if "%choice%"=="10" goto test_manager
+if "%choice%"=="11" goto install_reqs
+if "%choice%"=="12" goto run_vad
+if "%choice%"=="13" goto clean_test_outputs
+if "%choice%"=="14" goto clean_sessions
+if "%choice%"=="15" goto clean_cache_db
+if "%choice%"=="16" goto clean_bytecode_trash
+if "%choice%"=="17" goto clean_full_deep
+if "%choice%"=="18" goto run_quality_audit
 if "%choice%"=="0" goto end
 goto menu
 
@@ -158,6 +162,20 @@ goto menu
 echo.
 echo [TESTING] Ollama Qwen2.5 Conversation Brain...
 .venv\Scripts\python.exe -m model.voice_to_voice_model.model.brain
+pause
+goto menu
+
+:test_classifier
+echo.
+echo [TESTING] Hybrid Turn Classifier...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.turn_classifier
+pause
+goto menu
+
+:test_manager
+echo.
+echo [TESTING] Conversation State Manager...
+.venv\Scripts\python.exe -m model.voice_to_voice_model.model.question_manager
 pause
 goto menu
 

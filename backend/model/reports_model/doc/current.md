@@ -34,6 +34,8 @@ backend/model/reports_model/
     ├── audio_slicer.py         # Non-destructive WAV slicing utility
     ├── gemini_evaluator.py     # 3-stage Gemini multimodal evaluation engine (Audio, Technical, Combine)
     ├── pipeline.py             # Pipeline orchestrator & artifact renderer (JSON + Markdown) with Rate Limiting
+    ├── report_builder.py       # Backward compatibility alias for pipeline.py
+    ├── report_schema.py        # Backward compatibility alias for schemas.py
     ├── test_pipeline.py        # CLI headless verification runner with dynamic interactive menu
     └── front.py                # Interactive Kivy desktop UI for testing
 ```

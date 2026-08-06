@@ -39,7 +39,7 @@ Before modifying any source code in a model stage:
   - `interviewer_behavior.json` (Eva interviewer persona & system prompt from Stage 2)
 * **Outputs**: Dedicated session directory `model/voice_to_voice_model/test/output/sess_<timestamp>/` containing:
   1. `recording.wav`: Continuous raw PCM/WAV candidate & interviewer mic audio.
-  2. `transcript.json` / `session_manifest.json`: Turn-by-turn dialogue transcript with timestamp & latency telemetry (`stt_ms`, `llm_ms`, `tts_ms`).
+  2. `transcript.json`: Turn-by-turn dialogue transcript with timestamp & latency telemetry (`stt_ms`, `llm_ms`, `tts_ms`).
 * **Question Limit Scoping**:
   - **Testing Time**: Bounded to **5 questions max** (`MAX_QUESTIONS = 5`) for fast automated test harness execution.
   - **Real-Time Live Interview Time**: Supports **10 to 15 questions** (`MAX_QUESTIONS = 10..15`) tailored to job description requirements.
@@ -49,7 +49,7 @@ Before modifying any source code in a model stage:
 ## 📌 Rule 5: Stage 4 (Reports Model) Dual I/O Contract
 * **Inputs**: Loaded from `model/reports_model/test/input/sample_session/` or active session directory:
   - `continuous_mic_input.wav` / `recording.wav` (Continuous audio recording from Stage 3)
-  - `session_manifest.json` / `transcript.json` (Per-turn millisecond timing telemetry from Stage 3)
+  - `transcript.json` (Per-turn millisecond timing telemetry from Stage 3)
 * **Outputs**: Dedicated session directory `model/reports_model/test/output/sess_<timestamp>/` containing:
   1. `report.json`: Machine-readable Pydantic JSON report payload containing technical scores & vocal confidence.
   2. `evaluation_summary.md`: Human-readable Markdown summary report with pillar breakdowns and audio delivery notes.
