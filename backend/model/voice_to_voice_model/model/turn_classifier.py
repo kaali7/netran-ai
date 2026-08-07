@@ -5,6 +5,7 @@ Tier 1: Ultra-fast regex check (0ms).
 Tier 2: Qwen2.5:1.5B classification via local Ollama API (~80-120ms fallback).
 """
 
+import os
 import requests
 
 THINKING_FILLER_WORDS = {
@@ -83,11 +84,12 @@ def check_thought_completion(transcript: str) -> str:
         "Output ONLY one word: 'COMPLETE' or 'INCOMPLETE'."
     )
 
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
     try:
         response = requests.post(
             OLLAMA_API_URL,
             json={
-                "model": "qwen2.5:1.5b",
+                "model": OLLAMA_MODEL,
                 "prompt": prompt,
                 "stream": False,
                 "options": {
@@ -96,7 +98,7 @@ def check_thought_completion(transcript: str) -> str:
                     "top_p": 0.1
                 }
             },
-            timeout=0.250  # 250ms safety timeout fallback
+            timeout=0.600  # 600ms safety timeout fallback
         )
         if response.status_code == 200:
             result = response.json().get("response", "").strip().upper()

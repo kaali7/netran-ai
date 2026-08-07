@@ -98,6 +98,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Offline Speaker Verification (`speaker_verifier.py`)**: Employs SpeechBrain `speechbrain/spkrec-ecapa-voxceleb` (192-dim ECAPA-TDNN) to verify candidate identity before STT transcription.
   - **Auto-Enrollment**: Automatically captures 192-dim candidate speaker embedding from the first ICEBREAKER utterance >= 2 seconds.
   - **Verification Gate**: Evaluates cosine similarity of completed audio buffers against enrolled embedding (threshold 0.55 configurable via `.env` SV_THRESHOLD). Rejects foreign speech (students, teacher, TV, phone) with zero impact on per-frame VAD latency (~15ms per utterance).
+* **Inline Dynamic Noise Floor Calibration**: Calibration samples ambient noise directly from the active producer queue during the first 960ms of `listen_and_transcribe()`. Eliminates PortAudio driver lockups (silent `0.0000` audio buffers) on Windows caused by rapid stream open/close cycles.
 * **Adaptive Speech Gates**: All thresholds computed relative to `ambient_floor`:
   - Speech START: `(VAD prob >= 0.30 AND rms >= 2.5× ambient_floor)` OR `VAD prob >= 0.50`
   - Speech CONTINUATION: silence counter increments only when `rms < 1.8× ambient_floor`
@@ -111,7 +112,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - Implements Case 3 Hybrid Architecture to determine if candidate speech is a complete thought or an interrupted thinking pause.
   - **Tier 0 (Ollama Liveness Probe)**: Skips Tier 2 if Ollama is unreachable.
   - **Tier 1 (Regex/Lexical - 0ms)**: Checks trailing conjunctions and filler words.
-  - **Tier 2 (Qwen2.5:1.5B Probe - ~100ms)**: Calls local Ollama `qwen2.5:1.5b` with a 250ms fallback timeout.
+  - **Tier 2 (Qwen2.5 Probe - ~100ms)**: Calls local Ollama model using `OLLAMA_MODEL` (aligned with `brain.py` to prevent latency from model swapping in GPU/RAM memory) with a safety timeout limit.
   - When initial 800ms silence threshold is hit, dynamic pause extends up to 2300ms if thought is incomplete.
 * **Full-Duplex Real-Time Barge-In (v3)**: VAD runs continuously even while `state.is_agent_speaking` is set. When `speech_prob > 0.65`:
   1. **Cooldown check** (`interrupt_cooldown_sec=0.3s`) prevents rapid re-triggering.
