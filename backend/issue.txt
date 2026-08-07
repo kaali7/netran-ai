@@ -1,6 +1,0 @@
-1.taking time to recognize the user speech
-2. not understanding  the user speech properly 
-3. the segment of the speech that is recognized is not accurate or complete
-4 not able to listen properly to the user speech and respond accordingly
-5 the user response is quite different from the agwent response 
-6 interview should close by itself after 15 question 

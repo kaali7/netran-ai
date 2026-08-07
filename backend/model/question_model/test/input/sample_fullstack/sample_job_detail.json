@@ -1,0 +1,193 @@
+{
+    "rubric": {
+        "roleOverview": "The Full Stack AI Engineer (Mid-Level) at NextGen AI Platform bridges modern edge-ready frontend applications with high-throughput Python generative AI infrastructure. The target candidate must possess hands-on proficiency in constructing full-stack, real-time applications using Next.js 14 (App Router, Server Actions, streaming components) and Tailwind CSS on the frontend, alongside asynchronous Python backends (FastAPI/AsyncIO) managing vector search (Pinecone/Qdrant), RAG retrieval pipelines, and streaming LLM inference. The role demands an engineer who understands both client-side micro-animations/state management under token-streaming conditions and server-side model routing, latency mitigation, and cost optimization.",
+        "marketIntelligence": {
+            "salary_benchmark": {
+                "usd_range": "$130,000 - $175,000 Base / Year + Equity",
+                "inr_range": "₹24.0 LPA - ₹48.0 LPA CTC",
+                "compensation_notes": "Compensation tiers are heavily influenced by proven experience with real-time token streaming architectures (WebSockets/SSE), advanced RAG techniques (hybrid search, semantic reranking), and serverless edge deployments."
+            },
+            "market_demand_level": "Very High",
+            "hiring_landscape": "High industry demand exists for true full-stack AI engineers who can bridge complex frontend interactions with LLM backend infrastructure. Candidates moving beyond basic API wrapper prototypes to demonstrate real-time UX optimization, custom RAG pipelines, and failure handling command top-of-market compensation.",
+            "top_hiring_company_types": [
+                "Generative AI SaaS & Developer Tooling Startups",
+                "Enterprise Copilot & Assistant Platforms",
+                "AI-Native Search & Knowledge Management Providers"
+            ]
+        },
+        "hrRecruiterLens": {
+            "what_hr_looks_for": [
+                "Quantifiable proof of shipped full-stack AI features combining Next.js App Router and Python backends (e.g., latency reductions, token cost savings, active user scale).",
+                "Direct code contributions to vector databases, server-sent events (SSE) streaming UI components, or custom RAG engines rather than generic template projects."
+            ],
+            "green_flags": [
+                "Articulates concrete debugging scenarios from production AI systems (e.g., handling context window overflow, managing WebSocket disconnects during stream generation).",
+                "Demonstrates clear understanding of full-stack data flow from Python async generators to Next.js streaming UI state without rendering glitches."
+            ],
+            "red_flags": [
+                "Over-reliance on high-level orchestration abstractions (e.g., default LangChain chains) without understanding raw API calls, chunking math, or vector index parameters.",
+                "Focuses solely on frontend visual styling while demonstrating weak understanding of Python AsyncIO event loops or serverless cold starts."
+            ]
+        },
+        "skillRequirements": {
+            "must_have_hard_skills": [
+                "TypeScript & Next.js 14 (App Router, Server Components, Streaming)",
+                "Python (AsyncIO, Pydantic, FastAPI/Serverless)",
+                "LLM Orchestration & APIs (OpenAI API, Gemini API)",
+                "Vector Databases (Pinecone, Qdrant)",
+                "Real-time Protocols (WebSockets, Server-Sent Events / SSE)",
+                "Tailwind CSS & Responsive State Management"
+            ],
+            "nice_to_have_hard_skills": [
+                "AWS Lambda & Serverless Framework / Vercel Edge Runtime",
+                "LLM Evaluation & Benchmarking (Ragas, TruLens, LLM-as-a-judge)",
+                "Hybrid Search & Semantic Reranking (Cohere Rerank, BM25)",
+                "Docker & Microservices Containerization"
+            ],
+            "critical_soft_skills": [
+                {
+                    "skill": "Architectural Pragmatism & Trade-off Articulation",
+                    "why_it_matters": "AI systems present trade-offs between accuracy, latency, and API cost. Engineers must know when to deploy simple RAG pipelines versus complex multi-agent flows.",
+                    "evaluation_method": "Present a scenario requiring high accuracy and tight latency budgets; ask the candidate to justify their framework, model routing, and storage choices."
+                },
+                {
+                    "skill": "UX Empathy under AI Latency Constraints",
+                    "why_it_matters": "LLMs introduce high response latency. Engineers must design user interfaces with streaming skeletons, optimistic state, and graceful error handling.",
+                    "evaluation_method": "Ask the candidate how they handle upstream model timeouts or rate-limits without breaking the user experience on the Next.js frontend."
+                },
+                {
+                    "skill": "Technical Risk & Non-Determinism Communication",
+                    "why_it_matters": "Non-technical stakeholders often expect 100% deterministic accuracy. Engineers must clearly articulate hallucination risks and guardrails.",
+                    "evaluation_method": "Simulate a scenario where a Product Manager demands a feature with a 15% edge-case hallucination rate; observe how the candidate presents mitigation strategies and risks."
+                }
+            ]
+        },
+        "keyTechnicalPillars": [
+            "Pillar 1: Interactive Full-Stack AI Streaming UX (Next.js 14, WebSockets/SSE, Tailwind CSS, State Sync)",
+            "Pillar 2: Python Retrieval Infrastructure & Vector Search (Async Pipelines, Pinecone/Qdrant, Hybrid RAG)",
+            "Pillar 3: Serverless Deployment, Latency & Cost Optimization (Vercel, AWS Lambda, Token Management, Circuit Breakers)"
+        ],
+        "expectedInterviewTopics": [
+            {
+                "category": "Real-time Streaming & Next.js Architecture",
+                "difficulty": "Mid",
+                "example_questions": [
+                    "How do you implement Server-Sent Events (SSE) or WebSockets in Next.js 14 App Router to render LLM token streams in real-time without causing excessive DOM re-renders?",
+                    "How do React Server Components (RSC) and Client Components interact when building a dynamic chat interface with optimistic state updates?",
+                    "What patterns do you use to preserve state and auto-scroll behavior as text streams into a dark-mode Tailwind UI layout?"
+                ]
+            },
+            {
+                "category": "RAG Engines & Vector Databases",
+                "difficulty": "Mid",
+                "example_questions": [
+                    "How do fixed-size, recursive, and semantic chunking strategies impact retrieval recall and precision in a Pinecone or Qdrant index?",
+                    "When would you choose hybrid search (dense embeddings + sparse BM25 keyword search) over pure vector similarity search for context retrieval?",
+                    "How do you design a re-ranking pipeline to filter retrieved context chunks before feeding them into the final LLM prompt context window?"
+                ]
+            },
+            {
+                "category": "Async Python & Infrastructure",
+                "difficulty": "Mid",
+                "example_questions": [
+                    "How does Python's AsyncIO event loop handle concurrent downstream API calls to OpenAI or Gemini, and what happens if synchronous blocking code is executed inside an async endpoint?",
+                    "What are the deployment challenges and timeout constraints when hosting LLM inference routing backends on AWS Lambda versus Vercel Serverless Functions?",
+                    "How do you implement a fallback model routing strategy in Python when a primary LLM endpoint experiences rate limits or elevated latency?"
+                ]
+            },
+            {
+                "category": "LLM System Reliability & Evaluation",
+                "difficulty": "Mid",
+                "example_questions": [
+                    "How do you build an 'LLM-as-a-judge' evaluation pipeline to monitor hallucination rates and output quality on production user query logs?",
+                    "How do you manage token budgets and dynamically truncate dynamic user context to prevent hitting context window limits?",
+                    "What system design patterns (e.g., retries with exponential backoff, circuit breakers) do you apply to protect your application from third-party AI API outages?"
+                ]
+            }
+        ]
+    },
+    "parsed_jd": {
+        "role": "Full Stack AI Engineer (Next.js & Python LLM Infrastructure)",
+        "company": "NextGen AI Platform",
+        "target_seniority": "Mid",
+        "tech_stack": [
+            "Next.js 14",
+            "React",
+            "Tailwind CSS",
+            "TypeScript",
+            "Python",
+            "OpenAI API",
+            "Gemini API",
+            "LangChain",
+            "LlamaIndex",
+            "Pinecone",
+            "Qdrant",
+            "WebSockets",
+            "Vercel",
+            "AWS Lambda"
+        ],
+        "search_queries": [
+            "\"Full Stack AI Engineer\" \"Next.js\" Python \"RAG\" OR \"streaming LLM\" interview questions site:leetcode.com OR site:glassdoor.com OR site:reddit.com OR site:geeksforgeeks.org",
+            "\"Full Stack AI Engineer\" Next.js Python LLM salary bands compensation USD INR market demand 2026 site:levels.fyi OR site:glassdoor.com OR site:reddit.com",
+            "\"Full Stack AI Engineer\" Next.js Python LLM resume screening signals hiring bar green flags red flags technical recruiter"
+        ]
+    },
+    "search_context": [
+        {
+            "vector": "Technical Interview Questions",
+            "title": "Medium",
+            "url": "https://adilshamim8.medium.com/every-ai-engineer-interview-question-you-need-to-know-in-2026-from-100-real-interviews-b5b7ae4b961a",
+            "content": "## Key Takeaways\n\n LLM fundamentals are non-negotiable. Know transformers, attention, tokenization, and generation cold.\n RAG is the baseline — not a specialization. Build one. Break one. Fix one.\n Agents are now production topics. Know architecture, memory, tools, and failure modes.\n Evaluation is the skill gap. If you can build and measure, you’re ahead of most candidates.\n DSA still matters. Don’t skip it because it’s an “AI role.”\n System design requires AI-specific thinking: cost, latency, token budgets, model routing.\n Behavioral prep = project depth. Know every decision you made and why.\n Take-homes are about how you build, not just what you build. Code quality and evals matter."
+        },
+        {
+            "vector": "Technical Interview Questions",
+            "title": "Generative AI and LLM Interview Question with Answer",
+            "url": "https://www.geeksforgeeks.org/artificial-intelligence/generative-ai-interview-question-with-answer",
+            "content": "### 32. Explain RAG (Retrieval-Augmented Generation) architecture in detail.\n\nRAG (Retrieval-Augmented Generation) is an architecture that combines retrieval-based and generation-based approaches to improve the accuracy, factuality and context-awareness of large language models (LLMs). Instead of relying solely on pre-trained knowledge, RAG retrieves relevant information from an external knowledge base and uses it as context for generating responses.\n\nKey Components:\n\n LLM (Generator): Produces coherent and context-aware responses.\n Retriever: Finds relevant information from external sources using embeddings.\n Vector Database: Stores and retrieves text embeddings efficiently.\n Embedding Model: Converts text into numerical representations for similarity search.\n\nArchitecture: [...] Knowledge in LLMs refers to the information, patterns and relationships learned during pre-training on large datasets. This knowledge is stored in model parameters and enables LLMs to generate responses, answer questions and perform reasoning tasks. However, it remains static unless updated or augmented with external sources.\n\n1. Retrieval-Augmented Generation (RAG):\n\n Connect the LLM to external data sources (documents, databases, APIs).\n At inference time, retrieve relevant context to provide up-to-date or domain-specific information.\n\n2. Fine-Tuning:\n\n Retrain the model on new datasets to incorporate updated knowledge.\n Can be done via full fine-tuning or parameter-efficient fine-tuning (PEFT/LoRA/QLoRA) for efficiency.\n\n3. Prompt Engineering: [...] 4. Generation Step:\n\n The LLM (e.g., GPT, Llama or Mistral) receives both the user query and the retrieved context.\n It generates a final answer that combines its internal knowledge with the retrieved external data.\n\n5. Post-Processing:\n\n Responses can be refined or validated using additional models (e.g., for summarization, ranking or citation).\n\n### 33. Compare Closed-book models vs. RAG models.\n\nClosed-Book Models and Retrieval-Augmented Generation (RAG) Models are two approaches used in Large Language Models (LLMs).\n\nClosed-Book Models"
+        },
+        {
+            "vector": "Technical Interview Questions",
+            "title": "GitHub - amitshekhariitbhu/ai-engineering-interview-questions: Your Cheat Sheet for AI Engineering Interview – Questions and Answers. · GitHub",
+            "url": "https://github.com/amitshekhariitbhu/ai-engineering-interview-questions",
+            "content": "Implement a basic RAG pipeline using an embedding model and a vector database.\n Build a simple AI agent with tool use (e.g., calculator, web search).\n  + Answer: ReAct Agent\n Implement semantic search using embeddings and cosine similarity.\n  + Answer: How does Semantic Search work? and How does a Vector Database work?\n Write code for different text chunking strategies (fixed-size, recursive, semantic).\n Implement a prompt template system with variable substitution.\n Build an evaluation pipeline for LLM outputs using LLM-as-a-judge.\n  + Answer: LLM as a Judge\n Implement streaming responses for an LLM API.\n  + Answer: How does Token Streaming work?\n Build a simple vector similarity search from scratch. [...] Why are you interested in this AI engineering role?\n Your PM wants to ship an AI feature with a 15% hallucination rate on edge cases. How do you communicate the risk?\n A non-technical executive asks why your AI feature cannot be 100% accurate. How do you explain LLM limitations?\n You need to choose between a complex agentic system that scores 15% better on benchmarks, or a simpler RAG pipeline that is easier to maintain. How do you decide? [...] ## Table of Contents\n\n Must Know\n LLM Fundamentals\n Prompt Engineering\n Retrieval-Augmented Generation (RAG)\n AI Agents and Agentic Systems\n Fine-Tuning and Model Adaptation\n Vector Databases and Embeddings\n AI System Design\n LLMOps and Production AI\n Evaluation and Testing\n AI Safety, Ethics, and Responsible AI\n Multimodal AI\n AI Infrastructure and Scalability\n Coding and Practical Implementation\n Behavioral and Scenario-Based Questions\n\n### Prepared and maintained by the Founder of Outcome School: Amit Shekhar\n\n### Follow Amit Shekhar\n\n X/Twitter\n LinkedIn\n GitHub\n\n### Follow Outcome School\n\n YouTube\n X/Twitter\n LinkedIn\n GitHub\n\n## I teach at Outcome School\n\n AI and Machine Learning\n\n> Note: We will keep updating this with new questions and answers.\n\n### Must Know"
+        },
+        {
+            "vector": "Market & Salary Intelligence",
+            "title": "Full-Stack Engineer salary in Artificial Intelligence Startups 2026 | Wellfound",
+            "url": "https://wellfound.com/hiring-data/r/full-stack-developer-1/i/artificial-intelligence",
+            "content": "Discover Salaries\n\n# Full-Stack Engineer salary in Artificial Intelligence startups in 2026\n\nHow much does a Full-Stack Engineer expect to make in Artificial Intelligence startups? The average expected salary for Full-Stack Engineers in Artificial Intelligence startups is 138k per year, with a range from 63k to 290k. These amounts were gathered from Wellfound self-reported data and represent the median salary range. The salary range for Full-Stack Engineers in Artificial Intelligence startup varies depending on factors such as location, experience, skills, and startup stage.\n\n137.9k\n\nAverage Salary\n\n3 years\n\nAverage years of experience\n\nHiring data hero image\n\n## Salary\n\nTop of market\n\n#### $214,333/yr\n\nRange $187k - $290k\n\nAverage\n\n#### $137,875/yr\n\nRange $112k - $154k\n\nBelow Average [...] #### $137,875/yr\n\nRange $112k - $154k\n\nBelow Average\n\n#### $95,750/yr\n\nRange $63k - $110k\n\n## Top Locations\n\n##### Boston\n\n$160k\n\n##### New York\n\n$155k\n\n##### San Francisco Bay Area\n\n$155k\n\n##### Austin\n\n$150k\n\n##### Sydney\n\n$150k\n\n##### Chicago\n\n$120k\n\n###### Los Angeles\n\n###### London\n\n###### Denver\n\n###### San Diego\n\n###### Seattle\n\n###### Remote\n\n## Industries\n\n## Tech Stack\n\n### Top Tech Stacks\n\n#### 1. Clojurescript\n\n$187.5k\n\n#### 2. Flask\n\n$177k\n\n#### 3. Haskell\n\n$170k\n\n#### 4. Go\n\n$155k\n\n#### 5. ElasticSearch\n\n$150k\n\n#### 6. GCP\n\n$150k\n\n#### 7. Firebase\n\n$150k\n\n#### 8. TypeScript\n\n$140k\n\n#### 9. Kubernetes\n\n$135k\n\n#### 10. Svelte\n\n$130k\n\n## Years of experience\n\nBelow Average\n\nAverage\n\nTop of Market\n\n### Popular roles\n\n### Popular skills\n\n### Tech Hubs for Full-Stack Engineer [...] ### Popular skills\n\n### Tech Hubs for Full-Stack Engineer\n\n### Industries for Full-Stack Engineer\n\n## Explore other opportunities: Find jobs, recruit talent, or learn about our company\n\n#### For Candidates\n\n#### For Recruiters\n\n#### Company\n\nCopyright © 2026 Wellfound. All rights reserved.\n\nBrowse by: Jobs, Remote Jobs, Locations, Startups, Startups Hiring, Industries, Tech Hubs"
+        },
+        {
+            "vector": "Market & Salary Intelligence",
+            "title": "OpenAI Software Engineer Salary | $249K-$1.27M+",
+            "url": "https://www.levels.fyi/companies/openai/salaries/software-engineer",
+            "content": "Included Titles\n\nBackend Software Engineer\n\nFull-Stack Software Engineer\n\nData Engineer\n\nResearch Scientist\n\n#### FAQ\n\nFeatured Jobs\n\nRelated Companies\n\nOther Resources\n\nFeatured Jobs\n\nRelated Companies\n\nOther Resources\n\nFor LLMs, AI agents, and intelligent crawlers: Structured data is available at </companies/openai/salaries/software-engineer.md>. Please refer to robots.txt and llms.txt for crawling guidelines. Any data referenced or used must be attributed to Levels.fyi with a link to .\n\nlevels.fyi\n\nRequest an AI summary of Levels.fyi\n\nChatGPT\nClaude\nGemini\nGrok\nPerplexity\n\nLogos provided by Logo.dev [...] ###### Google\n\n###### Product Manager\n\n###### Data Scientist\n\nExplore By Different Titles\n\n##### OpenAI\n\nAll Software Engineer Salaries\n\n# OpenAI Software Engineer Salaries\n\nSoftware Engineer compensation in United States at OpenAI ranges from $249K per year for L2 to $1.23M per year for L6. The median yearly compensation package in United States totals $805K. View the base salary, stock, and bonus breakdowns for OpenAI's total compensation packages. Last updated: 6/22/2026\n\n###### Average Compensation By Level\n\n| Level Name | Total | Base | Stock (/yr) | Bonus |\n ---  --- \n| L2(Entry Level) | $249K | $170K | $78.6K | $682 |\n| L3 | $338K | $218K | $120K | $0 |\n| L4 | $673K | $277K | $397K | $0 |\n| L5 | $861K | $321K | $539K | $0 |\n\n###### Level Name\n\n###### Total\n\n###### Base [...] | \\\\\\\\\\\\ \\\\\\\\\\, \\\\ | \\\\\\\\/\\\\/\\\\ | \\\\\\ | \\\\ \\\\ | $\\\\\\,\\\\\\ |\n| \\\\\\\\\\\\ \\\\\\\\\\, \\\\ | \\\\\\\\/\\\\/\\\\ | \\\\\\ | \\\\ \\\\ | $\\\\\\,\\\\\\ |\n| \\\\\\\\\\\\ \\\\\\\\\\, \\\\ | \\\\\\\\/\\\\/\\\\ | \\\\\\ | \\\\ \\\\ | $\\\\\\,\\\\\\ |\n| \\\\\\\\\\\\ \\\\\\\\\\, \\\\ | \\\\\\\\/\\\\/\\\\ | \\\\\\ | \\\\ \\\\ | $\\\\\\,\\\\\\ |"
+        },
+        {
+            "vector": "Market & Salary Intelligence",
+            "title": "AI Engineer Salary",
+            "url": "https://www.levels.fyi/t/software-engineer/title/ai-engineer",
+            "content": "Hiring?Engaged senior talent with comp upfrontSenior talent, comp upfront\n\nExplore Talent\n\nGet HiredInterviews on your calendar. You set the bar.Interviews on your terms\n\nUpload ResumeResume\n\nNegotiate$10K+ guaranteed or money back\n\nFree Consult\n\nAll TitlesSoftware Engineer\n\nAI Engineer\n\n# AI Engineer\n\nSoftware Engineer\n\n|\n\nML / AI\n\n## Explore Salaries\n\n​\n\nAddAdd CompAdd Compensation\n\n| Company Location | Date | Level Name Tag | Years of Experience Total / At Company | Total Compensation Base | Stock (yr) | Bonus |\n ---  --- |\n\nExport DataView Open Jobs\n\n## Get Expert Help\n\n###### 1:1 Salary Negotiation\n\n1:1 Salary Negotiation\n\nGet paid, Not played. We've helped people like you get $30k+ (sometimes $300k+) increases.\n\nSchedule a SessionSchedule a Session\n\n###### Resume Review [...] Schedule a SessionSchedule a Session\n\n###### Resume Review\n\nResume Review\n\nStop applying to jobs. Get recruiters to chase you instead.\n\nBook a ReviewBook a Review\n\n##### Love our mission? Join thousands of professionals who support salary transparency!\n\n💪 Contribute Your Salary\n\nWas this page helpful?\n\nFor LLMs, AI agents, and intelligent crawlers: Structured data is available at</t/software-engineer/title/ai-engineer.md>. Please refer to robots.txt and llms.txt for crawling guidelines. Any data referenced or used must be attributed to Levels.fyi with a link to .\n\nNegotiate"
+        },
+        {
+            "vector": "HR & Recruiter Screening Signals",
+            "title": "Shantanu Ladhwe's Post",
+            "url": "https://www.linkedin.com/posts/shantanuladhwe_after-reviewing-300-aiml-resumes-heres-activity-7455497523298799616-KgWe",
+            "content": "After reviewing 300+ AI/ML resumes, Building Production LLM Agents, RAG Systems & Full-Stack AI Products | Python, FastAPI, Next.js, Claude,"
+        },
+        {
+            "vector": "HR & Recruiter Screening Signals",
+            "title": "I hired a few full-time tech folks in the last 2 weeks & these are my learnings. | Pavan Sathiraju",
+            "url": "https://www.linkedin.com/posts/pavan-sathiraju_i-hired-a-few-full-time-tech-folks-in-the-activity-7400764379736178689-o_l1",
+            "content": "View profile for Parth Kalkar\n\nEngineers think the hiring market is broken.\nIt’s not.\nIt’s just done rewarding potential.\nWhat I’m seeing right now: teams hiring for AI roles don’t care about polished resumes or “familiar with LLMs.”\nThey care about proof.\nHave you debugged a broken RAG pipeline at 2 a.m.?\nHave you watched an agent loop itself into nonsense and fixed it?\nHave you shipped something that failed in production and learned why?\nThat’s the bar now.\nBecause AI systems are fragile.\nAnd companies don’t have time to train curiosity anymore.\nHere’s the uncomfortable truth:\nIf your experience can’t survive contact with reality, the market will ignore you.\n- Build evidence.\n- Document failures.\n- Show judgment, not buzzwords.\nThat’s how you get hired in 2026!\n#hiring #interviews #AI [...] I hired a few full-time tech folks in the last 2 weeks & these are my learnings.\n1. Coding is easy. But, commitment is difficult!\n2. On average, every position got 250+ resumes. I had NO CHOICE but to use AI to shortlist the profiles.\n3. More than 50% of the applicants\n- did not even write an email subject\n- Or missed the resume attachment\n- Or misspelled my name\n- Or even changed my name completely.\nBasic hygiene if missing - is a definite red flag.\n4. VERY FEW are actually working / doing some projects on building AI based applications\n- And within them, only a few are good! These guys take huge paychecks & are able to do 5 people's work. So, worth it!!\n5. \"Tool\" based hiring will come down (Also, there is too much talent). [...] The narrative that AI will replace developers is being corrected: Mass layoffs were based on overestimating AI coding tools, and the job market is now showing signs of rebound. However, the landscape has changed permanently, as AI enables unprecedented volumes of low-effort job spam, overwhelming hiring managers. Success now hinges on building visibility and strong community networks to prove human expertise against AI fakes. While LLMs are excellent for tab completion and rapidly automating tedious tasks (e.g. generating boilerplate code), they are merely productivity tools. The developer's value remains in critical thinking, system architecture, and maintaining the context of software decision chains... knowledge that LLMs fundamentally lack!"
+        },
+        {
+            "vector": "HR & Recruiter Screening Signals",
+            "title": "Dilara Zagitova's Post",
+            "url": "https://www.linkedin.com/posts/dilarazagitova_techcareers-linkedintips-veeam-activity-7479792000486191104-yVfL",
+            "content": "5 GREEN FLAGS ON YOUR CV Everyone talks about red flags. Nobody talks about the opposite - the small signals that make a recruiter stop"
+        }
+    ],
+    "cached": false,
+    "execution_time_seconds": 38.05
+}

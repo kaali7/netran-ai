@@ -1,7 +1,0 @@
-faster-whisper
-pyaudio
-kokoro
-ollama
-numpy
-kivy
-onnxruntime

@@ -1,0 +1,16 @@
+{
+  "candidate_name": "Elena Rostova",
+  "target_role": "Full Stack AI Engineer",
+  "experience_years": 5,
+  "skills": [
+    "Next.js 14 (App Router, React Server Components, Server Actions)",
+    "TypeScript & Tailwind CSS",
+    "Python (FastAPI, AsyncIO, Pydantic)",
+    "LLM Orchestration (Gemini API, OpenAI API, LangChain, LlamaIndex)",
+    "Vector Databases (Pinecone, Qdrant)",
+    "RAG Architecture (Hybrid Search, Chunking, Semantic Reranking)",
+    "Real-time Protocols (Server-Sent Events / SSE, WebSockets)",
+    "Vercel Edge Runtime & AWS Lambda"
+  ],
+  "resume_text": "Elena Rostova\nFull Stack AI Engineer | Seattle, WA\n\nExecutive Summary:\nFull Stack AI Engineer with 5+ years of experience bridging cutting-edge Generative AI infrastructure with responsive, edge-deployed web applications. Proven track record building end-to-end RAG engines, streaming token UI components using Next.js 14 and Python FastAPI, and managing high-scale vector search in Pinecone and Qdrant.\n\nTechnical Skills:\n- Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS, Zustand, SSE Streaming UI\n- Backend & AI: Python (AsyncIO, FastAPI), Gemini API, OpenAI API, LangChain, LlamaIndex, PyTorch\n- Data & Vector Search: Pinecone, Qdrant, PostgreSQL (pgvector), Redis\n- Cloud & Infrastructure: Vercel Edge Runtime, AWS Lambda, Docker, GitHub Actions\n\nWork Experience:\nSenior Full Stack AI Engineer | Synthetix AI Labs (2022 - Present)\n- Architected an enterprise Knowledge RAG Assistant using Next.js 14 App Router and Python FastAPI, serving 100k+ active monthly users.\n- Implemented Server-Sent Events (SSE) token streaming from FastAPI backend to Next.js frontend, maintaining smooth 60fps UI rendering during active generation.\n- Built a hybrid vector search pipeline with Pinecone and Cohere semantic reranking, improving retrieval precision by 38% compared to single dense vector search.\n- Configured fallback model routing across Gemini and OpenAI APIs with exponential backoff retries, ensuring 99.95% application availability during provider outages.\n\nFull Stack Software Engineer | Cognitive Cloud Solutions (2019 - 2022)\n- Developed client-facing analytics dashboards using React, TypeScript, and Tailwind CSS with real-time WebSocket state synchronization.\n- Built Python backend REST services with FastAPI and PostgreSQL, containerized with Docker for AWS deployment."
+}

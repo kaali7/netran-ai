@@ -1,0 +1,3 @@
+=== AI INTERVIEW LOG: 2026-07-18 10:28:09 ===
+
+[10:28:09] Eva: Hello! Welcome to your technical interview today. [Clears Throat] Could you please start by describing your core frontend stack?

@@ -1,0 +1,451 @@
+[
+  {
+    "id": 1,
+    "tier": "ICEBREAKER",
+    "topic": "Introduction & Personal Identity",
+    "difficulty": "easy",
+    "question_text": "Hi Elena, welcome! To start off, could you share a bit about your journey in fullstack AI engineering and what personal projects or hobbies keep you curious outside of work?",
+    "resume_context": "Candidate background in fullstack AI systems and RAG architectures",
+    "expected_keywords": [
+      "background",
+      "hobbies",
+      "AI systems",
+      "fullstack"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Gives overly brief or disinterested response",
+        "Struggles to express non-technical interests"
+      ],
+      "good_answer_indicators": [
+        "Articulates career journey clearly",
+        "Shares personal hobbies that demonstrate well-roundedness"
+      ],
+      "bar_raiser_indicators": [
+        "Demonstrates exceptional enthusiasm, concise storytelling, and high self-awareness"
+      ]
+    },
+    "followup_if_strong": "How do your personal projects or outside interests influence your approach to AI product design?",
+    "followup_if_weak": "What specifically drew you toward building AI-powered fullstack software early in your career?"
+  },
+  {
+    "id": 2,
+    "tier": "ICEBREAKER",
+    "topic": "Engineering Culture & Team Environment",
+    "difficulty": "easy",
+    "question_text": "In your daily work building AI systems at Synthetix AI Labs, what type of team culture or engineering environment brings out your absolute best performance?",
+    "resume_context": "Experience across Synthetix AI Labs leading fullstack AI development",
+    "expected_keywords": [
+      "collaboration",
+      "autonomy",
+      "experimentation",
+      "feedback"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Vague responses without specific cultural preferences",
+        "Blames past teams or environments"
+      ],
+      "good_answer_indicators": [
+        "Identifies key factors like rapid experimentation, open peer reviews, and autonomy",
+        "Shows adaptability"
+      ],
+      "bar_raiser_indicators": [
+        "Explains how they actively foster trust, AI safety awareness, and continuous learning in technical teams"
+      ]
+    },
+    "followup_if_strong": "How do you foster alignment when frontend UI timelines clash with backend model fine-tuning schedules?",
+    "followup_if_weak": "Do you prefer working on rapid product prototyping or deep infrastructure optimization?"
+  },
+  {
+    "id": 3,
+    "tier": "BEHAVIORAL",
+    "topic": "Role Fit & Technical Motivation",
+    "difficulty": "Mid",
+    "question_text": "What specific fullstack AI challenges at NextGen AI Platform caught your attention, and why is this Full Stack AI Engineer role the right next step for you?",
+    "resume_context": "Full Stack AI Engineer role targeting enterprise RAG applications",
+    "expected_keywords": [
+      "scale",
+      "RAG",
+      "LLM streaming",
+      "fullstack AI"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Generic statements about wanting a new job",
+        "Lack of research on company domain"
+      ],
+      "good_answer_indicators": [
+        "Connects personal experience with Next.js 14, SSE streaming, and vector search to NextGen platform needs"
+      ],
+      "bar_raiser_indicators": [
+        "Demonstrates deep alignment with enterprise AI roadmaps and explains exact technical overlap"
+      ]
+    },
+    "followup_if_strong": "What unique AI architecture practice or retrieval evaluation standard do you plan to introduce to our team from day one?",
+    "followup_if_weak": "Which specific technical requirement in our job description matches your strongest core skill set?"
+  },
+  {
+    "id": 4,
+    "tier": "PROJECT_DEEP_DIVE",
+    "topic": "Real-time Streaming Protocols",
+    "difficulty": "Senior",
+    "question_text": "Why did you choose Server-Sent Events over WebSockets for your Next.js 14 and FastAPI token streaming architecture at Synthetix AI Labs?",
+    "resume_context": "Resume mentions implementing SSE token streaming from FastAPI backend to Next.js frontend.",
+    "expected_keywords": [
+      "unidirectional",
+      "HTTP/2 multiplexing",
+      "reconnection handles",
+      "overhead",
+      "text/event-stream"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "States WebSockets are always slower without explaining protocols",
+        "Confuses SSE with long polling"
+      ],
+      "good_answer_indicators": [
+        "Explains SSE is unidirectional and simpler over HTTP",
+        "Notes automatic client reconnection"
+      ],
+      "bar_raiser_indicators": [
+        "Analyzes HTTP/2 multiplexing advantages, browser connections per domain, and binary vs text transport efficiency"
+      ]
+    },
+    "followup_if_strong": "How do you handle client network connection interruptions mid-stream without losing partial generated token context?",
+    "followup_if_weak": "What HTTP header does FastAPI need to set to establish a persistent Server-Sent Events stream?"
+  },
+  {
+    "id": 5,
+    "tier": "PROJECT_DEEP_DIVE",
+    "topic": "Async Python Concurrency",
+    "difficulty": "Senior",
+    "question_text": "In your FastAPI backend, what happens to the AsyncIO event loop if a developer accidentally calls synchronous requests.post instead of an async HTTP client?",
+    "resume_context": "Resume highlights Python AsyncIO and FastAPI experience for high-scale backend services.",
+    "expected_keywords": [
+      "event loop blocking",
+      "thread pool",
+      "run_in_executor",
+      "httpx",
+      "concurrency bottleneck"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Claims AsyncIO handles sync calls in background automatically",
+        "Does not recognize blocking nature"
+      ],
+      "good_answer_indicators": [
+        "Explains that synchronous blocking calls freeze the entire single-threaded event loop for all concurrent users",
+        "Suggests httpx or run_in_executor offloading"
+      ],
+      "bar_raiser_indicators": [
+        "Details starvation mechanisms under event loop blocking, custom ThreadPoolExecutor tuning, and async task cancellation mechanics"
+      ]
+    },
+    "followup_if_strong": "How would you write a custom middleware or linter rule to detect and reject blocking synchronous calls in a FastAPI codebase?",
+    "followup_if_weak": "Why is an async HTTP client like HTTPX preferred over the requests library inside FastAPI async endpoint functions?"
+  },
+  {
+    "id": 6,
+    "tier": "WORK_EXPERIENCE",
+    "topic": "Hybrid Vector Search & Reranking",
+    "difficulty": "Senior",
+    "question_text": "At Synthetix, you built a hybrid vector search pipeline with Pinecone and Cohere reranking, boosting retrieval precision by 38%. How did you combine keyword and vector scores?",
+    "resume_context": "Resume highlights hybrid vector search with Pinecone and Cohere reranking.",
+    "expected_keywords": [
+      "Reciprocal Rank Fusion",
+      "dense embeddings",
+      "sparse vectors",
+      "BM25",
+      "Cohere Rerank",
+      "top_k"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Unaware of sparse vs dense vector retrieval",
+        "Cannot explain how reranking models refine initial vector recall"
+      ],
+      "good_answer_indicators": [
+        "Explains combining BM25 keyword search with dense vector similarity via Reciprocal Rank Fusion (RRF)",
+        "Describes applying Cohere rerank cross-encoder model on top-N candidates"
+      ],
+      "bar_raiser_indicators": [
+        "Analyzes latency-precision trade-offs of cross-encoders vs bi-encoders, vector chunking strategies, and dynamic top-K retrieval filtering"
+      ]
+    },
+    "followup_if_strong": "How did you optimize reranker latency to avoid adding more than 50ms to the end-to-end user query path?",
+    "followup_if_weak": "What is the difference between semantic vector search and keyword BM25 search?"
+  },
+  {
+    "id": 7,
+    "tier": "WORK_EXPERIENCE",
+    "topic": "Model Resilience & Fallback Routing",
+    "difficulty": "Mid",
+    "question_text": "You built a fallback routing system across Gemini and OpenAI APIs, achieving 99.95% availability. How did you implement failover without duplicating LLM API requests?",
+    "resume_context": "Fallback routing across Gemini and OpenAI APIs with exponential backoff.",
+    "expected_keywords": [
+      "circuit breaker",
+      "exponential backoff",
+      "timeout handling",
+      "model provider failover",
+      "idempotency"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Sends parallel requests to both providers on every query wasting tokens",
+        "Lacks backoff logic"
+      ],
+      "good_answer_indicators": [
+        "Explains primary provider attempts with strict timeouts, triggering fallback provider on rate-limit or server error",
+        "Uses exponential backoff retries"
+      ],
+      "bar_raiser_indicators": [
+        "Describes circuit breaker states (Open/Closed/Half-Open) preventing cascade failures and model capability mapping for prompts"
+      ]
+    },
+    "followup_if_strong": "How did you handle prompt formatting differences when failing over from Gemini JSON mode to OpenAI structured outputs?",
+    "followup_if_weak": "What HTTP status code indicates that an LLM API provider is rate limiting requests?"
+  },
+  {
+    "id": 8,
+    "tier": "TECHNICAL",
+    "topic": "LLM Evaluation Frameworks",
+    "difficulty": "Senior",
+    "question_text": "How would you design an automated LLM evaluation pipeline (using Ragas or LLM-as-a-judge) to measure Faithfulness and Answer Relevance in a production RAG system?",
+    "resume_context": "Identified gap: LLM Evaluation & Benchmarking Frameworks",
+    "expected_keywords": [
+      "Faithfulness",
+      "Answer Relevance",
+      "Context Precision",
+      "Ragas",
+      "LLM-as-a-judge",
+      "ground truth"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Relies solely on manual human review without automated telemetry",
+        "Confuses classification accuracy with generative RAG metrics"
+      ],
+      "good_answer_indicators": [
+        "Defines key RAG triad metrics: Context Precision, Context Recall, Faithfulness, and Answer Relevance",
+        "Describes running evaluation jobs in CI/CD before prompt deployments"
+      ],
+      "bar_raiser_indicators": [
+        "Explains synthetic test dataset generation (Evol-Instruct), judge LLM bias mitigation, and cost-efficient evaluation sampling strategies"
+      ]
+    },
+    "followup_if_strong": "How do you prevent judge LLM position bias and verbosity bias when evaluating generated candidate answers?",
+    "followup_if_weak": "What does Faithfulness measure in a Retrieval-Augmented Generation evaluation framework?"
+  },
+  {
+    "id": 9,
+    "tier": "TECHNICAL",
+    "topic": "Context Window & Token Budget Management",
+    "difficulty": "Senior",
+    "question_text": "During multi-turn conversation chats with large retrieved document payloads, how do you manage token budgets to prevent context window overflow?",
+    "resume_context": "Identified gap: Dynamic Context Window & Token Budget Management",
+    "expected_keywords": [
+      "tiktoken",
+      "sliding window",
+      "conversation summarization",
+      "context trimming",
+      "token budget allocation"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Truncates text blindly without counting tokens",
+        "Allows system prompt or query to be cut off"
+      ],
+      "good_answer_indicators": [
+        "Explains reserving fixed token allocations for System Prompt, Retrieved Context, Chat History, and Completion",
+        "Uses tokenizer (e.g. tiktoken) to trim oldest chat turns while retaining summary"
+      ],
+      "bar_raiser_indicators": [
+        "Details dynamic context compression algorithms, key-value (KV) cache reuse in local models, and hierarchical document summarization"
+      ]
+    },
+    "followup_if_strong": "How do you preserve critical system instructions and recent user intent when summarizing mid-session chat history?",
+    "followup_if_weak": "Why is character length an unreliable proxy for counting LLM token consumption?"
+  },
+  {
+    "id": 10,
+    "tier": "TECHNICAL",
+    "topic": "Next.js 14 App Router & RSC Hydration",
+    "difficulty": "Mid",
+    "question_text": "In Next.js 14 App Router, what is the architectural difference between React Server Components (RSC) and Client Components ('use client') during initial SSR hydration?",
+    "resume_context": "Next.js 14 App Router experience check",
+    "expected_keywords": [
+      "React Server Components",
+      "client bundle size",
+      "hydration boundary",
+      "use client directive",
+      "RSC payload stream"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Thinks 'use client' renders components purely on the browser without SSR",
+        "Does not understand RSC zero-bundle-size advantages"
+      ],
+      "good_answer_indicators": [
+        "Explains that RSCs execute strictly on the server and emit an RSC payload stream without sending JS code to the browser",
+        "Describes 'use client' defining the hydration boundary for interactive state"
+      ],
+      "bar_raiser_indicators": [
+        "Explains passing RSCs as children props into Client Components, server action revalidation (`revalidatePath`), and streaming HTML suspense boundaries"
+      ]
+    },
+    "followup_if_strong": "How do you pass a React Server Component as a prop into a Client Component without breaking the server execution boundary?",
+    "followup_if_weak": "What happens to the JavaScript bundle size when you move logic from a Client Component to a React Server Component?"
+  },
+  {
+    "id": 11,
+    "tier": "TECHNICAL",
+    "topic": "Vector Database Indexing (HNSW vs IVF)",
+    "difficulty": "Senior",
+    "question_text": "Compare Hierarchical Navigable Small World (HNSW) graphs and Inverted File Indexing (IVF) in vector databases like Pinecone or pgvector.",
+    "resume_context": "Vector search architecture evaluation",
+    "expected_keywords": [
+      "HNSW",
+      "IVF",
+      "recall vs latency",
+      "graph traversal",
+      "quantization",
+      "ef_construction"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not know vector index types",
+        "Confuses vector indexing with B-tree relational indexes"
+      ],
+      "good_answer_indicators": [
+        "Explains HNSW builds multi-layer proximity graphs offering high recall and fast queries at the cost of higher RAM usage",
+        "Notes IVF partitions vector space into clusters offering lower memory footprint"
+      ],
+      "bar_raiser_indicators": [
+        "Evaluates Product Quantization (PQ) memory compression, M and efSearch hyperparameter tuning in HNSW, and index build time scalability"
+      ]
+    },
+    "followup_if_strong": "How does scalar quantization (SQ8) impact query recall and memory footprint when indexing 10 million 1536-dimensional vectors?",
+    "followup_if_weak": "Why are standard SQL B-Tree indexes ineffective for nearest neighbor vector similarity searches?"
+  },
+  {
+    "id": 12,
+    "tier": "TECHNICAL",
+    "topic": "FastAPI Dependency Injection & Middleware",
+    "difficulty": "Mid",
+    "question_text": "How does FastAPI's dependency injection system (`Depends`) handle yield cleanup dependencies (e.g. database sessions or async connection pools)?",
+    "resume_context": "FastAPI backend architecture check",
+    "expected_keywords": [
+      "Depends",
+      "yield dependency",
+      "context manager",
+      "db session cleanup",
+      "scope management"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Does not know how to manage database connection teardown in FastAPI",
+        "Leaves connection leaks in endpoint functions"
+      ],
+      "good_answer_indicators": [
+        "Explains that code after the `yield` statement executes after the response is returned to the client",
+        "Demonstrates automatic closing of DB sessions or release of pool connections"
+      ],
+      "bar_raiser_indicators": [
+        "Discusses exception handling inside yield dependencies, sub-dependency resolution order, and async context manager safety"
+      ]
+    },
+    "followup_if_strong": "What happens if an unhandled exception occurs inside an endpoint function before a yield dependency executes its cleanup phase?",
+    "followup_if_weak": "Why is dependency injection using `Depends` useful for passing database sessions into FastAPI route functions?"
+  },
+  {
+    "id": 13,
+    "tier": "TECHNICAL",
+    "topic": "CORS, Preflight & Auth Streaming",
+    "difficulty": "Mid",
+    "question_text": "When streaming SSE responses from a FastAPI backend on port 8000 to a Next.js frontend on port 3000, how do you handle CORS preflight and Authorization headers?",
+    "resume_context": "Fullstack auth and cross-origin streaming check",
+    "expected_keywords": [
+      "CORS preflight",
+      "EventSource Limitation",
+      "fetch API SSE",
+      "Authorization bearer token",
+      "Access-Control-Allow-Origin"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Unaware that native browser `EventSource` API cannot send custom Authorization headers natively",
+        "Suggests passing JWT secret tokens in URL query params without security safeguards"
+      ],
+      "good_answer_indicators": [
+        "Explains using fetch-event-source or readable streams in frontend to pass custom Bearer headers",
+        "Configures CORSMiddleware with specific origins and headers"
+      ],
+      "bar_raiser_indicators": [
+        "Evaluates HTTP-only cookie authentication for streaming endpoints, CSRF protection, and handling preflight OPTIONS caching"
+      ]
+    },
+    "followup_if_strong": "Why is passing JWT tokens in SSE query parameters a security risk compared to HTTP-only cookies or fetch Authorization headers?",
+    "followup_if_weak": "What HTTP method does a browser send during a CORS preflight check?"
+  },
+  {
+    "id": 14,
+    "tier": "TECHNICAL",
+    "topic": "Prompt Engineering & Structured Outputs",
+    "difficulty": "Mid",
+    "question_text": "How do you enforce strict JSON schema outputs from Gemini or OpenAI APIs, and how do you handle schema validation errors during streaming?",
+    "resume_context": "Structured output and model interaction experience",
+    "expected_keywords": [
+      "response_schema",
+      "Pydantic validation",
+      "json_object",
+      "partial JSON parsing",
+      "retry mechanism"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Relies solely on prompt text ('Please output valid JSON') without using API response_schema configuration",
+        "Fails to handle JSON decode exceptions"
+      ],
+      "good_answer_indicators": [
+        "Uses native response_schema / response_mime_type API configurations with Pydantic schemas",
+        "Implements validation retry mechanisms or partial streaming JSON parsers"
+      ],
+      "bar_raiser_indicators": [
+        "Details state-machine based partial JSON parsers for real-time UI rendering and grammar-constrained decoding (e.g. Outlines/Instructor)"
+      ]
+    },
+    "followup_if_strong": "How do grammar-guided decoding tools enforce JSON schemas at the model sampling token level?",
+    "followup_if_weak": "Why is asking an LLM for JSON in plain text prompt instructions sometimes unreliable?"
+  },
+  {
+    "id": 15,
+    "tier": "TECHNICAL",
+    "topic": "Fullstack End-to-End Latency Optimization",
+    "difficulty": "Senior",
+    "question_text": "Break down the latency components of a user prompt to streaming answer: TTFT, STT, Vector Retrieval, LLM generation, and TTS streaming. Where are the largest bottlenecks?",
+    "resume_context": "Fullstack AI performance telemetry evaluation",
+    "expected_keywords": [
+      "Time To First Token (TTFT)",
+      "STT latency",
+      "vector query overhead",
+      "network RTT",
+      "chunked streaming"
+    ],
+    "rubric": {
+      "poor_answer_indicators": [
+        "Lumps all latency into 'the model is slow' without profiling sub-systems",
+        "Unaware of TTFT significance in voice and streaming UX"
+      ],
+      "good_answer_indicators": [
+        "Breaks down latency into STT processing, VectorDB retrieval (20-50ms), LLM TTFT (200-500ms), and TTS audio generation",
+        "Presents chunk-based pipeline overlap strategies"
+      ],
+      "bar_raiser_indicators": [
+        "Describes speculative execution, pre-fetching candidate context during STT stream, and streaming TTS sentence chunking to achieve sub-800ms total voice turn latency"
+      ]
+    },
+    "followup_if_strong": "How would you implement speculative retrieval while the user is still speaking into the STT engine to lower TTFT?",
+    "followup_if_weak": "What is Time To First Token (TTFT) and why is it critical for interactive AI user interfaces?"
+  }
+]

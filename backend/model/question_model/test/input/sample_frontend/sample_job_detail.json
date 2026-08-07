@@ -1,0 +1,130 @@
+{
+    "rubric": {
+        "roleOverview": "As a Senior Frontend Engineer (L5 equivalent) at Google, the candidate is expected to architect high-performance, resilient, and accessible client-side applications using React and TypeScript. This role requires technical leadership in frontend system design, deep proficiency in modern browser APIs, proactive bundle and runtime performance tuning (Core Web Vitals), robust state management, micro-frontend architecture, and establishing high bar frontend standards through code reviews and developer mentorship.",
+        "marketIntelligence": {
+            "salary_benchmark": {
+                "usd_range": "$320,000 - $480,000 Total Compensation (Base: $190,000 - $240,000 / Year + Equity & Bonus)",
+                "inr_range": "₹35.0 LPA - ₹65.0 LPA CTC (Total Comp up to ₹1.0+ Cr with RSUs at Big Tech / GCCs)",
+                "compensation_notes": "Top-tier compensation is driven by mastery of high-scale frontend architecture, proven performance optimization metrics (e.g., Core Web Vitals), deep TypeScript expertise, micro-frontend orchestration, and the ability to drive cross-team DX initiatives."
+            },
+            "market_demand_level": "Very High",
+            "hiring_landscape": "High demand for senior engineers who go beyond component building to master Frontend System Design, state management strategies (Zustand, Redux Toolkit, React Query), React 19 concurrent features, and build/runtime performance profiling.",
+            "top_hiring_company_types": [
+                "Tier-1 Big Tech & Cloud Giants (e.g., Google, Meta, Microsoft)",
+                "High-Volume Enterprise SaaS & FinTech Platforms",
+                "Global Capability Centers (GCCs) & Technology Product Centers"
+            ]
+        },
+        "hrRecruiterLens": {
+            "what_hr_looks_for": [
+                "Quantified performance achievements on resume (e.g., 'Reduced initial bundle size by 40%', 'Improved LCP from 4.2s to 1.8s')",
+                "Explicit, clear proof of hands-on React and strict TypeScript usage at scale over 5+ years",
+                "Demonstrated experience leading frontend architecture, micro-frontends, or design system libraries across multiple teams",
+                "Proven track record of mentoring junior/mid-level engineers and conducting technical design reviews"
+            ],
+            "green_flags": [
+                "Articulates clear, nuanced trade-offs between CSR, SSR, SSG, and ISR based on business requirements",
+                "Demonstrates a systematic, metrics-driven approach to debugging web performance and Core Web Vitals (LCP, INP, CLS)",
+                "Thinks deeply about Developer Experience (DX), maintainability, and building reusable component abstraction layers ('building for the next 100 developers')",
+                "Proactively addresses browser security concerns (CSP, XSS, CSRF, CORS) during architectural design"
+            ],
+            "red_flags": [
+                "Treats TypeScript purely as basic type annotations without understanding generics, union types, or strict safety",
+                "Inability to explain state re-rendering mechanics or relying heavily on third-party libraries without knowing underlying browser Web APIs",
+                "Lack of awareness around DOM virtualization when handling large datasets (e.g., rendering 10k+ table rows)",
+                "Over-looking security vectors like XSS sanitization or failing to configure proper CORS/CSP boundaries"
+            ]
+        },
+        "skillRequirements": {
+            "must_have_hard_skills": [
+                "React (Hooks, Context API, Concurrent Rendering, Custom Hooks)",
+                "TypeScript (Advanced Generics, Mapped Types, Strict Type Checking)",
+                "State Management (Zustand, Redux Toolkit, React Query / SWR)",
+                "Frontend Performance Profiling & Core Web Vitals (LCP, INP, CLS, Memory Leaks)",
+                "Build Tools & Module Bundlers (Webpack, Vite, Tree-Shaking, Code-Splitting)",
+                "Web Security (CORS, XSS, CSRF, Content Security Policy)"
+            ],
+            "nice_to_have_hard_skills": [
+                "Micro-Frontend Architectures (Module Federation)",
+                "GraphQL API Integration & Client-Side Caching (Apollo / Urql)",
+                "DOM Virtualization (react-window, react-virtualized)",
+                "WebSockets / Server-Sent Events (SSE) for Real-Time State",
+                "Next.js / SSR / ISR / Hydration Deep Dives"
+            ],
+            "critical_soft_skills": [
+                {
+                    "skill": "Architectural Articulation & Trade-Off Framing",
+                    "why_it_matters": "Senior engineers must justify architectural decisions (e.g., micro-frontends vs. monorepo, CSR vs. SSR) to both technical leads and business stakeholders.",
+                    "evaluation_method": "Ask the candidate to explain a major architectural decision they led, probing specifically on what trade-offs they accepted and why alternative options were discarded."
+                },
+                {
+                    "skill": "Technical Mentorship & Standard Setting",
+                    "why_it_matters": "Role requires mentoring junior engineers and elevating engineering practices across the organization.",
+                    "evaluation_method": "Inquire about a scenario where they conducted code reviews or technical design reviews for lower-level engineers, focusing on how they gave feedback and drove adoptable coding standards."
+                },
+                {
+                    "skill": "Crisis Communication & Production Incident Handling",
+                    "why_it_matters": "Frontend incidents directly impact user experience and revenue; leaders must remain calm, systematic, and clear under pressure.",
+                    "evaluation_method": "Behavioral question on diagnosing and resolving an urgent client-side production bug under tight timelines."
+                }
+            ]
+        },
+        "keyTechnicalPillars": [
+            "Pillar 1: Advanced React Architecture, State Synchronization & TypeScript Systems",
+            "Pillar 2: Frontend System Design, Micro-Frontends & Scalable API Integrations",
+            "Pillar 3: Browser Performance Optimization, Core Web Vitals & Web Security"
+        ],
+        "expectedInterviewTopics": [
+            {
+                "category": "Frontend System Design & Real-time Architecture",
+                "difficulty": "Senior",
+                "example_questions": [
+                    "How would you design a real-time collaborative application (e.g., live stock ticker or collaborative document editor) handling thousands of updates per second while maintaining high UI responsiveness?",
+                    "Walk me through the architecture of a shared UI component library and micro-frontend setup using Webpack Module Federation for multiple distributed product teams.",
+                    "How do you design a client-side data management layer handling offline persistence, cache invalidation, and optimistic UI updates for inconsistent REST/GraphQL APIs?"
+                ]
+            },
+            {
+                "category": "Browser Performance, Core Web Vitals & Build Tooling",
+                "difficulty": "Senior",
+                "example_questions": [
+                    "Given a Web Vitals report showing an LCP of 4.2 seconds and significant INP delays on a high-traffic app, outline your systematic debugging and remediation strategy.",
+                    "How do you configure Webpack/Vite to optimize initial bundle sizes through tree-shaking, code splitting, and route-based dynamic imports?",
+                    "Explain how DOM virtualization works under the hood and how you would implement a component that efficiently renders 50,000 tabular data rows."
+                ]
+            },
+            {
+                "category": "Advanced React Patterns & TypeScript Mechanics",
+                "difficulty": "Senior",
+                "example_questions": [
+                    "How does React 19's concurrent rendering model differ from traditional synchronous rendering, and how do primitives like `useTransition` and `useDeferredValue` impact main thread blocking?",
+                    "Write custom TypeScript utility types that extract and transform deep nested property types from an API response schema, demonstrating usage of conditional types and generics.",
+                    "Explain common causes of client-side memory leaks in React applications and how you diagnose them using Chrome DevTools Memory profiling."
+                ]
+            },
+            {
+                "category": "Web Security & Client Infrastructure",
+                "difficulty": "Senior",
+                "example_questions": [
+                    "How do you prevent Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF) in a complex React application storing user tokens and rendering user-generated HTML?",
+                    "Explain CORS preflight requests (`OPTIONS`), how browsers handle credentials in cross-origin requests, and how to structure CSP headers for frontend safety.",
+                    "How would you approach migrating a legacy, dynamically-typed JavaScript monolith codebase to strict TypeScript without halting feature delivery?"
+                ]
+            }
+        ]
+    },
+    "parsed_jd": {
+        "role": "Cached Target Profile",
+        "company": "Target Company",
+        "target_seniority": "Senior",
+        "tech_stack": [
+            "Pillar 1: Advanced React Architecture, State Synchronization & TypeScript Systems",
+            "Pillar 2: Frontend System Design, Micro-Frontends & Scalable API Integrations",
+            "Pillar 3: Browser Performance Optimization, Core Web Vitals & Web Security"
+        ],
+        "search_queries": []
+    },
+    "search_context": [],
+    "cached": true,
+    "execution_time_seconds": 0.003
+}

@@ -1,160 +1,221 @@
-# Netran AI - Real-Time Voice-to-Voice AI Interviewer Backend
+# Netran AI — Multi-Stage AI Technical Interviewer Backend
 
-A modular, high-fidelity, low-latency local voice assistant designed to conduct immersive technical interviews. The architecture runs entirely inside a single directory, utilizing dedicated workers for streaming audio processing, reasoning, and speech synthesis.
-
-## 🛠️ Technology Stack
-* **UI Layer:** Kivy Framework
-* **Speech-to-Text (STT):** Faster-Whisper (`base` model, local CPU execution)
-* **Reasoning Engine (LLM):** Ollama running `qwen2.5:1.5b` (Local execution)
-* **Text-to-Speech (TTS):** Kokoro-82M v1.0 (Local native PyTorch streaming pipeline)
-* **Audio Hardware Interface:** PyAudio (16kHz Input / 24kHz Output)
+Netran AI is an intelligent, web-augmented, multimodal AI technical interviewer. The system simulates real-world corporate technical interview loops by combining web-extracted market intelligence, dynamic resume-to-JD cross-matching, continuous real-time voice activity detection (VAD), speech-to-text (STT), local streaming LLM reasoning, neural text-to-speech (TTS), and multimodal audio-grounded candidate evaluation.
 
 ---
 
-## 📥 Installation & Setup Guide
+## 🎯 What We Are Making
 
-This project is already configured to run from the workspace virtual environment at [.venv](.venv). The installation steps below reflect the packages verified inside that environment and are intended for a Windows-based setup.
+The backend architecture comprises **4 core AI model stages** linked by a **Unified Workflow Orchestrator**:
 
-### 1. Prerequisites
+1. **Stage 1 — JD Research & Market Intelligence Engine (`research_model`)**:
+   - Parses raw Job Descriptions (JDs), queries live engineering web sources (LeetCode, Glassdoor, GitHub, GeeksforGeeks, Reddit) using **Tavily Search API**, synthesizes assessment rubrics via **Gemini 3.6 Flash**, and caches results in a local **SQLite** database (`cache.db`).
 
-#### Python
-Use Python 3.12.7. Confirm your interpreter before continuing:
+2. **Stage 2 — Contextual Question & Behavioral Prompt Engine (`question_model`)**:
+   - Parses candidate resumes (`.pdf`, `.docx`, `.txt`) using `pypdf` and `python-docx`. Performs skill-gap cross-matching against the JD rubric to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and generates a 1-2 sentence latency-constrained system prompt for Stage 3.
 
+3. **Stage 3 — Live Voice-to-Voice Streaming Loop (`voice_to_voice_model`)**:
+   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (dual VAD+RMS speech gate), **Faster-Whisper** (`small` int8 model loaded 100% offline) for STT, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, a **Qwen2.5:1.5B**-powered hybrid turn-taking classifier, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`recording.wav`) and millisecond-precision timing telemetry (`transcript.json`).
+
+4. **Stage 4 — Post-Session Multimodal Evaluation Engine (`reports_model`)**:
+   - Slices continuous audio into per-turn WAV clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps and runs a 3-branch **Gemini Multimodal Evaluation Engine** (Audio Branch, Technical Branch, Combine Branch) to output dual evaluation artifacts: `report.json` and `evaluation_summary.md`.
+
+5. **Workflow Orchestrator (`workflow`)**:
+   - A unified **5-screen Kivy Desktop Application** (`SetupScreen` → `ResearchScreen` → `QuestionScreen` → `InterviewScreen` → `ReportScreen`) that connects Stage 1 through Stage 4 in background threads with live UI progress callbacks.
+
+---
+
+## 💻 Prerequisites & System Requirements
+
+### 1. Recommended Python Version
+- **Python 3.11 or Python 3.12** (specifically 64-bit Windows) is **strongly recommended**.
+- *Why?* Python 3.11/3.12 provides optimum binary wheel compatibility for native C-extension packages used in speech processing and UI rendering (`faster-whisper`, `sounddevice`, `onnxruntime`, `kivy`, `torch`).
+
+Check your active Python version before proceeding:
 ```cmd
 python --version
 ```
 
-If Python is not installed, download the official Windows installer from python.org and enable the option to add Python to PATH.
+### 2. System Hardware Requirements
+- **OS**: Windows 10 / 11 (64-bit).
+- **RAM**: 8 GB minimum (16 GB recommended for optimal Whisper + Kokoro + Ollama co-execution).
+- **CPU**: Multi-core x86_64 processor (Intel i5/i7, AMD Ryzen 5/7+).
+- **Audio Hardware**: Active Microphone and Headphones/Speakers.
 
-#### System requirements for Windows
-Some audio dependencies may require Microsoft build tools or a compiler runtime:
-- Visual Studio Build Tools (C++ build tools) if native wheel compilation is needed
-- A working microphone and speakers/headphones
-- Internet connection for downloading model weights and packages
+### 3. Local Model Engine Requirement: Ollama
+Stage 3 uses local Ollama execution for LLM reasoning:
+1. Download and install **Ollama** from [ollama.com](https://ollama.com).
+2. Ensure Ollama service is running in the background.
+3. Open a terminal and pull the Qwen2.5 model:
+   ```cmd
+   ollama pull qwen2.5:3b
+   ```
 
-### 2. Create and Activate the Virtual Environment
+---
 
-From the backend root, create and activate the project environment:
+## ⚙️ Installation & Package Setup Guide
 
+Follow these step-by-step instructions to set up the backend environment from scratch:
+
+### Step 1: Open Terminal & Navigate to Backend
 ```cmd
-cd "C:\kali\product\netran ai\backend"
+cd "c:\kali\product\netran ai\backend"
+```
+
+### Step 2: Create a Virtual Environment (Python 3.11 or 3.12)
+```cmd
 py -3.12 -m venv .venv
-.venv\Scripts\activate
-python --version
 ```
+*(Or use `py -3.11 -m venv .venv` if Python 3.11 is installed).*
 
-If the activation command does not work in PowerShell, use:
+### Step 3: Activate the Virtual Environment
+- **Windows Command Prompt (cmd)**:
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+- **Windows PowerShell**:
+  ```powershell
+  .\.venv\Scripts\Activate.ps1
+  ```
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### 3. Upgrade Packaging Tools
-
-Before installing dependencies, upgrade pip and related build tools:
-
+### Step 4: Upgrade Packaging Tools & Install Requirements
+Install all master backend dependencies using the consolidated [`requirements.txt`](file:///c:/kali/product/netran%20ai/backend/requirements.txt):
 ```cmd
 python -m pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
 ```
 
-### 4. Install the Verified Project Dependencies
+### Step 5: Configure Environment Credentials (`.env`)
+Create or edit the `.env` file in the `backend/` directory:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+GEMINI_MODEL=gemini-3.6-flash
+OLLAMA_MODEL=qwen2.5:3b
+```
 
-The current virtual environment already contains the core runtime packages for this project, including:
-- numpy
-- pyaudio
-- faster-whisper
-- kivy
-- kokoro
-- ollama
-- soundfile
-- torch
-
-Install or verify them with:
-
+### Step 6: Download / Verify Silero VAD Weights
+Run the VAD downloader utility to fetch the `silero_vad.onnx` neural weight file (~2 MB):
 ```cmd
-pip install numpy pyaudio faster-whisper kivy kokoro ollama soundfile torch
+python -m model.voice_to_voice_model.model.download_vad
 ```
 
-If you want to reinstall everything from scratch in the current environment, use the same command above after activation.
+### Step 7: Hugging Face Model Downloads (Faster-Whisper & Kokoro)
 
-#### PyAudio on Windows
-If `pip install pyaudio` fails due to missing build support, install it through `pipwin`:
+The first time you run the Stage 3 Voice Model or hardware diagnostics (`listener.py` and `speaker.py`), the system will automatically download two Hugging Face models to your local cache:
+1. **Faster-Whisper (`Systran/faster-whisper-small`)**: ~500 MB (Used for Speech-to-Text). [View on Hugging Face](https://huggingface.co/Systran/faster-whisper-small)
+2. **Kokoro-82M (`hexgrad/Kokoro-82M`)**: ~350 MB (Used for Neural Text-to-Speech). [View on Hugging Face](https://huggingface.co/hexgrad/Kokoro-82M)
 
-```cmd
-pip install pipwin
-pipwin install pyaudio
+*Note: You must have an active internet connection on the very first run to fetch these weights into your Windows directory at `%USERPROFILE%\.cache\huggingface\hub\`. Subsequent runs will load these 100% offline from the local cache.*
+
+**Manual Pre-Download (Optional):**
+
+If you want to manually download these models before running the application, you can use the `huggingface-cli`. 
+
+First, ensure the CLI is installed in your activated virtual environment (it is included in `requirements.txt`, but can be installed manually):
+
+```bash
+pip install -U "huggingface_hub[cli]"
 ```
 
-### 5. Install and Start Ollama
+Then, run the following commands to pre-download the models:
 
-This backend uses Ollama locally for the reasoning model.
-
-1. Install Ollama from the official website or package manager.
-2. Start the Ollama service and ensure it is running in the background.
-3. Pull the model used by the project:
-
-```cmd
-ollama pull qwen2.5:1.5b
-```
-
-### 6. Verify the Installation
-
-Run the following command to confirm that the most important packages can be imported successfully:
-
-```cmd
-python -c "import numpy, pyaudio, faster_whisper, kivy, kokoro, ollama, soundfile, torch; print('Core dependencies imported successfully')"
-```
-
-If this finishes without import errors, the environment is ready for the application.
-
-### 7. Run the Application
-
-After the environment is active and Ollama is running, start the backend app:
-
-```cmd
-python main_app.py
-```
-
-> If you are running from a different terminal session, activate the environment first with `.venv\Scripts\activate` before starting the app.
-
----
-
-## 📂 Single-Folder Project Architecture
-
-All functional code logic resides directly within the project workspace folder for high mobility and scannability:
-
-```text
-backend/
-│
-├── .venv/               # Isolated Python 3.12.7 environment virtual bindings
-├── listener.py          # Opens Mic hardware, processes RMS VAD, and translates speech -> Text
-├── brain.py             # Interfaces natively with Ollama to stream Qwen2.5 tokens
-├── speaker.py           # Runs Kokoro-82M to convert float32 text streams -> Int16 speaker audio
-├── main_app.py          # Unified entrypoint hosting the Kivy UI window and backend workers
-└── interview_log.txt    # Autogenerated chronological transcript data file
-
+```bash
+huggingface-cli download Systran/faster-whisper-small
+huggingface-cli download hexgrad/Kokoro-82M
 ```
 
 ---
 
-## 🚀 Running the Application
+## 🚀 How to Run
 
-1. Open your terminal and activate your virtual environment.
-2. Confirm your Ollama desktop engine is running in the background.
-3. Boot the application using:
+You can launch the backend using either the interactive batch launcher or direct Python module commands.
+
+### Method A: Interactive Launcher (`run.bat`) — Recommended
+Run [`run.bat`](file:///c:/kali/product/netran%20ai/backend/run.bat) from the backend directory to open an interactive operational suite:
 
 ```cmd
-python main_app.py
-
+run.bat
 ```
 
+**Key Menu Options**:
+- **Option 1**: Launch Unified 5-Screen Netran AI Interview Workflow (Complete App).
+- **Options 2–5**: Run standalone stage models (Stage 1 Research, Stage 2 Question, Stage 3 Voice, Stage 4 Report).
+- **Options 6–10**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain, Turn Classifier, Question Manager).
+- **Options 11–12**: Setup Tools (Install dependencies, Download VAD).
+- **Options 13–18**: Maintenance tools to clean stage outputs, session folders, cache DB, trash, and run Code Audit Scanner.
+
+---
+
+### Method B: Direct Python Module Commands
+
+Make sure your `.venv` is activated, then run:
+
+#### 1. Run Complete Combined 5-Screen Application
+```cmd
+python -m model.workflow.model.front
+```
+
+#### 2. Run Stage 1 (JD Research & Market Intel Desktop GUI)
+```cmd
+python -m model.research_model.model.front
+```
+
+#### 3. Run Stage 2 (Question Tree & System Prompt Generator)
+- **Kivy UI**:
+  ```cmd
+  python -m model.question_model.model.front
+  ```
+- **CLI Harness**:
+  ```cmd
+  python -m model.question_model.model.test_pipeline
+  ```
+
+#### 4. Run Stage 3 (Standalone Voice Interview Desktop GUI)
+```cmd
+python -m model.voice_to_voice_model.model.front
+```
+
+#### 5. Run Stage 4 (Post-Session Report Generator)
+- **Kivy UI**:
+  ```cmd
+  python -m model.reports_model.model.front
+  ```
+- **CLI Harness**:
+  ```cmd
+  python -m model.reports_model.model.test_pipeline
+  ```
+
+#### 6. Run Code Quality & Architecture Audit Scanner
+```cmd
+python scan_code_quality.py
 ```
 
 ---
 
-### What's Next?
-Now that the installation process is cleanly locked down in documentation, where should we focus our next improvement break? 
-1. **Reduce Latency / Improve Speed:** We can tweak chunk sizes or optimize the speech processing loop to make Eva respond even faster.
-2. **UI Design:** We can implement your signature professional minimalist visual theme into the Kivy configuration. 
+## 🧹 Maintenance & Data Cleaning
 
-Which path would you like to take?
+During development and testing, temporary test output files and session logs are generated. You can clean these files using `run.bat` or manually:
+
+- **Stage Test Outputs (`model/*/model/test_output/`)**: Stores single-stage test outputs.
+- **Session Directories (`model/sessions/`)**: Stores active interview session folders (`sess_<timestamp>/`).
+- **SQLite Cache (`model/research_model/model/cache.db`)**: Stores cached JD rubrics.
+
+### Clean Data Commands via `run.bat`:
+- Select **Option 13**: Deletes stage `test/output/` and `test/process/` folders.
+- Select **Option 14**: Deletes active session folders in `model/sessions/` and `sessions/`.
+- Select **Option 15**: Deletes SQLite `cache.db` files.
+- Select **Option 16**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
+- Select **Option 17**: Performs a **Full Deep Clean** returning the repository to pristine condition.
+- Select **Option 18**: Run Code Quality Audit (Ruff, Bandit, Radon).
+
+---
+
+## 📚 Project Documentation
+
+Additional system documentation is available in the `doc/` directory:
+- [`doc/current.md`](file:///c:/kali/product/netran%20ai/backend/doc/current.md): Detailed current operational status & stage synthesis.
+- [`doc/folder_strucuture.md`](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md): Complete directory structure and file inventory.
+- [`doc/rule.md`](file:///c:/kali/product/netran%20ai/backend/doc/rule.md): Mandatory architectural rules and agent instructions.
+- [`doc/tech_stack.md`](file:///c:/kali/product/netran%20ai/backend/doc/tech_stack.md): Technical framework components.
+- [`model/workflow/doc/overall_model_process.md`](file:///c:/kali/product/netran%20ai/backend/model/workflow/doc/overall_model_process.md): High-level multi-stage process matrix.
