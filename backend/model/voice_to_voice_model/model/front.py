@@ -31,6 +31,7 @@ try:
     from .benchmark import Benchmark
     from .brain import TextSanitizer, generate_eva_response
     from .brain import preload as preload_brain
+    from .config import SV_ENABLED
     from .listener import BargeInWatcher, ContinuousMicWriter, listen_and_transcribe
     from .question_manager import QuestionManager
     from .schemas import load_stage2_bundle
@@ -44,6 +45,7 @@ try:
         speak_text,
     )
     from .speaker import preload_models as preload_speaker
+    from .speaker_verifier import SpeakerVerifier
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
@@ -52,6 +54,7 @@ except ImportError:
             generate_eva_response,
         )
         from model.voice_to_voice_model.model.brain import preload as preload_brain
+        from model.voice_to_voice_model.model.config import SV_ENABLED
         from model.voice_to_voice_model.model.listener import (
             BargeInWatcher,
             ContinuousMicWriter,
@@ -71,10 +74,12 @@ except ImportError:
         from model.voice_to_voice_model.model.speaker import (
             preload_models as preload_speaker,
         )
+        from model.voice_to_voice_model.model.speaker_verifier import SpeakerVerifier
     except ImportError:
         from benchmark import Benchmark
         from brain import generate_eva_response
         from brain import preload as preload_brain
+        from config import SV_ENABLED
         from listener import BargeInWatcher, ContinuousMicWriter, listen_and_transcribe
         from question_manager import QuestionManager
         from schemas import load_stage2_bundle
@@ -87,6 +92,8 @@ except ImportError:
             speak_text,
         )
         from speaker import preload_models as preload_speaker
+        from speaker_verifier import SpeakerVerifier
+
 
 
 # Multi-Screen KV layout definition with responsive proportions
@@ -674,8 +681,18 @@ class InterviewScreen(Screen):
         self.mic_writer = ContinuousMicWriter(filepath=mic_wav_path)
         self.mic_writer.start()
 
+        # Initialize Speaker Verification (auto-enroll mode)
+        if SV_ENABLED and SpeakerVerifier:
+            self.speaker_verifier = SpeakerVerifier()
+            self.session_state.speaker_verifier = self.speaker_verifier
+            print("[GUI] Speaker verification initialized (auto-enroll mode).", flush=True)
+        else:
+            self.speaker_verifier = None
+            print("[GUI] Speaker verification DISABLED.", flush=True)
+
         self.update_status("Initializing AI Models... (Please wait)")
         self.append_ui_text("\n[System]: Voice pipeline connected.\n")
+
 
         self.interview_thread = threading.Thread(
             target=self._run_interview_pipeline, daemon=True
@@ -922,22 +939,24 @@ class InterviewScreen(Screen):
                     traits = profile.get("personal_traits_and_hobbies", {})
                     icebreaker_angle = traits.get("icebreaker_probe_topic", "")
 
+                import datetime
+                hour = datetime.datetime.now().hour
+                if hour < 12:
+                    time_greeting = "Good morning"
+                elif hour < 18:
+                    time_greeting = "Good afternoon"
+                else:
+                    time_greeting = "Good evening"
+
                 if self.question_manager and self.question_manager.get_current_question():
                     q1 = self.question_manager.get_current_question()
-                    
                     # Strip any greeting from the original question text globally to prevent replays
                     import re
                     clean_q1_text = re.sub(r'^(Hi|Hello|Hey)\b[^!\.]*[!\.]\s*(Welcome[!\.]?\s*)?', '', q1.question_text, flags=re.IGNORECASE).strip()
                     q1.question_text = clean_q1_text
-                    
-                    initial_greeting = f"Hi {cand_first_name}! I'm Eva, your technical interviewer today. {clean_q1_text}"
-                    self.current_question_text = initial_greeting
-                else:
-                    initial_greeting = (
-                        f"Hi {cand_first_name}! I'm Eva, your technical interviewer today. "
-                        "Before we dive into technical questions, could you briefly introduce yourself and tell me what you've been working on recently?"
-                    )
-                    self.current_question_text = initial_greeting
+                
+                initial_greeting = f"{time_greeting}, {cand_first_name}. I'm Eva, your technical interviewer today. How are you doing?"
+                self.current_question_text = initial_greeting
 
                 self.log_and_display_turn("Eva", initial_greeting)
                 turn1_history = f"TONE: warm\nSPEAK: {initial_greeting}"
@@ -949,6 +968,7 @@ class InterviewScreen(Screen):
                 self._eva_speak_blocking(initial_greeting)
 
             # --- MAIN CYCLE LOOP ---
+            _dead_mic_retries = 0   # Tracks consecutive empty-transcript returns (dead mic / no speech)
             while self.is_running:
                 self.update_status("Listening to your response...")
                 turn_start_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
@@ -961,13 +981,36 @@ class InterviewScreen(Screen):
                     ui_callback=self.update_audio_diagnostics, 
                     mic_writer=self.mic_writer,
                     state=self.session_state,
-                    whisper_prompt=whisper_prompt
+                    whisper_prompt=whisper_prompt,
+                    speaker_verifier=getattr(self, "speaker_verifier", None)
                 )
+
                 turn_end_sec = self.session_logger.elapsed_sec() if self.session_logger else 0.0
                 silence_gap_sec = max(0.0, turn_start_sec - self.last_eva_speech_end_sec)
 
                 if user_transcript is None or not user_transcript.strip() or not self.is_running:
+                    _dead_mic_retries += 1
+                    if _dead_mic_retries >= 3:
+                        # Three consecutive empty returns = mic is dead or muted.
+                        # Pause and show a warning instead of spam-restarting the listener.
+                        print(
+                            f"[Front] ⚠️ Microphone returned empty {_dead_mic_retries}x in a row. "
+                            f"Pausing 5s — check mic connection.",
+                            flush=True
+                        )
+                        self.update_status("⚠️ Microphone silent — check your mic and speak again")
+                        if hasattr(self, 'update_audio_diagnostics'):
+                            self.update_audio_diagnostics({
+                                "type": "audio_level",
+                                "rms": 0.0,
+                                "vad_prob": 0.0,
+                                "state": "⚠️ Mic check: no audio signal detected"
+                            })
+                        import time as _t
+                        _t.sleep(5.0)
+                        _dead_mic_retries = 0   # Reset after pause
                     continue
+                _dead_mic_retries = 0   # Reset on successful transcript
 
                 clean_transcript = user_transcript.strip()
 

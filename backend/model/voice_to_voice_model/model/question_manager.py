@@ -236,10 +236,10 @@ class QuestionManager:
         # 2. ICEBREAKER PHASE
         if branch_taken == "icebreaker_response":
             instruction = (
-                "React warmly to the candidate's introduction in 1 short sentence, "
+                "React warmly to the candidate's greeting or response in 1 short sentence, "
                 f"then smoothly pivot to ask this question in your own natural words: '{target_logged_q}'"
             )
-            return f"Candidate Intro: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
+            return f"Candidate Response: '{candidate_transcript}'\nInstruction: {instruction}", target_logged_q
 
         # 3. INTERVIEWER META QUESTIONS (Role, Location, Identity)
         if branch_taken == "interviewer_meta":

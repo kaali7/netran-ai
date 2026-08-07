@@ -90,37 +90,35 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Zero-Network Execution**: Automatically sets `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` at process launch, preventing all external HTTP/HTTPS network calls to HuggingFace Hub during model initialization.
 * **Portable Snapshot Path Resolution**: `resolve_whisper_model_path()` dynamically detects local HuggingFace cache snapshots (`models--Systran--faster-whisper-small\snapshots\...`) using `%USERPROFILE%`, loading model weights directly from local disk. `resolve_kokoro_model_path()` uses the cached `"hexgrad/Kokoro-82M"` repository ID in offline mode.
 
-### 4. Speech-to-Text & Audio Capture ([listener.py](file:///c:/Users/Samta%20sakha/OneDrive/Desktop/netran-ai/backend/model/voice_to_voice_model/model/listener.py))
-* **Audio Capture Engine**: Built using `sounddevice`. **Always opens the stream at the device's native sample rate** (e.g., 44100Hz MME, 48000Hz WASAPI) and applies Python-side resampling — never requests 16kHz directly. Root cause: Windows KMixer's internal 44100→16kHz resampling produces aliased audio with energy but no speech spectral content, causing Silero VAD to output `prob=0.001` permanently even during loud speech.
-* **Python-Side Resampling**: Boxcar decimation (`reshape(-1, 3).mean()`) for 48000Hz WASAPI, and `audioop.ratecv` with **persistent inter-chunk state** for 44100Hz MME. The ratecv state is carried across all frames in a session for smooth interpolation without boundary artifacts.
-* **Microphone Priority (`config.py`)**: Safely prioritizes MME for Bluetooth/headset mics and WASAPI for built-in arrays. `MIC_DEVICE_INDEX` override in `.env` forces a specific device index.
-* **Startup Noise Floor Calibration (`_calibrate_noise_floor()`)**: Samples ~960ms of mic audio at native rate before the listen loop starts. Returns both:
-  1. `ambient_floor` (90th-percentile RMS) — offsets all VAD+RMS threshold gates adaptively for home vs. noisy college environments.
-  2. `noise_spectrum` (mean FFT power per bin across 30 frames) — used by the spectral subtraction noise canceller.
-  Supports `.env` override `NOISE_FLOOR_OVERRIDE=<float>` to skip auto-calibration.
-* **Spectral Subtraction Noise Cancellation (`_spectral_subtract()`)**: Per-frame (32ms) noise cancellation applied to `vad_frame` BEFORE Silero VAD inference. Algorithm: FFT → subtract `2.0×` calibrated noise power per bin (oversubtraction) → apply 0.2% spectral floor → IFFT. Removes stationary room noise (HVAC, fans, crowd murmur) so VAD can detect speech even in high-noise environments. Applied only to the VAD input; `proc_frame` for WAV recording retains original signal.
+### 4. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
+* **Audio Capture Engine**: Built using `sounddevice`. Always opens the stream at the device's native sample rate (e.g. 44100Hz MME, 48000Hz WASAPI) and applies Python-side resampling.
+* **Python-Side Resampling**: Boxcar decimation for 48000Hz WASAPI, and `audioop.ratecv` with persistent inter-chunk state for 44100Hz MME.
+* **Wiener Filter Noise Suppression (`NoiseReducer`)**: Replaced basic FFT power subtraction with `noisereduce` library (Wiener filter + spectral gating). Handles BOTH stationary noise (fan, AC, HVAC) AND transient bursts (keyboard clicks, mouse, door slams). Applied per-chunk to `vad_frame` BEFORE Silero VAD inference.
+* **Post-TTS Echo Guard Window**: Monotonic timestamp guard (`_echo_guard_until = time.monotonic() + 0.30`) suppresses VAD triggers for 300ms after `state.is_agent_speaking` clears to absorb room acoustic reflections of Eva's last sentence, preventing false barge-in and self-capture.
+* **Offline Speaker Verification (`speaker_verifier.py`)**: Employs SpeechBrain `speechbrain/spkrec-ecapa-voxceleb` (192-dim ECAPA-TDNN) to verify candidate identity before STT transcription.
+  - **Auto-Enrollment**: Automatically captures 192-dim candidate speaker embedding from the first ICEBREAKER utterance >= 2 seconds.
+  - **Verification Gate**: Evaluates cosine similarity of completed audio buffers against enrolled embedding (threshold 0.55 configurable via `.env` SV_THRESHOLD). Rejects foreign speech (students, teacher, TV, phone) with zero impact on per-frame VAD latency (~15ms per utterance).
 * **Adaptive Speech Gates**: All thresholds computed relative to `ambient_floor`:
   - Speech START: `(VAD prob >= 0.30 AND rms >= 2.5× ambient_floor)` OR `VAD prob >= 0.50`
   - Speech CONTINUATION: silence counter increments only when `rms < 1.8× ambient_floor`
-  Replaces hardcoded thresholds (e.g. bare `rms >= 0.015`) that falsely triggered on college room noise.
 * **Per-Frame Auto-Gain**: Utterance-level peak auto-gain up to **15x boost** applied to the full audio buffer before Whisper STT.
-* **Continuous Mic Writer (`ContinuousMicWriter`)**: Writes 3x-boosted 16kHz 16-bit Mono WAV frames directly to `recording.wav` (pre-noise-cancellation signal preserved).
+* **Continuous Mic Writer (`ContinuousMicWriter`)**: Writes 3x-boosted 16kHz 16-bit Mono WAV frames directly to `recording.wav`.
 * **Faster-Whisper Anti-Hallucination Tuning**: `condition_on_previous_text=False`, `no_speech_threshold=0.6`, `hallucination_silence_threshold=2.0`, `temperature=0.0`, `beam_size=1`.
 * **Input Modes (Auto-VAD vs Push-To-Talk)**: Supports both automatic VAD speech endpointing and PTT mode.
-* **Async Producer/Consumer Queue Architecture**: `listen_and_transcribe()` spawns a background daemon thread (`mic_stream_producer`) to continuously drain mic frames into a thread-safe `queue.Queue()`. Prevents `[Errno -10985] Input overflowed` crashes.
-* **Hardware Lock Retry Loop**: Both `listen_and_transcribe` and `BargeInWatcher` implement a 3-attempt, 0.3s delay retry on `sd.InputStream` initialization. Both now use the native-rate-first pattern consistently.
-* **Hybrid Turn Classifier & Dynamic Pause Extension ([turn_classifier.py](file:///c:/Users/Samta%20sakha/OneDrive/Desktop/netran-ai/backend/model/voice_to_voice_model/model/turn_classifier.py))**:
+* **Async Producer/Consumer Queue Architecture**: `listen_and_transcribe()` spawns a background daemon thread (`mic_stream_producer`) to continuously drain mic frames into a thread-safe `queue.Queue()`.
+* **Hardware Lock Retry Loop**: Both `listen_and_transcribe` and `BargeInWatcher` implement a 3-attempt, 0.3s delay retry on `sd.InputStream` initialization.
+* **Hybrid Turn Classifier & Dynamic Pause Extension ([turn_classifier.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/turn_classifier.py))**:
   - Implements Case 3 Hybrid Architecture to determine if candidate speech is a complete thought or an interrupted thinking pause.
-  - **Tier 0 (Ollama Liveness Probe - module load)**: `_probe_ollama_available()` sends a 100ms GET to `/api/tags` at import time. If Ollama is unreachable (e.g. college without local LLM), `OLLAMA_AVAILABLE=False` and Tier 2 is skipped for the entire session. Fallback returns `"COMPLETE"` (not `"INCOMPLETE"`) — avoids the blanket 2.3s pause extension every turn when the classifier cannot reach Ollama.
-  - **Tier 1 (Regex/Lexical - 0ms)**: Checks trailing conjunctions and filler words (`"and"`, `"because"`, `"so"`, `"but"`, `"uh"`, `"um"`, `"like"`, `"..."`).
-  - **Tier 2 (Qwen2.5:1.5B Probe - ~100ms)**: Calls local Ollama `qwen2.5:1.5b` with a 250ms fallback timeout if Tier 1 is ambiguous. Timeout fallback now returns `"COMPLETE"` (previously returned `"INCOMPLETE"` which extended every pause by 2.3s).
-  - When initial 800ms silence threshold is hit, an interim transcript is checked. If classified as `"INCOMPLETE"`, `state.pause_tolerance_ms` dynamically expands from **800ms up to 2300ms** (71 frames), giving the candidate time to finish their thought without being cut off. Resets back to 800ms default upon turn completion.
-* **Full-Duplex Real-Time Barge-In (v3)**: VAD runs **continuously** even while `state.is_agent_speaking` is set. When `speech_prob > 0.65`:
-  1. **Cooldown check** (`interrupt_cooldown_sec=0.3s`) prevents rapid re-triggering from a single transient.
-  2. **Sets `state.interrupt_event`** — the global shared signal checked by `brain.py` and `speaker.py`.
-  3. **Calls `force_stop_all()`** which hardware-flushes the WASAPI/ALSA/CoreAudio driver buffer via `stream.stop_stream()` + `stream.start_stream()`.
-  4. **Falls through** into normal audio accumulation — the barge-in speech is **captured for STT** instead of being discarded.
-  5. **Fast Teardown & Continuity**: Employs an ultra-fast 80ms thread `.join()` timeout during teardown and strictly preserves Silero RNN temporal continuity by omitting per-chunk DC offset subtraction within the watcher loop.
+  - **Tier 0 (Ollama Liveness Probe)**: Skips Tier 2 if Ollama is unreachable.
+  - **Tier 1 (Regex/Lexical - 0ms)**: Checks trailing conjunctions and filler words.
+  - **Tier 2 (Qwen2.5:1.5B Probe - ~100ms)**: Calls local Ollama `qwen2.5:1.5b` with a 250ms fallback timeout.
+  - When initial 800ms silence threshold is hit, dynamic pause extends up to 2300ms if thought is incomplete.
+* **Full-Duplex Real-Time Barge-In (v3)**: VAD runs continuously even while `state.is_agent_speaking` is set. When `speech_prob > 0.65`:
+  1. **Cooldown check** (`interrupt_cooldown_sec=0.3s`) prevents rapid re-triggering.
+  2. **Sets `state.interrupt_event`** signal.
+  3. **Calls `force_stop_all()`** hardware audio flush.
+  4. **Falls through** into normal audio accumulation.
+
 
 ### 5. LLM Engine, Text Sanitizer & TTFT/TTFA Telemetry ([brain.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/brain.py) & [speaker.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/speaker.py))
 * **Model**: Local Ollama execution of **`qwen2.5:3b`** (`MODEL_NAME = OLLAMA_MODEL`). Includes 3x exponential backoff retry and streams raw output live to console. Silences HTTPX and HTTPCORE debug logs from console stdout.
@@ -185,7 +183,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
     - Interactive WAV audio player with real-time `ProgressBar` and time tracking (`0:15 / 1:30`).
 * **SessionState Management**: Thread-safe `session_state.py` orchestrating cross-module events (Echo Gate, full-duplex barge-in interrupt).
 * **UI Rendering & Parallel Text Streaming**: Streams the LLM `SPEAK:` text output into the GUI character-by-character in real-time (`ui_callback`), exactly parallel with the TTS audio playback. The `_llm_ui_callback` receives direct streaming text without any XML parsing overhead, guaranteeing a clean front-end display. Displays spoken dialog using color-coded markup labels, and ensures only the clean spoken block is fed back into `conversation_history` context to prevent compounding context errors.
-* **Permanent Context Anchor & Personalized Greeting**: Extracts candidate background details during the ICEBREAKER phase into a `candidate_project_anchor`, dynamically prepending it to the system prompt so it is never purged. The initial greeting is also personalized with the candidate's first name and resume traits (icebreaker angle). `resume_highlights` are natively passed through to the `question_manager` to weave specific candidate facts into dynamic technical follow-ups.
+* **Permanent Context Anchor & Personalized Greeting**: Extracts candidate background details during the ICEBREAKER phase into a `candidate_project_anchor`, dynamically prepending it to the system prompt so it is never purged. The initial greeting is simplified to a time-based one-liner (e.g., "Good morning, Candidate. How are you doing?") to allow a short response for clean auto-enrollment before diving into technical questions. `resume_highlights` are natively passed through to the `question_manager` to weave specific candidate facts into dynamic technical follow-ups.
 * **Bounded Sliding Context History**: Caps LLM chat history length to prevent performance degradation over time, relying on the permanent anchor to retain crucial context.
 * **`_eva_speak_blocking` Audio Drain Fix (v2)**: Replaced unreliable `audio_queue.empty()` poll with `audio_queue.join()` executed in a daemon thread polled every 50ms with interrupt bail-out. A mandatory **150ms post-drain OS hardware buffer guard** then ensures the PyAudio WASAPI/ALSA driver buffer fully completes playback before `listen_and_transcribe()` opens the microphone. This eliminates acoustic bleed-back (Eva's voice leaking into mic) triggering a false barge-in → `force_stop_all()` → session ending with 0 turns.
 * **`brain.py preload()` Fix**: Corrected `preload()` to call `stream_llm_response()` directly as a function call instead of iterating its tuple return value with `for _ in ...` (which wrongly treated the tuple as a generator).

@@ -38,3 +38,5 @@ class SessionState:
     input_mode: str = "VAD"          # Input mode: "VAD" or "PTT" (Push-To-Talk)
     ptt_active: threading.Event = field(default_factory=threading.Event)
     last_vocal_anchor: str = ""      # Tracks last anchor to enforce anti-repetition rotation
+    speaker_verifier: object | None = None   # SpeakerVerifier instance (None if disabled)
+

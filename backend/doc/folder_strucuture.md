@@ -89,7 +89,9 @@ backend/
     │       ├── session_state.py  # Thread-safe cross-module state/event tracker (Echo Gate)
     │       ├── silero_vad.onnx # Silero VAD neural network model weights (2.3 MB)
     │       ├── speaker.py     # Kokoro-82M neural TTS streaming playback engine
+    │       ├── speaker_verifier.py # SpeechBrain ECAPA-TDNN candidate speaker verification & auto-enrollment engine
     │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
+
     │       ├── turn_classifier.py # Case 3 Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Qwen 1.5B)
     │       └── _interview_log.txt # Consolidated session logging file
     │

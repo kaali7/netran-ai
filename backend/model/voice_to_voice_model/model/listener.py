@@ -53,6 +53,10 @@ try:
     from .config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
     from .session_state import SessionState
     from .turn_classifier import check_thought_completion
+    try:
+        from .speaker_verifier import SpeakerVerifier
+    except ImportError:
+        SpeakerVerifier = None
 except ImportError:
     try:
         from model.voice_to_voice_model.model.benchmark import Benchmark
@@ -65,11 +69,20 @@ except ImportError:
         from model.voice_to_voice_model.model.turn_classifier import (
             check_thought_completion,
         )
+        try:
+            from model.voice_to_voice_model.model.speaker_verifier import SpeakerVerifier
+        except ImportError:
+            SpeakerVerifier = None
     except ImportError:
         from benchmark import Benchmark
         from config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
         from session_state import SessionState
         from turn_classifier import check_thought_completion
+        try:
+            from speaker_verifier import SpeakerVerifier
+        except ImportError:
+            SpeakerVerifier = None
+
 
 # Global setup
 VAD_MODEL_PATH = os.path.join(os.path.dirname(__file__), "silero_vad.onnx")
@@ -206,59 +219,69 @@ def _calibrate_noise_floor(mic_device, num_frames: int = 30):
         flush=True,
     )
 
-    # Build noise power spectrum from the collected clean silence frames
-    noise_spectrum = None
+    # Initialize NoiseReducer from the collected clean silence frames
+    noise_reducer = None
     if clean_frames:
-        n_bins = CHUNK // 2 + 1
-        accum = np.zeros(n_bins, dtype=np.float64)
-        for f in clean_frames:
-            accum += np.abs(np.fft.rfft(f, n=CHUNK)) ** 2
-        noise_spectrum = (accum / len(clean_frames)).astype(np.float32)
-        print(f"[Calibration] Noise spectrum captured ({len(clean_frames)} frames, {n_bins} bins)", flush=True)
+        try:
+            noise_clip = np.concatenate(clean_frames)
+            noise_reducer = NoiseReducer(noise_clip=noise_clip, sr=RATE)
+            print(f"[Calibration] NoiseReducer initialized ({len(clean_frames)} frames, {len(noise_clip)} samples)", flush=True)
+        except Exception as nr_exc:
+            print(f"[Calibration] Could not init NoiseReducer ({nr_exc})", flush=True)
 
-    return floor, noise_spectrum
+    return floor, noise_reducer
 
 
-def _spectral_subtract(frame: np.ndarray, noise_power: np.ndarray,
-                       oversubtraction: float = 2.0, floor: float = 0.002) -> np.ndarray:
+class NoiseReducer:
     """
-    Spectral Subtraction Noise Cancellation.
+    Wiener filter + spectral gating noise suppression using noisereduce library.
 
-    Suppresses stationary background noise (HVAC, fans, crowd murmur) from a
-    single 32ms frame by estimating the noise spectrum during calibration and
-    subtracting it per-frequency-bin.
+    Handles BOTH stationary noise (fan, AC, HVAC) AND transient bursts
+    (keyboard clicks, mouse, door slams) that the old FFT power subtraction missed.
 
-    Args:
-        frame          : float32 audio at 16kHz, exactly 512 samples
-        noise_power    : mean noise power spectrum (257 bins) from calibration
-        oversubtraction: aggressiveness factor (>1.0 = more suppression).
-                         2.0 is recommended for noisy college environments.
-        floor          : minimum fraction of original power kept per bin.
-                         Prevents complete silence in any bin (avoids musical noise).
-
-    Returns:
-        Noise-reduced float32 frame, same length as input.
+    Initialized during calibration with a noise profile from silence frames.
+    Applied per-chunk to the VAD input frame BEFORE Silero VAD inference.
     """
-    n = len(frame)
-    spectrum = np.fft.rfft(frame, n=n)
-    magnitude = np.abs(spectrum)
-    phase = np.angle(spectrum)
 
-    signal_power = magnitude ** 2
-    # Overestimate noise so suppression is aggressive for loud room noise
-    noise_est = oversubtraction * noise_power[:len(magnitude)]
-    cleaned_power = signal_power - noise_est
-    # Spectral floor: keep at least `floor` fraction of original power
-    # to prevent musical noise artefacts ("birdsong in the background").
-    spectral_floor = floor * signal_power
-    cleaned_power = np.maximum(cleaned_power, spectral_floor)
+    def __init__(self, noise_clip: np.ndarray, sr: int = 16000):
+        """
+        Args:
+            noise_clip: 1D float32 array of ambient noise audio captured
+                        during calibration (~960ms of silence).
+            sr: Sample rate (must be 16000 for Silero VAD compatibility).
+        """
+        self.noise_clip = noise_clip
+        self.sr = sr
 
-    cleaned_magnitude = np.sqrt(np.maximum(cleaned_power, 0.0)).astype(np.float32)
+    def suppress(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Applies noise suppression to a single 32ms frame (512 samples at 16kHz).
 
-    # Reconstruct time-domain signal with original phase (phase NOT distorted)
-    cleaned_spectrum = cleaned_magnitude * np.exp(1j * phase)
-    cleaned = np.fft.irfft(cleaned_spectrum, n=n).astype(np.float32)
-    return cleaned
+        Uses stationary=True for consistent stationary noise removal with
+        the calibrated noise profile. prop_decrease=0.85 keeps 15% of noise
+        energy to prevent musical noise artifacts.
+
+        Args:
+            frame: float32 array of exactly 512 samples.
+
+        Returns:
+            Noise-suppressed float32 frame, same length as input.
+        """
+        try:
+            import noisereduce as nr
+            reduced = nr.reduce_noise(
+                y=frame,
+                sr=self.sr,
+                y_noise=self.noise_clip,
+                stationary=True,
+                prop_decrease=0.85,
+                n_fft=512,
+                hop_length=128,
+            )
+            return reduced.astype(np.float32)
+        except Exception:
+            return frame
+
 
 
 
@@ -295,7 +318,13 @@ def _transcribe_audio_buffer(audio_buffer, whisper_prompt=""):
     return "".join([segment.text for segment in segments]).strip()
 
 
-def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState = None, whisper_prompt=""):
+def listen_and_transcribe(
+    ui_callback=None,
+    mic_writer=None,
+    state: SessionState = None,
+    whisper_prompt="",
+    speaker_verifier=None,
+):
     """
     Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
     respects the echo gate via SessionState, transcribes the speech using Faster-Whisper,
@@ -314,19 +343,6 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
     # --- Robust microphone stream initialization ---
-    # KEY FIX: Always query the device's NATIVE sample rate first, then open the stream
-    # at that native rate and apply Python-side resampling.
-    #
-    # Root cause of VAD prob=0.001 on college Realtek laptops:
-    #   Method B (requesting 16kHz directly from a 44100Hz MME device) SUCCEEDS via
-    #   Windows KMixer, but KMixer's 44100->16kHz resampling produces aliased audio
-    #   with noise energy but no speech spectral content. Silero VAD gave prob=0.001
-    #   permanently even during loud speech, causing the listener to never trigger.
-    #
-    # By opening at native rate + Python-side resampling (boxcar for 48kHz,
-    # audioop.ratecv for 44kHz), we guarantee clean 16kHz audio for Silero VAD
-    # on any device, regardless of Windows host API or KMixer behavior.
-
     device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
     device_native_rate = int(device_info.get("default_samplerate", RATE))
     if device_native_rate <= 0:
@@ -391,12 +407,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     else:
         print("\n[Listening...] Speak into your microphone now.", flush=True)
 
-    # --- Adaptive noise floor calibration + noise spectrum capture ---
-    # Measures ambient RMS AND records the noise power spectrum in one 960ms window
-    # BEFORE opening the main listener loop.
-    # ambient_floor  — offsets all VAD+RMS thresholds
-    # noise_spectrum — per-bin power used for spectral subtraction noise cancellation
-    ambient_floor, noise_spectrum = _calibrate_noise_floor(MIC_DEVICE)
+    # --- Adaptive noise floor calibration + noise reducer initialization ---
+    ambient_floor, noise_reducer = _calibrate_noise_floor(MIC_DEVICE)
     # Speech START: require audio clearly above ambient (2.5× floor) AND VAD confirmation.
     _start_rms_gate    = max(ambient_floor * 2.5, 0.012)
     # Speech CONTINUATION: silence counter only increments below 1.8× ambient.
@@ -404,7 +416,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     print(
         f"[Calibration] Gates → start_rms={_start_rms_gate:.5f}  "
         f"continue_rms={_continue_rms_gate:.5f}  "
-        f"noise_cancel={'ON' if noise_spectrum is not None else 'OFF'}",
+        f"noise_suppress={'ON' if noise_reducer is not None else 'OFF'}",
         flush=True,
     )
 
@@ -414,14 +426,18 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     has_spoken = False
     has_extended_silence = False
     speech_start_candidate_frames = 0
+    rms_start_candidate_frames = 0     # RMS-only speech start fallback counter
     silence_frames_counter = 0
-    _diag_frame_counter = 0   # Periodic VAD diagnostic counter
+    _diag_frame_counter = 0            # Periodic VAD diagnostic counter
+    _echo_guard_until = 0.0   # Monotonic timestamp for post-TTS silence guard window
 
     # Defaults if state isn't provided (for standalone tests) — 800ms default pause tolerance (25 frames * 32ms)
     max_silence_frames = 25 if state is None else max(8, state.pause_tolerance_ms // 32)
     MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
     total_frames_counter = 0
-    MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms)
+    MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms) — applies AFTER speech starts
+    MAX_IDLE_WAIT_SEC = 90.0     # 90s hard timeout — applies BEFORE speech starts (waiting for first word)
+
 
     if state:
         state.is_candidate_speaking.clear()
@@ -431,6 +447,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     vad_state = np.zeros((2, 1, 128), dtype=np.float32)
     sr_scalar = np.array(RATE, dtype=np.int64)
     _ratecv_state = None   # Persistent audioop.ratecv interpolation state across chunks
+    _listen_start_time = time.monotonic()  # Wall-clock start for pre-speech idle timeout
 
 
     try:
@@ -455,41 +472,37 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             if native_rate == 48000 and RATE == 16000:
                 original_frame = original_frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
             elif native_rate != RATE:
-                # Use audioop.ratecv with persistent state for smooth inter-chunk interpolation.
-                # (Previously passed None every frame — discarding state caused interpolation
-                # artifacts at chunk boundaries.)
                 pcm16 = (original_frame * 32767.0).astype(np.int16)
                 resampled_pcm, _ratecv_state = audioop.ratecv(
                     pcm16.tobytes(), 2, 1, native_rate, RATE, _ratecv_state
                 )
                 original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
-            # 2. Process the raw frame for VAD
+            # 2. Prepare VAD frame from raw (pre-noise-suppression) audio
+            #    IMPORTANT: Silero VAD must receive the un-suppressed signal.
+            #    Noise suppression zeros out speech components too aggressively,
+            #    causing prob=0.001 even when the user is speaking loudly.
             vad_frame = original_frame.copy()
             if len(vad_frame) < CHUNK:
                 vad_frame = np.pad(vad_frame, (0, CHUNK - len(vad_frame)), mode='edge')
 
-            # --- Spectral Subtraction Noise Cancellation ---
-            # Apply per-frame spectral subtraction using the noise power spectrum
-            # captured during calibration. This removes stationary background noise
-            # (college HVAC, fans, crowd murmur) from the VAD input so Silero VAD
-            # can correctly detect speech even in high-noise environments.
-            # NOTE: applied ONLY to the VAD input (vad_frame); proc_frame for WAV
-            # recording uses the original (pre-cancellation) signal.
-            if noise_spectrum is not None:
-                vad_frame = _spectral_subtract(vad_frame, noise_spectrum)
+            # Compute RMS on the VAD (raw) frame for gate decisions
+            rms = float(np.sqrt(np.mean(vad_frame ** 2)))
 
-            frame_peak = float(np.max(np.abs(vad_frame)))
+            # --- Noise suppression for recording/Whisper only (NOT for VAD) ---
+            # Apply Wiener filter to produce a clean frame for Whisper + WAV recording.
+            clean_frame = vad_frame.copy()
+            if noise_reducer is not None:
+                clean_frame = noise_reducer.suppress(clean_frame)
 
             # Apply a constant volume boost for the output recording (Whisper + WAV)
-            # DO NOT apply dynamic per-chunk auto-gain before Silero VAD, as it destroys RNN temporal continuity!
-            proc_frame = original_frame[:CHUNK] * 3.0 if len(original_frame) >= CHUNK else vad_frame * 3.0
+            proc_frame = clean_frame * 3.0
             proc_frame = np.clip(proc_frame, -1.0, 1.0)
 
             if mic_writer:
                 mic_writer.write_frame(proc_frame)
 
-            # Prepare VAD inputs: input shape must be [1, 512]. Feed clean, un-gained audio to VAD.
+            # Prepare VAD inputs: shape [1, 512]. Feed RAW (un-suppressed) audio to VAD.
             audio_input = np.expand_dims(vad_frame, axis=0)
 
             # 3. Run Silero VAD v3 — 3 inputs: input, state, sr
@@ -498,31 +511,25 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 "state": vad_state,
                 "sr": sr_scalar,
             }
-            # Outputs: [output_prob [batch,1], stateN [2,batch,128]]
             ort_outputs = vad_session.run(None, ort_inputs)
             out   = ort_outputs[0]   # shape [1, 1]
             vad_state = ort_outputs[1]   # updated hidden state
             speech_prob = out[0, 0]
 
-            # 3b. Full-Duplex Barge-In Detection
-            # Calculate RMS early to use it as a fallback for broken VAD microphones.
-            rms = np.sqrt(np.mean(proc_frame ** 2))
-            
-            # VAD runs continuously even during agent speech. When speech_prob > 0.65 OR rms >= 0.015,
-            # we fire the interrupt (with cooldown) and FALL THROUGH to accumulate the
-            # barge-in audio so the candidate's interrupted speech is captured for STT.
+
+            # 3b. Full-Duplex Barge-In Detection & Echo Guard
+            # (rms already computed from raw vad_frame above)
+
             if state and state.is_agent_speaking.is_set():
-                # Avoid false barge-in triggers on static/noise by requiring a minimum VAD speech probability
-                if speech_prob > 0.50 or (speech_prob > 0.25 and rms >= 0.015):
+                _echo_guard_until = time.monotonic() + 0.30  # Arm 300ms post-speech guard window
+                if speech_prob > 0.65:
                     now = time.monotonic()
                     cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
                     last_t = getattr(state, 'last_interrupt_time', 0.0)
                     if now - last_t > cooldown:
                         print("⚡ [Barge-In] Candidate interrupted Eva! Halting audio output.", flush=True)
-                        # 1. Set global interrupt signal (checked by brain.py & speaker.py)
                         state.interrupt_event.set()
                         state.last_interrupt_time = now
-                        # 2. Hard-flush hardware audio buffer + drain Python queue
                         try:
                             from .speaker import force_stop_all
                         except ImportError:
@@ -534,15 +541,18 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                                 from speaker import force_stop_all
                         force_stop_all()
                         state.is_agent_speaking.clear()
-                        # 3. Fall through — do NOT continue; let audio_buffer accumulate
-                        #    the barge-in speech so STT captures what the candidate said.
+                        _echo_guard_until = 0.0  # Cancel guard when candidate barged in
                 else:
-                    # Low-probability frame during agent speech: suppress mic accumulation
                     silence_frames_counter = 0
                     continue
 
+            # Post-TTS Echo Guard: suppress VAD triggers during post-speech room acoustic decay
+            if time.monotonic() < _echo_guard_until:
+                continue
+
             # 4. Speech Start/End Decision Logic
             _diag_frame_counter += 1
+
 
             # Periodic VAD diagnostic: print live VAD prob + RMS every ~2s (60 frames * 32ms)
             # This helps calibrate thresholds when speech is not being detected.
@@ -554,23 +564,41 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 )
 
             if not has_spoken:
-                # --- Adaptive Speech START Gate ---
-                # Bug fix: the original gate had a bare `rms >= 0.015` condition with no VAD floor.
-                # In noisy rooms (college AC/crowd), ambient RMS easily exceeds 0.015,
-                # causing the listener to perpetually trigger on background noise.
+
+                # --- Adaptive Speech START Gate (hybrid VAD + RMS) ---
                 #
-                # Fix: Both conditions now require a VAD probability confirmation, AND the
-                # RMS floor is computed as 2.5× the calibrated ambient floor so the gate
-                # self-adapts to the current room noise level instead of being hardcoded.
-                #
-                # Combined gate: VAD prob >= 0.30 AND rms > _start_rms_gate (adaptive)
-                # Strong gate:   VAD prob >= 0.50 alone (confident speech, no RMS needed)
-                if (speech_prob >= 0.30 and rms >= _start_rms_gate) or speech_prob >= 0.50:
+                # Primary path  : VAD prob >= 0.30 AND rms > _start_rms_gate  (debounce 2 frames ~64ms)
+                # Strong path   : VAD prob >= 0.50 alone (confident speech, no RMS needed)
+                # RMS fallback  : rms > _start_rms_gate for 4 consecutive frames (~128ms)
+                #                 Used when Silero VAD is unreliable on this audio device
+                #                 and prob is stuck near 0.001 despite real speech present.
+                vad_triggered = (
+                    (speech_prob >= 0.30 and rms >= _start_rms_gate)
+                    or speech_prob >= 0.50
+                )
+                rms_triggered = rms >= _start_rms_gate
+
+                if vad_triggered:
                     speech_start_candidate_frames += 1
-                    if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms debounce
+                    rms_start_candidate_frames = 0
+                    if speech_start_candidate_frames >= 2:   # ~64ms debounce
                         print(
-                            f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f}, "
-                            f"gate={_start_rms_gate:.4f}, floor={ambient_floor:.5f})",
+                            f"[Speech Detected! VAD] prob={speech_prob:.2f}, RMS={rms:.4f}, "
+                            f"gate={_start_rms_gate:.4f}",
+                            flush=True
+                        )
+                        has_spoken = True
+                        audio_buffer.extend(pre_speech_buffer)
+                        if state:
+                            state.is_candidate_speaking.set()
+                        silence_frames_counter = 0
+                elif rms_triggered:
+                    rms_start_candidate_frames += 1
+                    speech_start_candidate_frames = 0
+                    if rms_start_candidate_frames >= 4:   # ~128ms debounce (RMS needs more confidence)
+                        print(
+                            f"[Speech Detected! RMS-only] prob={speech_prob:.2f}, RMS={rms:.4f}, "
+                            f"gate={_start_rms_gate:.4f} (VAD unreliable — using RMS fallback)",
                             flush=True
                         )
                         has_spoken = True
@@ -580,24 +608,21 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                         silence_frames_counter = 0
                 else:
                     speech_start_candidate_frames = 0
+                    rms_start_candidate_frames = 0
             else:
-                # --- Adaptive Speech CONTINUATION Gate ---
-                # Bug fix: the original `rms > 0.008` continuation check was permanently
-                # satisfied by college ambient noise, preventing silence_frames_counter
-                # from ever climbing high enough to break the listen loop.
-                #
-                # Fix: continuation threshold is now 1.8× calibrated ambient floor.
-                # Only resets silence counter when audio is meaningfully above ambient.
+                # --- Adaptive Speech CONTINUATION Gate (RMS primary) ---
+                # Silence counter climbs when BOTH VAD and RMS confirm silence.
+                # Either VAD prob > 0.20 OR rms above continue gate resets the counter.
+                # This means RMS alone is sufficient to extend the speech window.
                 if speech_prob > 0.20 or rms > _continue_rms_gate:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
 
             if ui_callback:
-                display_rms = np.sqrt(np.mean(proc_frame ** 2))
                 ui_callback({
                     "type": "audio_level",
-                    "rms": float(display_rms),
+                    "rms": float(rms),
                     "vad_prob": float(speech_prob),
                     "state": (
                         "Hearing you..." if has_spoken
@@ -605,21 +630,41 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     )
                 })
 
-            # Accumulate clean, un-clipped audio while speech is active for Whisper
+            # Accumulate clean (noise-suppressed) audio for Whisper while speech is active
             if has_spoken:
-                audio_buffer.append(vad_frame.copy())
+                audio_buffer.append(clean_frame.copy())
                 total_frames_counter += 1
-            else:
-                pre_speech_buffer.append(vad_frame.copy())
-                
-                # Warning near timeout (around 50s)
+
+
+                # Warning near post-speech hard timeout (around 50s)
                 if total_frames_counter == 1562 and ui_callback:
                     ui_callback({
-                        "type": "audio_level", 
-                        "rms": 0.0, 
+                        "type": "audio_level",
+                        "rms": 0.0,
                         "vad_prob": 0.0,
                         "state": "⚠️ Approaching time limit (10s remaining)..."
                     })
+            else:
+                pre_speech_buffer.append(vad_frame.copy())
+
+                # Pre-speech idle timeout: if no speech is detected for MAX_IDLE_WAIT_SEC,
+                # break and return empty string — prevents infinite hang when user says nothing.
+                idle_elapsed = time.monotonic() - _listen_start_time
+                if idle_elapsed >= MAX_IDLE_WAIT_SEC:
+                    print(
+                        f"[Listener] No speech detected in {MAX_IDLE_WAIT_SEC:.0f}s idle window. "
+                        f"Returning empty transcript.",
+                        flush=True
+                    )
+                    if ui_callback:
+                        ui_callback({
+                            "type": "audio_level",
+                            "rms": 0.0,
+                            "vad_prob": 0.0,
+                            "state": "⏱️ No response detected — moving on..."
+                        })
+                    break
+
 
             # Break loop when silence threshold is reached after speech (and minimum speech duration met), or hard timeout
             if has_spoken:
@@ -641,6 +686,50 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                             )
                             continue
 
+                    # ── Speaker Verification Gate ──
+                    # Runs ONCE per completed utterance (NOT per VAD frame).
+                    # Rejects foreign voices BEFORE sending audio to Whisper STT.
+                    if speaker_verifier is not None and audio_buffer:
+                        sv_audio = np.concatenate(audio_buffer)
+                        sv_duration = len(sv_audio) / 16000
+
+                        if speaker_verifier.is_enrolled:
+                            is_candidate, sv_score = speaker_verifier.verify(sv_audio)
+                            if not is_candidate:
+                                print(
+                                    f"[SV] ❌ Rejected foreign voice "
+                                    f"(score={sv_score:.3f} < {speaker_verifier.ACCEPT_THRESHOLD}). "
+                                    f"Ignoring {sv_duration:.1f}s audio.",
+                                    flush=True,
+                                )
+                                if ui_callback:
+                                    ui_callback({
+                                        "type": "audio_level",
+                                        "rms": 0.0,
+                                        "vad_prob": 0.0,
+                                        "state": f"⚠️ Voice didn't match profile (score: {sv_score:.2f}) - please speak clearly"
+                                    })
+                                # Reset state and continue listening — do NOT transcribe
+                                audio_buffer.clear()
+                                has_spoken = False
+                                has_extended_silence = False
+                                speech_start_candidate_frames = 0
+                                silence_frames_counter = 0
+                                total_frames_counter = 0
+                                _cached_interim_transcript = None
+                                continue  # Back to top of while loop
+                            else:
+                                print(f"[SV] ✅ Candidate voice confirmed (score={sv_score:.3f})", flush=True)
+                        else:
+                            # Auto-enroll from first utterance >= 2 seconds (ICEBREAKER turn)
+                            if sv_duration >= 2.0:
+                                speaker_verifier.enroll(sv_audio)
+                                print(
+                                    f"[SV] 🎤 Auto-enrolled candidate voice from "
+                                    f"{sv_duration:.1f}s first utterance.",
+                                    flush=True,
+                                )
+
                     print(f"[Silence Detected ({silence_frames_counter * 32}ms). Processing speech...]")
                     if ui_callback:
                         ui_callback({
@@ -652,6 +741,7 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                     Benchmark.start("ttfa")
                     Benchmark.start("stt")
                     break
+
 
     finally:
         stop_producer.set()
