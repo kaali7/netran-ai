@@ -26,6 +26,18 @@ import os
 import sys
 import warnings
 import collections
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Force offline mode for Hugging Face / Transformers before imports
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+# Load backend root .env file
+env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)
@@ -102,6 +114,154 @@ def is_valid_transcript(text: str) -> bool:
     return True
 
 
+def _calibrate_noise_floor(mic_device, num_frames: int = 30):
+    """
+    Samples `num_frames` × 32ms (~960ms) of mic audio with NO speech expected.
+    Returns a tuple:
+        (ambient_floor: float, noise_spectrum: np.ndarray | None)
+
+    ambient_floor  — 90th-percentile RMS used to offset VAD+RMS thresholds.
+    noise_spectrum — mean power spectrum (257 bins @ 16kHz) used for per-frame
+                     spectral subtraction noise cancellation. None on failure.
+
+    Always opens the stream at the device's NATIVE sample rate and applies
+    Python-side resampling. Requesting 16kHz directly on a 44100Hz MME device
+    causes Windows KMixer to resample internally, producing aliased audio that
+    has energy but no speech spectral content (VAD gives prob=0.001 always).
+    """
+    # --- .env override ---
+    override_str = os.getenv("NOISE_FLOOR_OVERRIDE", "").strip()
+    if override_str:
+        try:
+            override_val = float(override_str)
+            if override_val > 0.0:
+                print(f"[Calibration] NOISE_FLOOR_OVERRIDE active: {override_val:.5f}", flush=True)
+                return override_val, None
+        except ValueError:
+            pass
+
+    RATE  = 16000
+    CHUNK = 512
+    rms_samples  = []
+    clean_frames = []   # 16kHz resampled frames — used to build noise spectrum
+
+    try:
+        # Query device native rate — always open at native rate for clean audio
+        try:
+            dev_info = sd.query_devices(mic_device) if mic_device is not None else sd.query_devices(sd.default.device[0])
+            _native_rate = int(dev_info.get("default_samplerate", RATE))
+            if _native_rate <= 0:
+                _native_rate = RATE
+        except Exception:
+            _native_rate = RATE
+
+        _chunk_native = int(CHUNK * _native_rate / RATE)
+        stream = sd.InputStream(
+            samplerate=_native_rate,
+            channels=1,
+            dtype="float32",
+            blocksize=_chunk_native,
+            device=mic_device,
+        )
+        stream.start()
+        print(f"[Calibration] Sampling noise profile ({num_frames * 32}ms at {_native_rate}Hz)...", flush=True)
+        _ratecv_state = None
+        for _ in range(num_frames):
+            try:
+                data, _ = stream.read(_chunk_native)
+                frame = data.flatten()
+                # Resample to 16kHz
+                if _native_rate == 48000 and RATE == 16000:
+                    frame = frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
+                elif _native_rate != RATE:
+                    pcm16 = (frame * 32767.0).astype(np.int16)
+                    resampled_pcm, _ratecv_state = audioop.ratecv(
+                        pcm16.tobytes(), 2, 1, _native_rate, RATE, _ratecv_state
+                    )
+                    frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
+                # Trim/pad to exactly CHUNK samples for spectrum computation
+                if len(frame) >= CHUNK:
+                    frame = frame[:CHUNK]
+                else:
+                    frame = np.pad(frame, (0, CHUNK - len(frame)), mode='constant')
+                rms_samples.append(float(np.sqrt(np.mean(frame ** 2))))
+                clean_frames.append(frame)
+            except Exception:
+                break
+        stream.stop()
+        stream.close()
+    except Exception as exc:
+        print(f"[Calibration] Could not open stream ({exc}). Using default floor 0.008", flush=True)
+        return 0.008, None
+
+    if not rms_samples:
+        return 0.008, None
+
+    floor = float(np.percentile(rms_samples, 90))
+    floor = min(floor, 0.040)   # Hard cap — never let ambient swamp all speech
+    floor = max(floor, 0.002)   # Always at least 0.002 (below true silence is nonsense)
+    print(
+        f"[Calibration] Noise floor = {floor:.5f}  "
+        f"(min={min(rms_samples):.5f}  max={max(rms_samples):.5f}  p90={floor:.5f})",
+        flush=True,
+    )
+
+    # Build noise power spectrum from the collected clean silence frames
+    noise_spectrum = None
+    if clean_frames:
+        n_bins = CHUNK // 2 + 1
+        accum = np.zeros(n_bins, dtype=np.float64)
+        for f in clean_frames:
+            accum += np.abs(np.fft.rfft(f, n=CHUNK)) ** 2
+        noise_spectrum = (accum / len(clean_frames)).astype(np.float32)
+        print(f"[Calibration] Noise spectrum captured ({len(clean_frames)} frames, {n_bins} bins)", flush=True)
+
+    return floor, noise_spectrum
+
+
+def _spectral_subtract(frame: np.ndarray, noise_power: np.ndarray,
+                       oversubtraction: float = 2.0, floor: float = 0.002) -> np.ndarray:
+    """
+    Spectral Subtraction Noise Cancellation.
+
+    Suppresses stationary background noise (HVAC, fans, crowd murmur) from a
+    single 32ms frame by estimating the noise spectrum during calibration and
+    subtracting it per-frequency-bin.
+
+    Args:
+        frame          : float32 audio at 16kHz, exactly 512 samples
+        noise_power    : mean noise power spectrum (257 bins) from calibration
+        oversubtraction: aggressiveness factor (>1.0 = more suppression).
+                         2.0 is recommended for noisy college environments.
+        floor          : minimum fraction of original power kept per bin.
+                         Prevents complete silence in any bin (avoids musical noise).
+
+    Returns:
+        Noise-reduced float32 frame, same length as input.
+    """
+    n = len(frame)
+    spectrum = np.fft.rfft(frame, n=n)
+    magnitude = np.abs(spectrum)
+    phase = np.angle(spectrum)
+
+    signal_power = magnitude ** 2
+    # Overestimate noise so suppression is aggressive for loud room noise
+    noise_est = oversubtraction * noise_power[:len(magnitude)]
+    cleaned_power = signal_power - noise_est
+    # Spectral floor: keep at least `floor` fraction of original power
+    # to prevent musical noise artefacts ("birdsong in the background").
+    spectral_floor = floor * signal_power
+    cleaned_power = np.maximum(cleaned_power, spectral_floor)
+
+    cleaned_magnitude = np.sqrt(np.maximum(cleaned_power, 0.0)).astype(np.float32)
+
+    # Reconstruct time-domain signal with original phase (phase NOT distorted)
+    cleaned_spectrum = cleaned_magnitude * np.exp(1j * phase)
+    cleaned = np.fft.irfft(cleaned_spectrum, n=n).astype(np.float32)
+    return cleaned
+
+
+
 def _transcribe_audio_buffer(audio_buffer, whisper_prompt=""):
     if not audio_buffer:
         return ""
@@ -153,49 +313,52 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
         native_rate = 16000
     CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
-    # Robust microphone initialization with retries (fixes race condition with BargeInWatcher)
+    # --- Robust microphone stream initialization ---
+    # KEY FIX: Always query the device's NATIVE sample rate first, then open the stream
+    # at that native rate and apply Python-side resampling.
+    #
+    # Root cause of VAD prob=0.001 on college Realtek laptops:
+    #   Method B (requesting 16kHz directly from a 44100Hz MME device) SUCCEEDS via
+    #   Windows KMixer, but KMixer's 44100->16kHz resampling produces aliased audio
+    #   with noise energy but no speech spectral content. Silero VAD gave prob=0.001
+    #   permanently even during loud speech, causing the listener to never trigger.
+    #
+    # By opening at native rate + Python-side resampling (boxcar for 48kHz,
+    # audioop.ratecv for 44kHz), we guarantee clean 16kHz audio for Silero VAD
+    # on any device, regardless of Windows host API or KMixer behavior.
+
+    device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
+    device_native_rate = int(device_info.get("default_samplerate", RATE))
+    if device_native_rate <= 0:
+        device_native_rate = RATE
+
     stream = None
-    native_rate = RATE
-    CHUNK_NATIVE = CHUNK
-    
+    native_rate = device_native_rate
+    CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+
     for attempt in range(3):
         try:
-            # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
             stream = sd.InputStream(
-                samplerate=RATE,
+                samplerate=native_rate,
                 channels=CHANNELS,
                 dtype='float32',
-                blocksize=CHUNK,
+                blocksize=CHUNK_NATIVE,
                 device=MIC_DEVICE,
             )
-            native_rate = RATE
-            CHUNK_NATIVE = CHUNK
             break
-        except sd.PortAudioError:
-            try:
-                # Fallback Method A: WASAPI strictly requires native rate
-                device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
-                native_rate = int(device_info.get("default_samplerate", 16000))
-                if native_rate <= 0:
-                    native_rate = 16000
-                CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
-                
-                stream = sd.InputStream(
-                    samplerate=native_rate,
-                    channels=CHANNELS,
-                    dtype='float32',
-                    blocksize=CHUNK_NATIVE,
-                    device=MIC_DEVICE,
-                )
-                break
-            except Exception as e:
-                if attempt < 2:
-                    print(f"[VAD] Mic locked, retrying... ({e})")
-                    time.sleep(0.3)
-                else:
-                    raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
-                    
+        except Exception as e:
+            if attempt < 2:
+                print(f"[VAD] Mic locked, retrying... ({e})")
+                time.sleep(0.3)
+            else:
+                raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
+
     stream.start()
+    print(
+        f"[Listener] Mic stream opened: device={MIC_DEVICE}, "
+        f"native_rate={native_rate}Hz, chunk={CHUNK_NATIVE} samples",
+        flush=True
+    )
 
     audio_queue = queue.Queue()
     stop_producer = threading.Event()
@@ -228,18 +391,36 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     else:
         print("\n[Listening...] Speak into your microphone now.", flush=True)
 
+    # --- Adaptive noise floor calibration + noise spectrum capture ---
+    # Measures ambient RMS AND records the noise power spectrum in one 960ms window
+    # BEFORE opening the main listener loop.
+    # ambient_floor  — offsets all VAD+RMS thresholds
+    # noise_spectrum — per-bin power used for spectral subtraction noise cancellation
+    ambient_floor, noise_spectrum = _calibrate_noise_floor(MIC_DEVICE)
+    # Speech START: require audio clearly above ambient (2.5× floor) AND VAD confirmation.
+    _start_rms_gate    = max(ambient_floor * 2.5, 0.012)
+    # Speech CONTINUATION: silence counter only increments below 1.8× ambient.
+    _continue_rms_gate = max(ambient_floor * 1.8, 0.010)
+    print(
+        f"[Calibration] Gates → start_rms={_start_rms_gate:.5f}  "
+        f"continue_rms={_continue_rms_gate:.5f}  "
+        f"noise_cancel={'ON' if noise_spectrum is not None else 'OFF'}",
+        flush=True,
+    )
+
     audio_buffer = []
+    _cached_interim_transcript = None
     pre_speech_buffer = collections.deque(maxlen=15)  # 480ms ring buffer
     has_spoken = False
     has_extended_silence = False
     speech_start_candidate_frames = 0
     silence_frames_counter = 0
     _diag_frame_counter = 0   # Periodic VAD diagnostic counter
-    
+
     # Defaults if state isn't provided (for standalone tests) — 800ms default pause tolerance (25 frames * 32ms)
     max_silence_frames = 25 if state is None else max(8, state.pause_tolerance_ms // 32)
     MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
-    total_frames_counter = 0 
+    total_frames_counter = 0
     MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms)
 
     if state:
@@ -249,6 +430,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
     # Initialize VAD state tensors (Silero VAD v3 ONNX: only state is required, no context)
     vad_state = np.zeros((2, 1, 128), dtype=np.float32)
     sr_scalar = np.array(RATE, dtype=np.int64)
+    _ratecv_state = None   # Persistent audioop.ratecv interpolation state across chunks
+
 
     try:
         while True:
@@ -272,9 +455,13 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             if native_rate == 48000 and RATE == 16000:
                 original_frame = original_frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
             elif native_rate != RATE:
-                # Basic fallback
+                # Use audioop.ratecv with persistent state for smooth inter-chunk interpolation.
+                # (Previously passed None every frame — discarding state caused interpolation
+                # artifacts at chunk boundaries.)
                 pcm16 = (original_frame * 32767.0).astype(np.int16)
-                resampled_pcm, _ = audioop.ratecv(pcm16.tobytes(), 2, 1, native_rate, RATE, None)
+                resampled_pcm, _ratecv_state = audioop.ratecv(
+                    pcm16.tobytes(), 2, 1, native_rate, RATE, _ratecv_state
+                )
                 original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
             # 2. Process the raw frame for VAD
@@ -282,11 +469,21 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             if len(vad_frame) < CHUNK:
                 vad_frame = np.pad(vad_frame, (0, CHUNK - len(vad_frame)), mode='edge')
 
+            # --- Spectral Subtraction Noise Cancellation ---
+            # Apply per-frame spectral subtraction using the noise power spectrum
+            # captured during calibration. This removes stationary background noise
+            # (college HVAC, fans, crowd murmur) from the VAD input so Silero VAD
+            # can correctly detect speech even in high-noise environments.
+            # NOTE: applied ONLY to the VAD input (vad_frame); proc_frame for WAV
+            # recording uses the original (pre-cancellation) signal.
+            if noise_spectrum is not None:
+                vad_frame = _spectral_subtract(vad_frame, noise_spectrum)
+
             frame_peak = float(np.max(np.abs(vad_frame)))
 
             # Apply a constant volume boost for the output recording (Whisper + WAV)
             # DO NOT apply dynamic per-chunk auto-gain before Silero VAD, as it destroys RNN temporal continuity!
-            proc_frame = vad_frame * 3.0
+            proc_frame = original_frame[:CHUNK] * 3.0 if len(original_frame) >= CHUNK else vad_frame * 3.0
             proc_frame = np.clip(proc_frame, -1.0, 1.0)
 
             if mic_writer:
@@ -315,7 +512,8 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             # we fire the interrupt (with cooldown) and FALL THROUGH to accumulate the
             # barge-in audio so the candidate's interrupted speech is captured for STT.
             if state and state.is_agent_speaking.is_set():
-                if speech_prob > 0.65 or rms >= 0.015:
+                # Avoid false barge-in triggers on static/noise by requiring a minimum VAD speech probability
+                if speech_prob > 0.50 or (speech_prob > 0.25 and rms >= 0.015):
                     now = time.monotonic()
                     cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
                     last_t = getattr(state, 'last_interrupt_time', 0.0)
@@ -351,23 +549,30 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
             if _diag_frame_counter % 60 == 0 and not has_spoken:
                 print(
                     f"[VAD Diag] prob={speech_prob:.3f}  rms={rms:.4f}  "
-                    f"(need: prob>=0.20+rms>=0.008 OR prob>=0.35 OR rms>=0.015 to trigger)",
+                    f"(gates: prob>=0.30+rms>={_start_rms_gate:.4f} OR prob>=0.50)",
                     flush=True
                 )
 
             if not has_spoken:
-                # Lowered thresholds for laptop/built-in mic compatibility:
-                # Combined gate: VAD prob >= 0.20 AND RMS >= 0.008  (was 0.35 + 0.015)
-                # Strong gate:   VAD prob >= 0.35                   (was 0.50)
-                # Rationale: the BargeInWatcher threshold is already at 0.50 for barge-in;
-                # for initial speech start we use softer criteria since there's no
-                # concurrent agent audio to filter out. The RMS floor of 0.008 is still
-                # sufficient to reject pure background static near the 0.0005 noise gate.
-                # FALLBACK: If VAD fails due to corrupted audio but RMS is consistently high (>= 0.015).
-                if (speech_prob >= 0.20 and rms >= 0.008) or speech_prob >= 0.35 or rms >= 0.015:
+                # --- Adaptive Speech START Gate ---
+                # Bug fix: the original gate had a bare `rms >= 0.015` condition with no VAD floor.
+                # In noisy rooms (college AC/crowd), ambient RMS easily exceeds 0.015,
+                # causing the listener to perpetually trigger on background noise.
+                #
+                # Fix: Both conditions now require a VAD probability confirmation, AND the
+                # RMS floor is computed as 2.5× the calibrated ambient floor so the gate
+                # self-adapts to the current room noise level instead of being hardcoded.
+                #
+                # Combined gate: VAD prob >= 0.30 AND rms > _start_rms_gate (adaptive)
+                # Strong gate:   VAD prob >= 0.50 alone (confident speech, no RMS needed)
+                if (speech_prob >= 0.30 and rms >= _start_rms_gate) or speech_prob >= 0.50:
                     speech_start_candidate_frames += 1
                     if speech_start_candidate_frames >= 2:   # 2 frames = ~64ms debounce
-                        print(f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f})", flush=True)
+                        print(
+                            f"[Speech Detected!] (VAD prob={speech_prob:.2f}, RMS={rms:.4f}, "
+                            f"gate={_start_rms_gate:.4f}, floor={ambient_floor:.5f})",
+                            flush=True
+                        )
                         has_spoken = True
                         audio_buffer.extend(pre_speech_buffer)
                         if state:
@@ -376,8 +581,14 @@ def listen_and_transcribe(ui_callback=None, mic_writer=None, state: SessionState
                 else:
                     speech_start_candidate_frames = 0
             else:
-                # Forgiving speech continuation threshold
-                if speech_prob > 0.15 or rms > 0.008:
+                # --- Adaptive Speech CONTINUATION Gate ---
+                # Bug fix: the original `rms > 0.008` continuation check was permanently
+                # satisfied by college ambient noise, preventing silence_frames_counter
+                # from ever climbing high enough to break the listen loop.
+                #
+                # Fix: continuation threshold is now 1.8× calibrated ambient floor.
+                # Only resets silence counter when audio is meaningfully above ambient.
+                if speech_prob > 0.20 or rms > _continue_rms_gate:
                     silence_frames_counter = 0
                 else:
                     silence_frames_counter += 1
@@ -803,46 +1014,26 @@ class BargeInWatcher:
         vad_state_local = np.zeros((2, 1, 128), dtype=np.float32)
         sr_scalar_local = np.array(RATE, dtype=np.int64)
 
+        # --- Robust BargeInWatcher stream init (native rate, Python-side resampling) ---
+        # Same fix as listen_and_transcribe: always open at device native rate to avoid
+        # KMixer resampling artifacts that cause VAD prob=0.001 on 44100Hz MME devices.
         device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
-        native_rate = int(device_info.get("default_samplerate", 16000))
+        native_rate = int(device_info.get("default_samplerate", RATE))
         if native_rate <= 0:
-            native_rate = 16000
+            native_rate = RATE
         CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
 
-        # Open an independent sounddevice input stream for concurrent mic monitoring
-        # Robust microphone initialization with retries (fixes race condition with main listener)
         stream = None
         for attempt in range(3):
             try:
-                # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
                 stream = sd.InputStream(
-                    samplerate=RATE,
+                    samplerate=native_rate,
                     channels=1,
                     dtype="float32",
-                    blocksize=CHUNK,
+                    blocksize=CHUNK_NATIVE,
                     device=MIC_DEVICE,
                 )
-                native_rate = RATE
-                CHUNK_NATIVE = CHUNK
                 break
-            except sd.PortAudioError:
-                try:
-                    # Fallback Method A: WASAPI strictly requires native rate
-                    stream = sd.InputStream(
-                        samplerate=native_rate,
-                        channels=1,
-                        dtype="float32",
-                        blocksize=CHUNK_NATIVE,
-                        device=MIC_DEVICE,
-                    )
-                    break
-                except Exception as exc:
-                    if attempt < 2:
-                        print(f"[BargeInWatcher] Mic locked, retrying... ({exc})", flush=True)
-                        _time.sleep(0.3)
-                    else:
-                        print(f"[BargeInWatcher] Could not open mic stream after retries: {exc}", flush=True)
-                        return
             except Exception as exc:
                 if attempt < 2:
                     print(f"[BargeInWatcher] Mic locked, retrying... ({exc})", flush=True)
@@ -892,7 +1083,8 @@ class BargeInWatcher:
                 # Barge-in detected: speech above threshold
                 # Use a combined probability and raw RMS check to support quiet laptop mics
                 rms = np.sqrt(np.mean(frame ** 2))
-                if (speech_prob > 0.25 and rms > 0.003) or speech_prob > 0.35 or rms > 0.01:
+                # Avoid false barge-in triggers on static/noise by requiring a minimum VAD speech probability
+                if (speech_prob > 0.25 and rms > 0.005) or speech_prob > 0.40:
                     now = _time.monotonic()
                     cooldown = getattr(self.state, "interrupt_cooldown_sec", 0.3)
                     last_t = getattr(self.state, "last_interrupt_time", 0.0)

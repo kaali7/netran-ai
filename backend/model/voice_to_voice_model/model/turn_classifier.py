@@ -17,6 +17,30 @@ THINKING_FILLER_WORDS = {
 }
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
+_OLLAMA_TAGS_URL = "http://localhost:11434/api/tags"
+
+
+def _probe_ollama_available(timeout: float = 0.10) -> bool:
+    """
+    Quick liveness check: GET /api/tags with a 100ms timeout.
+    Returns True if Ollama is running and reachable, False otherwise.
+    Called ONCE at module import so Tier 2 is skipped for the entire session
+    when Ollama is not available (e.g. at college without a local GPU).
+    """
+    try:
+        r = requests.get(_OLLAMA_TAGS_URL, timeout=timeout)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+OLLAMA_AVAILABLE: bool = _probe_ollama_available()
+if not OLLAMA_AVAILABLE:
+    print(
+        "[TurnClassifier] Ollama not reachable — Tier 2 LLM classification DISABLED. "
+        "Tier 1 regex only; fallback defaults to COMPLETE (no 2.3s extension).",
+        flush=True,
+    )
 
 
 def check_thought_completion(transcript: str) -> str:
@@ -47,6 +71,12 @@ def check_thought_completion(transcript: str) -> str:
     #     return "COMPLETE"
 
     # --- TIER 2: QWEN 2.5:1.5B PROBE (~100ms) ---
+    # Skipped when OLLAMA_AVAILABLE is False (no local LLM running at this location).
+    # Fallback returns COMPLETE in that case — safe choice when we can't classify;
+    # avoids the blanket 2.3s pause extension that occurred when Ollama timed out.
+    if not OLLAMA_AVAILABLE:
+        return "COMPLETE"
+
     prompt = (
         "Task: Determine if the candidate's sentence is complete or interrupted mid-thought.\n"
         f'Transcript: "{clean_text}"\n'
@@ -74,8 +104,10 @@ def check_thought_completion(transcript: str) -> str:
                 return "INCOMPLETE"
             return "COMPLETE"
     except Exception:
-        # Fallback safety if 1.5B model is busy, not pulled, or times out
-        return "INCOMPLETE"  # Safer to wait and give candidate more time
+        # Fallback: Ollama WAS available at startup but timed out on this call.
+        # Return COMPLETE (do not extend pause) — avoids stalling for 2.3s every turn
+        # in environments where Ollama is slow or intermittently overloaded.
+        return "COMPLETE"
 
     # Default fallback if uncertain
 

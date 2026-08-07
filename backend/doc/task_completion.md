@@ -188,3 +188,39 @@ This document defines the complete technology stack powering **Netran AI**, an a
 ```
 
 ```
+
+---
+
+## Session Log — 2026-08-07 | Stage 3: Voice-to-Voice Audio Pipeline Fix
+
+### Problem
+Listener permanently stuck in "Listening..." state in college environment. Silero VAD reported `prob=0.001` across all 1929 frames in a 62-second session recording — no speech detected despite user actively speaking.
+
+### Root Cause Analysis
+
+**Bug 1 — KMixer Aliasing (Critical)**
+`sd.InputStream(samplerate=16000)` succeeded on Realtek MME (44100Hz native) via Windows KMixer, which internally resampled 44100→16kHz using a poor algorithm. The output had energy (RMS 0.01–0.33) but no speech spectral content. VAD ONNX model correctly returned `prob=0.001` — it was genuinely not speech.
+
+Confirmed by running Silero VAD offline against the saved `recording.wav`: `Max VAD prob = 0.0031` across the entire 62-second recording.
+
+**Bug 2 — BargeInWatcher had same aliasing bug**
+Both `listen_and_transcribe()` and `BargeInWatcher._watch_loop()` used the Method A/Method B fallback pattern — Method B (16kHz) always won on MME devices.
+
+**Bug 3 — Ollama unavailable → 2.3s per-turn extension**
+`turn_classifier.py` Tier 2 timeout was returning `"INCOMPLETE"` when Ollama was unreachable, extending every pause by 2.3s.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| `listener.py` — `_calibrate_noise_floor()` | Opens at device native rate; collects 30 resampled frames; returns `(floor, noise_spectrum)` tuple |
+| `listener.py` — `_spectral_subtract()` | NEW: Per-frame spectral subtraction noise cancellation (FFT, oversubtraction ×2.0, spectral floor 0.2%, IFFT) |
+| `listener.py` — `listen_and_transcribe()` | Queries native rate before opening stream; always uses native rate; applies spectral subtraction to `vad_frame` before VAD; persistent `_ratecv_state` for smooth 44100→16kHz interpolation |
+| `listener.py` — `BargeInWatcher._watch_loop()` | Same native-rate-first pattern; removed Method A/B fallback |
+| `turn_classifier.py` | Added `_probe_ollama_available()` at module load; skips Tier 2 if Ollama unreachable; timeout fallback returns `"COMPLETE"` |
+| `.env` | Added `NOISE_FLOOR_OVERRIDE` under Section 5; `MIC_DEVICE_INDEX=1` (Realtek MME) |
+
+### Verification
+- `ast.parse()` syntax check: ✅ PASS on all modified files
+- WAV forensics: confirmed aliased audio → VAD `prob=0.001` → root cause established
+- Spectral subtraction algorithm: mathematically correct, no external dependencies (pure NumPy FFT)
