@@ -24,6 +24,20 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.nn.modules.rnn")
 warnings.filterwarnings("ignore", category=FutureWarning, module="torch.nn.utils.weight_norm")
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Force offline mode for Hugging Face / Transformers before imports
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+# Load backend root .env file
+env_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+
 import numpy as np
 import sounddevice as sd
 from kokoro import KPipeline
@@ -112,6 +126,7 @@ class PersistentSpeaker:
             frames_per_buffer=512
         )
         self.is_running = True
+        self.is_playing = False
         self.worker_thread = threading.Thread(target=self._play_loop, daemon=True)
         self.worker_thread.start()
 
@@ -127,6 +142,7 @@ class PersistentSpeaker:
             try:
                 chunk = self.audio_queue.get(timeout=0.02)
                 if chunk is not None:
+                    self.is_playing = True
                     chunk_bytes = chunk if isinstance(chunk, (bytes, bytearray)) else chunk.tobytes()
                     # Write in small sub-chunks, checking interrupt between each
                     bytes_per_sample = 4  # float32 = 4 bytes
@@ -138,9 +154,12 @@ class PersistentSpeaker:
                         if sub:
                             self.stream.write(sub)
                     self.audio_queue.task_done()
+                    self.is_playing = False
             except queue.Empty:
+                self.is_playing = False
                 continue
             except Exception as e:
+                self.is_playing = False
                 print(f"[PersistentSpeaker Consumer Error] {e}", flush=True)
 
     def _drain_queue(self):
@@ -222,6 +241,12 @@ class PersistentSpeaker:
 
                 audio_data = audio_array.astype(np.float32)
 
+                # Amplify Kokoro output volume (default peak is ~0.45, making it very quiet)
+                import os
+                boost_factor = float(os.getenv("SPEAKER_VOLUME_BOOST", "2.0"))
+                if boost_factor != 1.0:
+                    audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0)
+
                 # Record true Time-To-First-Audio (TTFA) on first synthesized audio chunk
                 if Benchmark.get_start_time("ttfa"):
                     ttfa_ms = Benchmark.end("ttfa")
@@ -290,7 +315,15 @@ def speak_text(text_to_say, voice_preset="af_bella"):
                 continue
             if hasattr(audio_array, "cpu"):
                 audio_array = audio_array.cpu().numpy()
-            sd.play(audio_array, samplerate=24000)
+            
+            # Apply volume boost
+            import os
+            boost_factor = float(os.getenv("SPEAKER_VOLUME_BOOST", "2.0"))
+            audio_data = audio_array.astype(np.float32)
+            if boost_factor != 1.0:
+                audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0)
+
+            sd.play(audio_data, samplerate=24000)
             sd.wait()
 
 
@@ -303,3 +336,40 @@ def force_stop_all():
             sd.stop()
         except Exception:
             pass
+
+
+if __name__ == "__main__":
+    import time
+    print("===================================================================", flush=True)
+    print("             NETRAN AI - SPEAKER COMPONENT DIAGNOSTIC              ", flush=True)
+    print("===================================================================\n", flush=True)
+    print("Loading Kokoro-82M TTS model and initializing audio stream...", flush=True)
+    
+    state = SessionState()
+    init_speaker_compat(state)
+    
+    test_phrase = (
+        "Hello! This is a test of the Netran A.I. text-to-speech engine using Kokoro eighty-two M. "
+        "The volume boost is active, and the audio stream is running normally."
+    )
+    
+    print(f"\n[TTS PLAYBACK START] Playing test utterance:\n  \"{test_phrase}\"\n", flush=True)
+    
+    # Track time taken for diagnostic report
+    start_time = time.time()
+    speak_text(test_phrase)
+    
+    # Wait for the queue to drain and audio to finish playing
+    if _default_player:
+        while not _default_player.audio_queue.empty() or _default_player.is_playing:
+            time.sleep(0.1)
+        # Give a small buffer for the audio device to output final frames
+        time.sleep(1.0)
+        
+    duration = time.time() - start_time
+    print(f"\n[TTS PLAYBACK END] Playback completed in {duration:.1f} seconds.", flush=True)
+    
+    print("Releasing audio resources...", flush=True)
+    if _default_player:
+        _default_player.close()
+    print("Speaker diagnostic complete.", flush=True)
