@@ -40,8 +40,20 @@ def download_hf_models():
         
     for model in models:
         print(f"\n--- Fetching {model} ---")
+        
+        # Check if already cached
+        folder_name = "models--" + model.replace("/", "--")
+        cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+        model_path = os.path.join(cache_dir, folder_name)
+        
+        if os.path.exists(model_path) and os.path.isdir(model_path):
+            print(f"Model '{model}' is already cached. Skipping download.")
+            continue
+            
         try:
-            subprocess.run([hf_cli, "download", model], check=True)
+            env = os.environ.copy()
+            env["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+            subprocess.run([hf_cli, "download", model], env=env, check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error downloading {model}: {e}")
         except Exception as e:

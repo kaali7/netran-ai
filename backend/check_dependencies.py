@@ -87,7 +87,8 @@ def main():
         "torchaudio": "torchaudio",
         "pypdf": "pypdf",
         "python-docx": "docx",
-        "tavily-python": "tavily"
+        "tavily-python": "tavily",
+        "huggingface_hub":"huggingface_hub"
     }
     
     all_pkgs_ok = True
@@ -121,10 +122,20 @@ def main():
     print("\n========================================")
     if all_pkgs_ok and ollama_ok and models_ok:
         print("[SUCCESS] All crucial dependencies appear to be met!")
-        print("          If you face issues with models (e.g. Silero/Faster-Whisper), they will auto-download on first run.")
     else:
-        print("[FAILED]  Some dependencies are missing. Please review the errors above.")
-        print("          Use setup options in run.bat to install python packages.")
+        print("[FAILED]  Some dependencies are missing.")
+        if not all_pkgs_ok:
+            print("          -> Use setup options in run.bat to install python packages.")
+        if not ollama_ok:
+            print("          -> Ensure Ollama is running and models are pulled.")
+        
+    if not models_ok:
+        print("\n[AUTO-DOWNLOAD] Triggering Model Pre-Downloader for missing Hugging Face / VAD models...")
+        download_script = os.path.join("model", "voice_to_voice_model", "model", "download_vad.py")
+        if os.path.exists(download_script):
+            subprocess.run([sys.executable, download_script])
+        else:
+            print(f"[ERROR] Could not find {download_script}")
 
 if __name__ == "__main__":
     main()

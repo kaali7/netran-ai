@@ -34,7 +34,7 @@ echo  11. Test Speaker Verifier (speaker_verifier.py)
 echo.
 echo   --- SETUP TOOLS ---
 echo  12. Install / Update Backend Dependencies (requirements.txt)
-echo  13. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  13. Download / Verify Silero VAD Model Weights or Other HuggingFace Models (download_vad.py)
 echo  14. Check System Requirements ^& Dependencies (check_dependencies.py)
 echo.
 echo   --- MAINTENANCE ^& DATA CLEANING ---

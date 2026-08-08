@@ -13,9 +13,10 @@ backend/
 ├── .agents/                   # AI Agent custom instructions and tool skills
 │   ├── AGENTS.md              # AI Agent Workspace Rules
 │   └── skills/                # AI capability extensions (gemini-interactions-api)
+├── check_dependencies.py      # Environment, Ollama, HuggingFace model & API key checker
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
-├── run.bat                    # Interactive Windows batch launcher (12-option menu)
+├── run.bat                    # Interactive Windows batch launcher (20-option menu)
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
 ├── skills-lock.json           # Locked agent skill registry
 ├── doc/                       # System-wide backend documentation
@@ -138,8 +139,9 @@ backend/
 
 ### 1. `backend/` (Root Directory)
 - **`.env`**: Stores sensitive API credentials (`GEMINI_API_KEY`, `TAVILY_API_KEY`, `OLLAMA_MODEL`).
+- **`check_dependencies.py`**: Automated environment, Ollama model, Hugging Face local cache, and API key verification script.
 - **`requirements.txt`**: Consolidated dependencies file for the entire backend model suite.
-- **`run.bat`**: Interactive Windows Command Prompt launcher providing a 12-choice menu to run individual stage tests or the full workflow app.
+- **`run.bat`**: Interactive Windows Command Prompt launcher providing a 20-choice menu to run individual stage tests, maintenance routines, or the full workflow app.
 - **`scan_code_quality.py`**: Automated audit script ensuring docstring coverage, single requirements.txt usage, and clean directory hygiene.
 
 ### 2. `backend/doc/`
