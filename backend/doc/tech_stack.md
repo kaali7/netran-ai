@@ -92,7 +92,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 
 * **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
-* Speech start/stop detection with dynamic RMS peak auto-gain normalization.
+* Speech start/stop detection with fixed 20x hardware pre-gain scaling to correct low mic volume.
 * High-pass IIR filtering (`alpha=0.995`) to remove DC drift before feeding 16kHz PCM audio to Whisper.
 
 
