@@ -8,7 +8,7 @@ Description: Master class-based Stage4Pipeline orchestrator executing audio slic
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 try:
     from .audio_slicer import slice_audio
@@ -190,7 +190,8 @@ class Stage4Pipeline:
         turn_clips: dict[int, Path],
         resume_text: str = "",
         rubric_text: str = "",
-        session_dir: Path | None = None
+        session_dir: Path | None = None,
+        status_callback: Callable[[int, int, str], None] | None = None
     ) -> tuple[list[AudioBranchOutput], list[TechnicalBranchOutput]]:
         """Runs audio and technical branch evaluations per turn with progressive caching."""
         import time
@@ -206,9 +207,13 @@ class Stage4Pipeline:
                 except Exception:
                     cache_data = {}
 
-        for turn in turns:
-            t_id = turn.get("turn_id", 1)
+        total_turns = len(turns)
+        for idx, turn in enumerate(turns, 1):
+            t_id = turn.get("turn_id", idx)
             t_id_str = str(t_id)
+
+            if status_callback:
+                status_callback(idx, total_turns, f"Evaluating track {idx}/{total_turns} ({turn.get('topic', 'General')})")
 
             # --- CACHE HIT ---
             if t_id_str in cache_data:
@@ -281,7 +286,8 @@ class Stage4Pipeline:
         self,
         session_dir: str | Path,
         model_name: str | None = None,
-        output_dir: str | Path | None = None
+        output_dir: str | Path | None = None,
+        status_callback: Callable[[int, int, str], None] | None = None
     ) -> CandidateReportPayload:
         """
         Main execution method for Stage 4 Report Generation.
@@ -316,7 +322,7 @@ class Stage4Pipeline:
         resume_text, rubric_text = self._load_session_context(session_dir)
 
         audio_outputs, technical_outputs = self._evaluate_turns(
-            evaluator, turns, turn_clips, resume_text, rubric_text, session_dir
+            evaluator, turns, turn_clips, resume_text, rubric_text, session_dir, status_callback
         )
 
         final_report = evaluator.evaluate_combine_branch(

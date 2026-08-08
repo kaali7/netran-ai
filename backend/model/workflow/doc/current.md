@@ -55,13 +55,14 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
 
 ---
 
-## 4. 5-Phase Kivy Desktop GUI Screens
+## 4. 6-Phase Kivy Desktop GUI Screens
 
 1. **`SetupScreen`**: Input screen for candidate metadata, Question Limit Selector (`Fast Testing (5 Questions)` vs `Real-Time Live (15 Questions)`), JD (paste or file upload), resume file upload, and demo data filling.
 2. **`ResearchScreen`**: Live progress bar & scrollable log console displaying Stage 1 market research and rubric synthesis.
 3. **`QuestionScreen`**: Displays generated question cards with topic and difficulty badges.
-4. **`InterviewScreen`**: Live voice interview dashboard featuring active question display card, turn counter (`Turn X / Y`), live status indicator, scrollable candidate transcript box, and emergency stop button.
-5. **`ReportScreen`**: Final evaluation report card displaying Overall Technical Score, Vocal Confidence Score, Hiring Signal badge, Executive Summary, Pillar breakdowns, and **Export Artifacts** button.
+4. **`InterviewScreen`**: Live voice interview dashboard featuring active question display card, turn counter (`Turn X / Y`), live status indicator, scrollable candidate transcript box, and emergency stop/restart buttons.
+5. **`ReportProcessingScreen`**: Intermediate status screen showing live real-time Stage 4 audio track processing, with audio turn logs and progress tracking before the final report is generated.
+6. **`ReportScreen`**: Final evaluation report card displaying Overall Technical Score, Vocal Confidence Score, Hiring Signal badge, Executive Summary, Pillar breakdowns, and **Export Artifacts** button.
 
 ---
 

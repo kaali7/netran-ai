@@ -262,12 +262,25 @@ class PersistentSpeaker:
         except Exception as e:
             print(f"\n[PersistentSpeaker Error: {e!s}]", flush=True)
 
+    def wait_until_done(self, timeout: float = 15.0):
+        """Blocks until all queued audio has finished playing through physical speakers."""
+        start_time = time.monotonic()
+        while (not self.audio_queue.empty() or self.is_playing) and self.is_running:
+            if self.interrupt_event.is_set():
+                break
+            if time.monotonic() - start_time > timeout:
+                break
+            time.sleep(0.02)
+        # Post-playback room acoustic decay buffer (300ms) to ensure mic doesn't capture speaker echo
+        time.sleep(0.3)
+
     def speak_text(self, text_to_say: str, state: SessionState, voice_preset: str = "af_bella"):
         """Maintains backward compatibility for full phrases."""
         self.interrupt_event.clear()
         state.interrupt_event.clear()
         state.is_agent_speaking.set()
         self.speak_clause(text_to_say, state, voice_preset)
+        self.wait_until_done()
         state.is_agent_speaking.clear()
 
     def close(self):

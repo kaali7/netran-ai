@@ -93,7 +93,6 @@ backend/
     │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
 
     │       ├── turn_classifier.py # Case 3 Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Qwen 1.5B)
-    │       ├── volume_diagnostic.py # Hardware microphone volume diagnostic & gain recommendation tool
     │       └── _interview_log.txt # Consolidated session logging file
     │
     ├── reports_model/         # STAGE 4: Post-Session Multimodal Evaluation Engine

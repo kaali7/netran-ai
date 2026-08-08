@@ -557,7 +557,7 @@ class InterviewScreen(Screen):
         self.selected_preset_name = "sample_backend"
 
         self.session_state = SessionState()
-        self.session_state.pause_tolerance_ms = 1500  # 1.5s Baseline Response
+        self.session_state.pause_tolerance_ms = 800  # 0.8s Baseline Response
         self.session_state.selected_voice = "af_bella" # Kokoro Female American Voice
         self.session_state.input_mode = "VAD"          # Auto-VAD
         self.tts_player = None

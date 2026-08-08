@@ -31,6 +31,8 @@ try:
     )
     from model.voice_to_voice_model.model.speaker import speak_text
     from model.voice_to_voice_model.model.session_state import SessionState
+    from model.voice_to_voice_model.model.question_manager import QuestionManager
+    from model.voice_to_voice_model.model.schemas import InterviewQuestionInput
 except ImportError:
     from voice_to_voice_model.model import brain
     from voice_to_voice_model.model.listener import (
@@ -40,6 +42,8 @@ except ImportError:
     from voice_to_voice_model.model.session_logger import SessionLogger
     from voice_to_voice_model.model.speaker import speak_text
     from voice_to_voice_model.model.session_state import SessionState
+    from voice_to_voice_model.model.question_manager import QuestionManager
+    from voice_to_voice_model.model.schemas import InterviewQuestionInput
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,7 @@ class WorkflowVoiceEngine:
         self.stop_event = threading.Event()
         
         self.questions_path = os.path.join(session_dir, "interview_questions.json")
-        self.prompt_path = os.path.join(session_dir, "system_prompt.txt")
+        self.behavior_path = os.path.join(session_dir, "interviewer_behavior.json")
         self.wav_path = os.path.join(session_dir, "continuous_mic_input.wav")
         
         self.question_tree: list[dict[str, Any]] = []
@@ -70,11 +74,12 @@ class WorkflowVoiceEngine:
         else:
             logger.warning(f"Question tree not found at {self.questions_path}")
             
-        if os.path.exists(self.prompt_path):
-            with open(self.prompt_path, "r", encoding="utf-8") as f:
-                self.system_prompt_text = f.read()
+        if os.path.exists(self.behavior_path):
+            with open(self.behavior_path, "r", encoding="utf-8") as f:
+                behavior_data = json.load(f)
+                self.system_prompt_text = behavior_data.get("interviewer_system_prompt", "")
         else:
-            logger.warning(f"System prompt not found at {self.prompt_path}")
+            logger.warning(f"Interviewer behavior not found at {self.behavior_path}")
 
     def inject_question_tree(self, questions: list[dict[str, Any]], system_prompt: str):
         """
@@ -113,41 +118,49 @@ class WorkflowVoiceEngine:
         mic_writer.start()
         
         conversation_history: list[dict[str, str]] = []
-        total_questions = len(self.question_tree) if self.question_tree else max_turns
-        total_turns = min(max_turns, total_questions)
+        
+        # Initialize QuestionManager
+        question_objects = []
+        for q in self.question_tree:
+            try:
+                question_objects.append(InterviewQuestionInput(**q))
+            except Exception as e:
+                logger.error(f"Failed to map question: {e}")
+        
+        qm_qs = question_objects[:max_turns] if max_turns > 0 else question_objects
+        question_manager = QuestionManager(qm_qs)
         
         try:
-            for turn_idx in range(1, total_turns + 1):
-                if self.stop_event.is_set():
-                    logger.info("Interview stopped by user request.")
-                    break
-                    
-                q_item = self.question_tree[turn_idx - 1] if turn_idx <= len(self.question_tree) else {}
-                topic = q_item.get("topic", "Technical Assessment")
-                question_text = q_item.get("question_text", f"Question #{turn_idx}")
+            initial_q = question_manager.get_current_question()
+            if initial_q:
+                import datetime
+                hour = datetime.datetime.now().hour
+                time_greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+                initial_greeting = f"{time_greeting}. I'm Eva, your technical interviewer today. How are you doing?"
                 
-                logger.info(f"--- TURN {turn_idx}/{total_turns}: [{topic}] ---")
+                logger.info(f"--- TURN 0: [ICEBREAKER] ---")
+                if status_callback:
+                    status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
+                    
+                speak_text(initial_greeting)
+                conversation_history.append({"role": "assistant", "content": initial_greeting})
+
+            _dead_mic_retries = 0
+            turn_idx = 0
+            
+            while not self.stop_event.is_set() and not question_manager.is_finished():
+                turn_idx += 1
+                curr_q = question_manager.get_current_question()
+                topic = curr_q.topic if curr_q else "Interview"
                 
-                # Eva speaks the current question from the tree
-                # (UI question box only updates here so it matches what Eva is actually saying)
+                logger.info(f"--- TURN {turn_idx}: [{topic}] ---")
+                
                 if status_callback:
-                    status_callback(turn_idx, "SPEAKING_QUESTION", question_text, "")
-                    
-                if turn_idx == 1:
-                    speak_text(f"Welcome! Let's begin your technical interview. First question: {question_text}")
-                else:
-                    speak_text(question_text)
-                    
-                if self.stop_event.is_set():
-                    break
-                    
-                # Now listening — UI confirms we're waiting for the candidate's answer
-                if status_callback:
-                    status_callback(turn_idx, "LISTENING_CANDIDATE", question_text, "")
+                    status_callback(turn_idx, "LISTENING_CANDIDATE", "", "")
                     
                 audio_start_perf = session_log.elapsed_sec()
-                
                 transcription_result = listen_and_transcribe(state=self.session_state)
+                
                 if isinstance(transcription_result, dict):
                     candidate_transcript = transcription_result.get("text", "").strip()
                     stt_latency = transcription_result.get("latency_ms", 0.0)
@@ -160,38 +173,48 @@ class WorkflowVoiceEngine:
                 audio_end_perf = session_log.elapsed_sec()
                 logger.info(f"Candidate Turn {turn_idx} STT: '{candidate_transcript}'")
                 
-                if status_callback:
-                    status_callback(turn_idx, "PROCESSING_RESPONSE", question_text, candidate_transcript)
+                if not candidate_transcript:
+                    _dead_mic_retries += 1
+                    if _dead_mic_retries >= 3:
+                        logger.warning("Empty transcript 3 times. Stopping.")
+                        self.stop_event.set()
+                        break
+                    continue
+                    
+                _dead_mic_retries = 0
+
+                if "stop interview" in candidate_transcript.lower() or "end interview" in candidate_transcript.lower():
+                    logger.info("Candidate requested to stop the interview.")
+                    speak_text("Alright, stopping the interview. Thank you for your time.")
+                    self.stop_event.set()
+                    break
                 
-                # Build acknowledgment prompt — brain gives a 1-sentence reaction only, NOT another question.
-                # The next question will always come from the tree in the next loop iteration.
-                ack_history = conversation_history.copy()
-                ack_history.append({
-                    "role": "user",
-                    "content": (
-                        f"[Candidate answered Q{turn_idx}: \"{candidate_transcript}\". "
-                        f"Give ONE short acknowledgment sentence (max 15 words). Do NOT ask another question yet.]"
-                    )
-                })
+                if status_callback:
+                    status_callback(turn_idx, "PROCESSING_RESPONSE", "", candidate_transcript)
+                
+                branch_taken = question_manager.evaluate_transcript(candidate_transcript)
+                llm_prompt, target_question = question_manager.format_prompt_context(
+                    branch_taken, candidate_transcript, resume_highlights=None
+                )
+                
+                ack_history = list(conversation_history)
+                ack_history.append({"role": "user", "content": candidate_transcript})
+                ack_history.append({"role": "user", "content": llm_prompt})
                 
                 ttft_start = time.perf_counter()
-                eva_ack = ""
-                
-                for token in brain.generate_eva_response(ack_history):
-                    eva_ack += token
-                    if self.stop_event.is_set():
-                        break
-                        
+                try:
+                    _, eva_response = brain.generate_eva_response(ack_history)
+                except Exception:
+                    eva_response = "Got it. Let's move on. " + (target_question or "")
                 ttft_ms = (time.perf_counter() - ttft_start) * 1000.0
                 
-                # Store real candidate answer in full history
                 conversation_history.append({"role": "user", "content": candidate_transcript})
-                conversation_history.append({"role": "assistant", "content": eva_ack})
+                conversation_history.append({"role": "assistant", "content": eva_response})
                 
                 session_log.log_turn(
                     turn_id=turn_idx,
                     topic=topic,
-                    question_text=question_text,
+                    question_text=target_question or "N/A",
                     candidate_transcript=candidate_transcript,
                     audio_start_sec=audio_start_perf,
                     audio_end_sec=audio_end_perf,
@@ -200,18 +223,12 @@ class WorkflowVoiceEngine:
                     ttft_ms=ttft_ms
                 )
                 
-                # Show transcript update with candidate answer + Eva's short ack
                 if status_callback:
-                    status_callback(turn_idx, "EVA_RESPONDING", question_text, f"{candidate_transcript}\n\n[Eva]: {eva_ack}")
+                    status_callback(turn_idx, f"EVA_RESPONDING_BRANCH|{branch_taken}", target_question, f"{candidate_transcript}\n\n[Eva]: {eva_response}")
                     
-                # Eva speaks the acknowledgment only (NOT the next question — that comes next loop)
-                if eva_ack and not self.stop_event.is_set():
-                    speak_text(eva_ack)
+                if not self.stop_event.is_set():
+                    speak_text(eva_response)
                     
-            # Final closing message
-            if not self.stop_event.is_set():
-                speak_text("Thank you for your time today. That concludes our technical interview. Good luck!")
-                
         except Exception as e:
             logger.error(f"Error during voice interview loop: {e}", exc_info=True)
         finally:
