@@ -246,3 +246,19 @@ Microphone hardware output was extremely low (-78 dBFS). The dynamic AGC impleme
 - Full Stage 3 pipeline tested cleanly.
 - `scan_code_quality.py` run on backend codebase (Passed Radon CC & MI).
 - Git commits executed via automated documentation safety checks.
+
+## Session Log - 2026-08-08 | Backend Architecture Plan Overhaul
+
+### Problem
+`backend_plan.md` contained raw SQL migration notes that did not belong in the specification, and lacked specific DSP definitions for the newly implemented Stage 3 Voice-to-Voice mechanics.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| `backend_plan.md` | Cleaned raw SQL migration notes. Overhauled WebSocket DSP section to formally document the fixed 20x pre-gain, streaming IIR DC blocker, and hybrid turn classifier timeout configuration. |
+| `backend_plan.md` | Added complete `SessionState` signal bus reference schema. |
+| `backend_plan.md` | Clarified Stage 1 through Stage 4 module handoffs in API endpoints. |
+
+### Verification
+- Document committed successfully as part of documentation audit cycle.
