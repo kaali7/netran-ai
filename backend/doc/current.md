@@ -11,7 +11,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 
 1. **Stage 1 (Research Model):** Web-augmented Job Description analysis and market intelligence search.
 2. **Stage 2 (Question Engine):** Candidate resume parsing, skill gap matrix calculation, and 15-question tree generation.
-3. **Stage 3 (Voice-to-Voice Loop):** Real-time cascaded voice interaction (VAD + STT + Streaming LLM + Neural TTS) utilizing local Qwen2.5:3B reasoning, Kokoro-82M TTS, and a hybrid turn-taking classifier (Tier 1 Regex + Tier 2 Qwen2.5:1.5B).
+3. **Stage 3 (Voice-to-Voice Loop):** Real-time cascaded voice interaction (VAD + STT + Streaming LLM + Neural TTS) utilizing local Qwen2.5:3B reasoning, Kokoro-82M TTS, and a hybrid turn-taking classifier (Tier 1 Regex + Tier 2 Ollama `OLLAMA_MODEL`, qwen2.5:3b by default).
 4. **Stage 4 (Reports Engine):** Non-destructive audio slicing, precision telemetry extraction, and 3-branch Gemini multimodal evaluation.
 
 ---
@@ -22,7 +22,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 |---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | Gemini 3.6 Flash, Tavily API, SQLite caching |
 | **Stage 2** | `question_model` | ✅ **Covered** | Gemini 3.6 Flash, `pypdf`, `python-docx`. Output: `interview_questions.json`, `interviewer_behavior.json`, `resume_analysis.json` |
-| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS, Qwen2.5:1.5b (Turn Classifier). Output: `recording.wav`, `transcript.json` |
+| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS, Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Ollama OLLAMA_MODEL). Output: `recording.wav`, `transcript.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | Audio slicing, Gemini 3-branch evaluation (Audio/Tech/Comb) with RateLimit retry. Output: `report.json`, `evaluation_summary.md` |
 | **Workflow** | `workflow` | ✅ **Covered** | Master pipeline coordinator (`orchestrator.py`), 6-screen Kivy UI |
 
@@ -57,7 +57,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 │  STAGE 3: Voice Interview (voice_to_voice_model/model/pipeline.py)          │
 │  • Ingests Stage 2 artifacts to boost Whisper STT and ground the LLM prompt.│
 │  • Voice Loop: VAD -> STT -> Qwen2.5:3B LLM -> Kokoro TTS                   │
-│  • Hybrid Turn Classifier: Evaluates interruptions using Qwen2.5:1.5B       │
+│  • Hybrid Turn Classifier: Evaluates interruptions using Ollama `OLLAMA_MODEL` (qwen2.5:3b by default) │
 │  • Output: recording.wav & transcript.json                                  │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       ▼
@@ -85,7 +85,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`
 - **Core Files:** `pipeline.py`, `listener.py`, `brain.py`, `speaker.py`, `turn_classifier.py`, `session_logger.py`, `benchmark.py`, `question_manager.py`, `schemas.py`, `download_vad.py`, `front.py`.
-- **Functionality**: Drives the real-time cascaded voice loop under 100% offline model resolution (`HF_HUB_OFFLINE=1`). Uses Silero VAD v3 + dynamic peak auto-gain. Faster-Whisper (`small` int8) handles STT (dynamically weighted with candidate-specific resume jargon), Ollama `qwen2.5:3b` manages LLM reasoning, and Kokoro-82M executes neural TTS. Includes hybrid turn classifier leveraging `Qwen2.5:1.5B`. Logs gain-boosted continuous PCM mic audio (`recording.wav`) alongside a millisecond-precision timing manifest (`transcript.json`).
+- **Functionality**: Drives the real-time cascaded voice loop under 100% offline model resolution (`HF_HUB_OFFLINE=1`). Uses Silero VAD v3 + dynamic peak auto-gain. Faster-Whisper (`small` int8) handles STT (dynamically weighted with candidate-specific resume jargon), Ollama `qwen2.5:3b` manages LLM reasoning, and Kokoro-82M executes neural TTS. Includes hybrid turn classifier leveraging Ollama `OLLAMA_MODEL` (qwen2.5:3b by default, aligned with brain.py). Logs gain-boosted continuous PCM mic audio (`recording.wav`) alongside a millisecond-precision timing manifest (`transcript.json`).
 
 ### 4. Stage 4: Reports Model (`reports_model`)
 - **Location**: `backend/model/reports_model/model/`

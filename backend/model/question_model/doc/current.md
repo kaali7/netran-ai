@@ -13,7 +13,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 
 1. **Resume Analysis & Skill Gap Matrix (`resume_analysis.json`):** Evaluates candidate proficiency tiers (`Foundational`, `Intermediate`, `Production Master`), identifies missing requirements from JD/Rubric, highlights warning flags, and selects top projects to probe.
 2. **Branching Question Tree (`interview_questions.json`):** 15 stratified technical questions across 3 tiers with 3-level evaluation rubrics (`poor_answer_indicators`, `good_answer_indicators`, `bar_raiser_indicators`) and 2-way branching paths (`followup_if_strong`, `followup_if_weak`).
-3. **Interviewer Behavior & System Prompt (`interviewer_behavior.json` & `system_prompt.txt`):** Generates Eva's persona configuration and latency-constrained voice system prompt (1–2 sentence max for Qwen2.5:3b in Stage 3).
+3. **Interviewer Behavior & System Prompt (`interviewer_behavior.json`):** Generates Eva's persona configuration, dynamic `whisper_domain_vocabulary`, and latency-constrained voice system prompt (`interviewer_system_prompt` formatted for Qwen2.5:3b in Stage 3).
 
 ---
 
@@ -26,7 +26,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 | `schemas.py` | Pydantic v2 schemas (`SkillMatch`, `SkillGap`, `ResumeAnalysis`, `AnswerRubric`, `QuestionItem`, `InterviewerBehavior`, `Stage2Output`). |
 | `prompt_builder.py` | Class-based `Stage2PromptBuilder` with `extract_job_context` parsing nested Stage 1 outputs and legacy flat JDs. |
 | `cache.py` | Class-based SQLite hashing subsystem (`Stage2Cache`) caching Stage 2 outputs by SHA-256 hash with schema validation error recovery. |
-| `pipeline.py` | Master Stage 2 orchestrator pipeline (`Stage2Pipeline`) executing resume parsing, cache check, Gemini prompt generation, and 4-artifact saving. |
+| `pipeline.py` | Master Stage 2 orchestrator pipeline (`Stage2Pipeline`) executing resume parsing, cache check, Gemini prompt generation, and 3-artifact saving. |
 | `resume_parser.py` | Multimodal `ResumeParser` supporting `.pdf` (`pypdf`), `.docx` (`python-docx`), `.txt`, and `.json` files. |
 | `question_generator.py` | Backward-compatibility alias wrapping `pipeline.py`. |
 | `front.py` | Kivy Desktop GUI Client displaying Resume Analysis Matrix, Question Cards with Rubrics & Branching badges, System Prompt, and Session History Modal. |
@@ -82,7 +82,7 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 - **Preset Input Subdirectories (`model/question_model/test/input/`):**
   - `sample_backend/`, `sample_frontend/`, `sample_fullstack/`
 - **Output Session Folders (`model/question_model/test/output/sess_<timestamp>/`):**
-  - Contains `resume_analysis.json`, `interview_questions.json`, `interviewer_behavior.json`, and `system_prompt.txt`.
+  - Contains `resume_analysis.json`, `interview_questions.json`, and `interviewer_behavior.json`.
 
 Run via `run.bat` menu:
 - Select **Option 3: Run Stage 2 Question Engine**

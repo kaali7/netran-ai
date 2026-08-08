@@ -324,3 +324,24 @@ The user introduced major upgrades to the Stage 3 Voice Model, transitioning fro
 ### Verification
 - Documentation audit successfully verified that all Stage 3 references accurately reflect the new ECAPA-TDNN, 3B Turn Classifier, and dynamic noise architecture.
 - Git commits executed successfully.
+
+---
+
+## Session Log - 2026-08-08 | Documentation Alignment with Codebase
+
+### Problem
+Documentation files (model/question_model/doc/current.md, model/voice_to_voice_model/doc/current.md, model/reports_model/doc/current.md, doc/current.md, and doc/folder_strucuture.md) contained legacy references to output formats (e.g. system_prompt.txt or session_manifest.json) or classifier model sizes (e.g. Qwen2.5:1.5B) that did not match the actual codebase implementation.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| model/question_model/doc/current.md | Removed legacy references to system_prompt.txt (the prompt is embedded in interviewer_behavior.json). Updated output count to 3 JSON artifacts. |
+| model/voice_to_voice_model/doc/current.md | Corrected Stage 3 output contract reference to transcript.json instead of legacy session_manifest.json. |
+| model/reports_model/doc/current.md | Marked transcript.json as the primary timing manifest with session_manifest.json as legacy fallback. Adjusted test inputs to reference only existing sample1/ directory. Added venv Python prefixes to execution commands. |
+| doc/current.md | Aligned Turn Classifier model references to use OLLAMA_MODEL (qwen2.5:3b by default) to prevent model swapping in GPU/VRAM. |
+| doc/folder_strucuture.md | Updated turn_classifier.py description to reference OLLAMA_MODEL (qwen2.5:3b by default). |
+
+### Verification
+- Ran code quality audit scanner on the repository to verify file integrity.
+- Zero syntax or schema issues found.

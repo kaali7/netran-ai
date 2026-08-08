@@ -2,7 +2,7 @@
 
 **Status:** ✅ **COVERED & OPERATIONAL**  
 **Subsystem Directory:** `backend/model/reports_model/`  
-**Last Updated:** August 01, 2026  
+**Last Updated:** August 08, 2026  
 
 ---
 
@@ -10,7 +10,7 @@
 
 Stage 4 is the post-session analytics and synthesis subsystem of Netran AI. It ingests:
 - `continuous_mic_input.wav` / `recording.wav`: Raw continuous audio recording from Stage 3.
-- `session_manifest.json` / `transcript.json`: Per-turn millisecond timing telemetry from Stage 3.
+- `transcript.json` / `session_manifest.json` (legacy): Per-turn millisecond timing telemetry from Stage 3. Pipeline resolves `transcript.json` first, then falls back to `session_manifest.json`.
 - `sample_resume.txt` / `sample_resume.json`: Candidate resume context (Stage 1/2 Grounding).
 - `sample_rubric.json` / `sample_job_detail.json`: Job rubric and pillar requirements (Stage 1 Grounding).
 
@@ -26,7 +26,7 @@ backend/model/reports_model/
 │   ├── current.md              # Stage 4 technical implementation status
 │   └── prd.md                  # Stage 4 Product Requirements Document
 ├── test/                       # Stage 4 standardized test harness directories
-│   ├── input/                  # Stage 3 preset input sessions (sample1/, sample2/)
+│   ├── input/                  # Stage 3 preset input sessions (sample1/)
 │   └── output/                 # Generated session report artifacts (sess_<timestamp>/)
 └── model/
     ├── prompts.py              # Centralized dynamic system prompts with context injection functions
@@ -99,12 +99,12 @@ Inside `test/output/sess_<timestamp>/` (or active `backend/sessions/<session_id>
 
 - **Kivy Desktop Test UI:**
   ```cmd
-  python -m model.reports_model.model.front
+  .\.venv\Scripts\python.exe -m model.reports_model.model.front
   ```
 
 - **Headless CLI Test Pipeline (Interactive Session Picker):**
   ```cmd
-  python -m model.reports_model.model.test_pipeline
+  .\.venv\Scripts\python.exe -m model.reports_model.model.test_pipeline
   ```
 
 - **Interactive System Launcher:**
