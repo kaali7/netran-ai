@@ -32,21 +32,22 @@ echo   9. Test Hybrid Turn Classifier (turn_classifier.py)
 echo  10. Test Conversation State Manager (question_manager.py)
 echo  11. Test Speaker Verifier (speaker_verifier.py)
 echo.
-echo  --- SETUP TOOLS ---
+echo   --- SETUP TOOLS ---
 echo  12. Install / Update Backend Dependencies (requirements.txt)
 echo  13. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  14. Check System Requirements ^& Dependencies (check_dependencies.py)
 echo.
-echo  --- MAINTENANCE ^& DATA CLEANING ---
-echo  14. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
-echo  15. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  16. Clean SQLite Research Cache Database (cache.db)
-echo  17. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
-echo  18. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
-echo  19. Run Code Quality Audit (scan_code_quality.py)
+echo   --- MAINTENANCE ^& DATA CLEANING ---
+echo  15. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
+echo  16. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
+echo  17. Clean SQLite Research Cache Database (cache.db)
+echo  18. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
+echo  19. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  20. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-19): "
+set /p choice="Enter your choice (0-20): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
@@ -61,12 +62,13 @@ if "%choice%"=="10" goto test_manager
 if "%choice%"=="11" goto test_verifier
 if "%choice%"=="12" goto install_reqs
 if "%choice%"=="13" goto run_vad
-if "%choice%"=="14" goto clean_test_outputs
-if "%choice%"=="15" goto clean_sessions
-if "%choice%"=="16" goto clean_cache_db
-if "%choice%"=="17" goto clean_bytecode_trash
-if "%choice%"=="18" goto clean_full_deep
-if "%choice%"=="19" goto run_quality_audit
+if "%choice%"=="14" goto check_deps
+if "%choice%"=="15" goto clean_test_outputs
+if "%choice%"=="16" goto clean_sessions
+if "%choice%"=="17" goto clean_cache_db
+if "%choice%"=="18" goto clean_bytecode_trash
+if "%choice%"=="19" goto clean_full_deep
+if "%choice%"=="20" goto run_quality_audit
 if "%choice%"=="0" goto end
 
 goto menu
@@ -195,14 +197,21 @@ goto menu
 :install_reqs
 echo.
 echo [SETUP] Installing / Updating Backend Dependencies from requirements.txt...
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 pause
 goto menu
 
 :run_vad
 echo.
 echo [SETUP] Downloading / Verify Silero VAD ONNX model weights...
-.venv\Scripts\python.exe -m model.voice_to_voice_model.model.download_vad
+.\.venv\Scripts\python.exe -m model.voice_to_voice_model.model.download_vad
+pause
+goto menu
+
+:check_deps
+echo.
+echo [SETUP] Checking System Requirements ^& Dependencies...
+.\.venv\Scripts\python.exe check_dependencies.py
 pause
 goto menu
 
