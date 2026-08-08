@@ -142,9 +142,9 @@ run.bat
 **Key Menu Options**:
 - **Option 1**: Launch Unified 6-Screen Netran AI Interview Workflow (Complete App).
 - **Options 2–5**: Run standalone stage models (Stage 1 Research, Stage 2 Question, Stage 3 Voice, Stage 4 Report).
-- **Options 6–10**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain, Turn Classifier, Question Manager).
-- **Options 11–12**: Setup Tools (Install dependencies, Download VAD).
-- **Options 13–18**: Maintenance tools to clean stage outputs, session folders, cache DB, trash, and run Code Audit Scanner.
+- **Options 6–11**: Run component hardware diagnostics (listener, speaker, brain, turn classifier, question manager, speaker verifier).
+- **Options 12–14**: Setup Tools (Install requirements, Download/verify VAD & Hugging Face models, Check system dependencies).
+- **Options 15–20**: Maintenance tools (clean test outputs, sessions, cache DB, bytecode trash, full deep clean, code audit scanner).
 
 ---
 
@@ -187,7 +187,12 @@ python -m model.voice_to_voice_model.model.front
   python -m model.reports_model.model.test_pipeline
   ```
 
-#### 6. Run Code Quality & Architecture Audit Scanner
+#### 6. Run System Requirements & Dependency Checker
+```cmd
+python check_dependencies.py
+```
+
+#### 7. Run Code Quality & Architecture Audit Scanner
 ```cmd
 python scan_code_quality.py
 ```
@@ -203,12 +208,12 @@ During development and testing, temporary test output files and session logs are
 - **SQLite Cache (`model/research_model/model/cache.db`)**: Stores cached JD rubrics.
 
 ### Clean Data Commands via `run.bat`:
-- Select **Option 13**: Deletes stage `test/output/` and `test/process/` folders.
-- Select **Option 14**: Deletes active session folders in `model/sessions/` and `sessions/`.
-- Select **Option 15**: Deletes SQLite `cache.db` files.
-- Select **Option 16**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
-- Select **Option 17**: Performs a **Full Deep Clean** returning the repository to pristine condition.
-- Select **Option 18**: Run Code Quality Audit (Ruff, Bandit, Radon).
+- Select **Option 15**: Deletes stage `test/output/` and `test/process/` folders.
+- Select **Option 16**: Deletes active session folders in `model/sessions/` and `sessions/`.
+- Select **Option 17**: Deletes SQLite `cache.db` files.
+- Select **Option 18**: Deletes Python bytecode trash (`__pycache__`, `.pyc`), `.log` files, and `_interview_log.txt`.
+- Select **Option 19**: Performs a **Full Deep Clean** returning the repository to pristine condition.
+- Select **Option 20**: Run Code Quality Audit (Ruff, Bandit, Radon).
 
 ---
 
