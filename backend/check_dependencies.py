@@ -60,6 +60,11 @@ def check_env():
                 print("[OK] GEMINI_API_KEY found in .env.")
             else:
                 print("[WARNING] GEMINI_API_KEY is missing in .env.")
+                
+            if "TAVILY_API_KEY" in content:
+                print("[OK] TAVILY_API_KEY found in .env.")
+            else:
+                print("[WARNING] TAVILY_API_KEY is missing in .env.")
     else:
         print("[ERROR] .env file is missing.")
         
