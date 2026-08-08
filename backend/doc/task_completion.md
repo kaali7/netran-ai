@@ -304,3 +304,23 @@ ule.md, and older_strucuture.md to formally document the fixed 20x pre-gain arc
 
 ### Verification
 - Document committed successfully as part of documentation audit cycle.
+
+---
+
+## Session Log - 2026-08-08 | Voice Model Upgrades (ECAPA-TDNN & Dynamic Noise)
+
+### Problem
+The user introduced major upgrades to the Stage 3 Voice Model, transitioning from a fixed 20x hardware pre-gain to an inline dynamic noise floor calibration mechanism. Additionally, the candidate speaker verification module (SpeechBrain ECAPA-TDNN) was integrated, and the Qwen turn classifier was bumped from 1.5B to 3B to eliminate memory swapping overhead. The global documentation required syncing to reflect these sweeping architectural changes.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| README.md | Updated the Stage 3 system summary and the Hugging Face models download table to include the newly integrated speechbrain/spkrec-ecapa-voxceleb model and dynamic noise floor calibration. |
+| doc/tech_stack.md | Documented the transition to inline dynamic noise floor calibration for Silero VAD, upgraded the Turn Classifier to Qwen 2.5 (3B), and added a dedicated section for Candidate Speaker Verification using ECAPA-TDNN. |
+| model/workflow/doc/current.md | Synced Stage 3 workflow summary to mention inline dynamic noise calibration, the Qwen2.5:3B turn classifier, and SpeechBrain ECAPA-TDNN for candidate verification. |
+| model/workflow/doc/overall_model_process.md | Updated the High-Level Architecture Flow, Summary Matrix, and Detailed Component Breakdown to properly document the inclusion of speaker_verifier.py and 	urn_classifier.py. |
+
+### Verification
+- Documentation audit successfully verified that all Stage 3 references accurately reflect the new ECAPA-TDNN, 3B Turn Classifier, and dynamic noise architecture.
+- Git commits executed successfully.

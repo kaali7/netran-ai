@@ -83,17 +83,21 @@ This document defines the complete technology stack powering **Netran AI**, an a
 * Low-latency streaming response generation during live conversations, dynamically steered using `interview_behavior` and `jd_detail` loaded directly from SQLite.
 
 
-* **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (1.5B)**
-* Hybrid conversational turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 1.5B) resolving candidate pauses, hesitation checks, and barge-ins.
+* **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
+* Hybrid conversational turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 3B probe) resolving candidate pauses, hesitation checks, and thoughts, aligned with `OLLAMA_MODEL` to eliminate memory swapping overhead.
 
 
 * **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper `small` int8)**
 * Real-time streaming transcription loaded offline (`HF_HUB_OFFLINE=1`), dynamically boosted with candidate-specific `whisper_domain_vocabulary` extracted from Stage 2 `interview_behavior`.
 
 
+* **Candidate Speaker Verification (Offline Speaker Verifier)**: **SpeechBrain ECAPA-TDNN (`speechbrain/spkrec-ecapa-voxceleb`)**
+* 192-dim speaker embedding encoder for candidate identity auto-enrollment (from first ICEBREAKER utterance >= 2s) and cosine-similarity verification (rejects foreign speech/background voices before STT).
+
+
 * **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
-* Speech start/stop detection with fixed 20x hardware pre-gain scaling to correct low mic volume.
-* High-pass IIR filtering (`alpha=0.995`) to remove DC drift before feeding 16kHz PCM audio to Whisper.
+* Speech start/stop detection with **inline dynamic noise floor calibration** (samples ambient room noise directly from active producer queue during the first 960ms of `listen_and_transcribe()` to eliminate PortAudio stream lockups on Windows).
+* Adaptive noise floor gates (`start_rms = 2.5x ambient_floor`, `continue_rms = 1.8x ambient_floor`) and high-pass IIR filtering (`alpha=0.995`) to remove DC drift before feeding 16kHz PCM audio to Whisper.
 
 
 * **Text-to-Speech (TTS)**: **Kokoro-82M (PyTorch / KPipeline)**

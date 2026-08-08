@@ -30,7 +30,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                               STAGE 3: VOICE-TO-VOICE LOOP                             │
 │                   backend/model/voice_to_voice_model/model/  [COVERED]                 │
-│  - Silero VAD v3 + Auto-Gain Peak Normalizer + Faster-Whisper STT (listener.py)        │
+│  - Silero VAD v3 (Dynamic Noise Floor) + ECAPA-TDNN Verification + Faster-Whisper (listener.py)│
 │  - Local Ollama Qwen2.5:3B Interviewer Persona Engine (brain.py)                     │
 │  - Kokoro-82M Neural TTS Direct 24kHz Audio Streaming (speaker.py)                     │
 │  - Asynchronous PCM Mic Recording -> continuous_mic_input.wav (listener.py)            │
@@ -57,7 +57,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 |---|---|---|---|---|
 | **Stage 1** | `research_model` | ✅ **Covered** | `backend/model/research_model/model/` | JD parsing, Tavily domain web search, Gemini rubric generator, SQLite cache (`cache.db`), Kivy UI |
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | PDF/DOCX/TXT resume parsing, skill gap matrix, Gemini 15-question tree (`interview_questions.json`) & system prompt (`system_prompt.txt`) |
-| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, Faster-Whisper int8, Ollama Qwen2.5 LLM, Kokoro TTS, `continuous_mic_input.wav`, `session_manifest.json` |
+| **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, SpeechBrain ECAPA-TDNN, Faster-Whisper int8, Ollama Qwen2.5 LLM, Kokoro TTS, `continuous_mic_input.wav`, `session_manifest.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), 3-branch Gemini multimodal evaluation, `report.json` & `evaluation_summary.md` synthesis, Kivy UI |
 | **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master 5-screen Kivy UI orchestrator linking Stage 1 → Stage 2 → Stage 3 → Stage 4 seamlessly |
 
@@ -100,7 +100,9 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 * **Location**: `backend/model/voice_to_voice_model/model/`
 * **Implemented Code**:
   - `main_app.py`: Kivy Desktop UI, streaming regex sentence buffer, live conversation panel, dual modes (LLM vs. Script Calibration).
-  - `listener.py`: Silero VAD v3 ONNX + Faster-Whisper (`small` int8 CPU) + Echo Gate + `ContinuousMicWriter` background thread writing raw 16kHz WAV.
+  - `listener.py`: Silero VAD v3 ONNX (inline noise calibration) + Faster-Whisper (`small` int8 CPU) + Echo Gate + `ContinuousMicWriter` background thread writing raw 16kHz WAV.
+  - `turn_classifier.py`: Hybrid conversational turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 3B probe) to resolve candidate pauses.
+  - `speaker_verifier.py`: SpeechBrain ECAPA-TDNN candidate auto-enrollment and cosine-similarity verification engine.
   - `brain.py`: Ollama `qwen2.5:3b` local streaming LLM engine (`Eva` persona).
   - `speaker.py`: Kokoro-82M neural TTS (`af_bella` voice) with direct `sounddevice` float32 streaming playback.
   - `session_logger.py`: High-resolution monotonic timer (`time.perf_counter()`) logging per-turn millisecond offsets and outputting `session_manifest.json`.

@@ -15,7 +15,7 @@ The backend architecture comprises **4 core AI model stages** linked by a **Unif
    - Parses candidate resumes (`.pdf`, `.docx`, `.txt`) using `pypdf` and `python-docx`. Performs skill-gap cross-matching against the JD rubric to construct a 15-question tree stratified across 3 difficulty tiers (Junior, Mid, Senior) and generates a 1-2 sentence latency-constrained system prompt for Stage 3.
 
 3. **Stage 3 — Live Voice-to-Voice Streaming Loop (`voice_to_voice_model`)**:
-   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (with fixed 20x hardware pre-gain and streaming IIR DC offset blocking), **Faster-Whisper** (`small` int8 model loaded 100% offline) for STT, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, a **Qwen2.5:1.5B**-powered hybrid turn-taking classifier, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`recording.wav`) and millisecond-precision timing telemetry (`transcript.json`).
+   - Runs a real-time cascaded voice loop powered by **Silero VAD v3** (with inline dynamic noise floor calibration), **Faster-Whisper** (`small` int8 model loaded 100% offline) for STT, offline **SpeechBrain ECAPA-TDNN** (`speechbrain/spkrec-ecapa-voxceleb`) for candidate speaker verification, local **Ollama Qwen2.5:3b** streaming LLM reasoning under the `Eva` interviewer persona, a **Qwen2.5:3B**-powered hybrid turn-taking classifier, and **Kokoro-82M** (`af_bella` voice) neural TTS streaming playback. Continuously records microphone PCM audio (`recording.wav`) and millisecond-precision timing telemetry (`transcript.json`).
 
 4. **Stage 4 — Post-Session Multimodal Evaluation Engine (`reports_model`)**:
    - Slices continuous audio into per-turn WAV clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps and runs a 3-branch **Gemini Multimodal Evaluation Engine** (Audio Branch, Technical Branch, Combine Branch) to output dual evaluation artifacts: `report.json` and `evaluation_summary.md`.
@@ -100,29 +100,30 @@ Run the VAD downloader utility to fetch the `silero_vad.onnx` neural weight file
 python -m model.voice_to_voice_model.model.download_vad
 ```
 
-### Step 7: Hugging Face Model Downloads (Faster-Whisper & Kokoro)
+### Step 7: Download Stage 3 Voice Model Weights (Faster-Whisper, Kokoro, & SpeechBrain)
 
-The first time you run the Stage 3 Voice Model or hardware diagnostics (`listener.py` and `speaker.py`), the system will automatically download two Hugging Face models to your local cache:
-1. **Faster-Whisper (`Systran/faster-whisper-small`)**: ~500 MB (Used for Speech-to-Text). [View on Hugging Face](https://huggingface.co/Systran/faster-whisper-small)
-2. **Kokoro-82M (`hexgrad/Kokoro-82M`)**: ~350 MB (Used for Neural Text-to-Speech). [View on Hugging Face](https://huggingface.co/hexgrad/Kokoro-82M)
+Stage 3 (`voice_to_voice_model`) relies on 3 Hugging Face neural models for local offline voice interaction:
 
-*Note: You must have an active internet connection on the very first run to fetch these weights into your Windows directory at `%USERPROFILE%\.cache\huggingface\hub\`. Subsequent runs will load these 100% offline from the local cache.*
+| Model / Asset | Hugging Face / Source ID | Size | Purpose / Module | Download / Cache Location |
+| :--- | :--- | :---: | :--- | :--- |
+| **1. Ollama LLM** | `qwen2.5:3b` | ~1.9 GB | Streaming reasoning engine & turn classifier (`brain.py`) | Managed by Ollama service |
+| **2. Silero VAD v3** | `silero_vad.onnx` | ~2 MB | Neural voice activity detection (`listener.py`) | `model/voice_to_voice_model/model/silero_vad.onnx` |
+| **3. Faster-Whisper** | `Systran/faster-whisper-small` | ~500 MB | Local speech-to-text transcription (`listener.py`) | `%USERPROFILE%\.cache\huggingface\hub\` |
+| **4. Kokoro-82M** | `hexgrad/Kokoro-82M` | ~350 MB | Neural text-to-speech engine (`speaker.py`) | `%USERPROFILE%\.cache\huggingface\hub\` |
+| **5. SpeechBrain ECAPA** | `speechbrain/spkrec-ecapa-voxceleb` | ~100 MB | Candidate speaker verification (`speaker_verifier.py`) | `%USERPROFILE%\.cache\huggingface\hub\` |
 
-**Manual Pre-Download (Optional):**
+#### Automatic Downloads on First Run:
+The first time you launch Stage 3 or hardware diagnostics (`listener.py`, `speaker.py`, `speaker_verifier.py`), the system will automatically download these models to your local Hugging Face cache (`%USERPROFILE%\.cache\huggingface\hub\`).
 
-If you want to manually download these models before running the application, you can use the `huggingface-cli`. 
+*Note: You must have an active internet connection during the first run. Subsequent runs execute **100% offline** without any network dependencies (`HF_HUB_OFFLINE=1`).*
 
-First, ensure the CLI is installed in your activated virtual environment (it is included in `requirements.txt`, but can be installed manually):
+#### Manual Pre-Download (Recommended for Offline Environments):
+If you want to manually pre-download all Hugging Face models before starting the application, use `huggingface-cli` (included in `requirements.txt`):
 
-```bash
-pip install -U "huggingface_hub[cli]"
-```
-
-Then, run the following commands to pre-download the models:
-
-```bash
+```cmd
 huggingface-cli download Systran/faster-whisper-small
 huggingface-cli download hexgrad/Kokoro-82M
+huggingface-cli download speechbrain/spkrec-ecapa-voxceleb
 ```
 
 ---
