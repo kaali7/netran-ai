@@ -21,7 +21,7 @@ The backend architecture comprises **4 core AI model stages** linked by a **Unif
    - Slices continuous audio into per-turn WAV clips (`turn_01.wav` ... `turn_15.wav`) based on manifest timestamps and runs a 3-branch **Gemini Multimodal Evaluation Engine** (Audio Branch, Technical Branch, Combine Branch) to output dual evaluation artifacts: `report.json` and `evaluation_summary.md`.
 
 5. **Workflow Orchestrator (`workflow`)**:
-   - A unified **5-screen Kivy Desktop Application** (`SetupScreen` → `ResearchScreen` → `QuestionScreen` → `InterviewScreen` → `ReportScreen`) that connects Stage 1 through Stage 4 in background threads with live UI progress callbacks.
+   - A unified **6-screen Kivy Desktop Application** (`SetupScreen` → `ResearchScreen` → `QuestionScreen` → `InterviewScreen` → `ReportProcessingScreen` → `ReportScreen`) that connects Stage 1 through Stage 4 in background threads with live UI progress callbacks.
 
 ---
 
@@ -140,7 +140,7 @@ run.bat
 ```
 
 **Key Menu Options**:
-- **Option 1**: Launch Unified 5-Screen Netran AI Interview Workflow (Complete App).
+- **Option 1**: Launch Unified 6-Screen Netran AI Interview Workflow (Complete App).
 - **Options 2–5**: Run standalone stage models (Stage 1 Research, Stage 2 Question, Stage 3 Voice, Stage 4 Report).
 - **Options 6–10**: Run hardware diagnostics (VAD/STT listener, TTS speaker, Ollama brain, Turn Classifier, Question Manager).
 - **Options 11–12**: Setup Tools (Install dependencies, Download VAD).
@@ -152,7 +152,7 @@ run.bat
 
 Make sure your `.venv` is activated, then run:
 
-#### 1. Run Complete Combined 5-Screen Application
+#### 1. Run Complete Combined 6-Screen Application
 ```cmd
 python -m model.workflow.model.front
 ```

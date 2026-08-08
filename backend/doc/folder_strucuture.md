@@ -124,7 +124,7 @@ backend/
         │   └── output/        # Final workflow evaluation reports (sess_<timestamp>/ -> report.json & evaluation_summary.md)
         └── model/
             ├── config.py      # Master configuration & non-colliding sys.path injector
-            ├── front.py       # Unified 5-Screen Kivy Desktop Application
+            ├── front.py       # Unified 6-Screen Kivy Desktop Application
             ├── orchestrator.py # Master 4-stage pipeline execution coordinator
             ├── run.bat        # Duplicate workflow launcher script
             ├── sample_data.py # Demo testing data provider (loads test/input/sample_session JSON files)

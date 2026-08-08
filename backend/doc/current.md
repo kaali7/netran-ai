@@ -24,7 +24,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 | **Stage 2** | `question_model` | ✅ **Covered** | Gemini 3.6 Flash, `pypdf`, `python-docx`. Output: `interview_questions.json`, `interviewer_behavior.json`, `resume_analysis.json` |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS, Qwen2.5:1.5b (Turn Classifier). Output: `recording.wav`, `transcript.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | Audio slicing, Gemini 3-branch evaluation (Audio/Tech/Comb) with RateLimit retry. Output: `report.json`, `evaluation_summary.md` |
-| **Workflow** | `workflow` | ✅ **Covered** | Master pipeline coordinator (`orchestrator.py`), 5-screen Kivy UI |
+| **Workflow** | `workflow` | ✅ **Covered** | Master pipeline coordinator (`orchestrator.py`), 6-screen Kivy UI |
 
 ---
 
@@ -95,7 +95,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 ### 5. Workflow Orchestrator (`workflow`)
 - **Location**: `backend/model/workflow/model/`
 - **Core Files**: `front.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `test_pipeline.py`
-- **Functionality**: Master multi-stage controller. Houses the unified 5-screen Kivy desktop GUI application, orchestrates background pipeline threads, and provides built-in demo testing data.
+- **Functionality**: Master multi-stage controller. Houses the unified 6-screen Kivy desktop GUI application, orchestrates background pipeline threads, and provides built-in demo testing data.
 
 ---
 

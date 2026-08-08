@@ -16,7 +16,7 @@ echo             NETRAN AI - BACKEND MODEL OPERATIONAL SUITE
 echo ===================================================================
 echo.
 echo  --- COMBINED PIPELINE ---
-echo   1. Launch Unified 5-Screen Netran AI Interview Workflow (Kivy Desktop)
+echo   1. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
 echo  --- INDIVIDUAL STAGE MODELS ---
 echo   2. Run Stage 1: JD Research ^& Market Intelligence Engine

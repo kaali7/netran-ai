@@ -59,7 +59,7 @@ This document tracks the multi-stage AI pipeline components implemented inside t
 | **Stage 2** | `question_model` | ✅ **Covered** | `backend/model/question_model/model/` | PDF/DOCX/TXT resume parsing, skill gap matrix, Gemini 15-question tree (`interview_questions.json`) & system prompt (`system_prompt.txt`) |
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | `backend/model/voice_to_voice_model/model/` | Silero VAD, SpeechBrain ECAPA-TDNN, Faster-Whisper int8, Ollama Qwen2.5 LLM, Kokoro TTS, `continuous_mic_input.wav`, `session_manifest.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | `backend/model/reports_model/model/` | Audio slicing (`wave`), 3-branch Gemini multimodal evaluation, `report.json` & `evaluation_summary.md` synthesis, Kivy UI |
-| **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master 5-screen Kivy UI orchestrator linking Stage 1 → Stage 2 → Stage 3 → Stage 4 seamlessly |
+| **Workflow** | `workflow` | ✅ **Covered** | `backend/model/workflow/model/` | Master 6-screen Kivy UI orchestrator linking Stage 1 → Stage 2 → Stage 3 → Stage 4 seamlessly |
 
 ---
 

@@ -8,7 +8,7 @@
 
 ## 1. Overview & Objective
 
-The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four sub-stages of Netran AI into a single end-to-end application driven by a **5-screen Kivy desktop GUI**:
+The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four sub-stages of Netran AI into a single end-to-end application driven by a **6-screen Kivy desktop GUI**:
 
 1. **Stage 1 (Research Model):** Job Description parsing, market intelligence web search (Tavily), and evaluation rubric synthesis (Gemini).
 2. **Stage 2 (Question Engine):** Candidate Resume + JD skill gap analysis, 15-question tree generation (`interview_questions.json`), and custom dynamic system prompt generation (`system_prompt.txt`).
@@ -49,7 +49,7 @@ The **Unified Interview Workflow Orchestrator (`workflow`)** combines all four s
 | `sample_data.py` | Built-in demo testing harness exposing sample data loaded from `test/input/sample_session/` (`sample_job_detail.json` and `sample_resume.json`). |
 | `voice_engine.py` | Stage 3 loop controller that overrides Ollama's `SYSTEM_PROMPT` with Stage 2's dynamic prompt, receives in-memory question tree injection (`inject_question_tree`), handles 1-sentence brain acknowledgments, manages `ContinuousMicWriter`, and logs turn timing data. |
 | `orchestrator.py` | Master thread coordinator executing Stage 1 (`Stage1Pipeline`) → Stage 2 (`Stage2Pipeline`) → Stage 3 (`WorkflowVoiceEngine`) → Stage 4 (`Stage4Pipeline`) using uniform stage pipelines. Directs intermediate artifacts to `model/workflow/test/process/` and final report artifacts to `model/workflow/test/output/`. |
-| `front.py` | Main Kivy Desktop application implementing the 5-screen `ScreenManager` (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportScreen`) with dynamic `ReportCard` component and live transcript sync. |
+| `front.py` | Main Kivy Desktop application implementing the 6-screen `ScreenManager` (`SetupScreen`, `ResearchScreen`, `QuestionScreen`, `InterviewScreen`, `ReportProcessingScreen`, `ReportScreen`) with dynamic `ReportCard` component and live transcript sync. |
 | `test_pipeline.py` | Standalone CLI headless test runner executing Stage 1 → 2 → 3 → 4 end-to-end with 5-question test scoping. |
 | `run.bat` | Batch launcher script for direct execution. |
 
@@ -86,7 +86,7 @@ model/workflow/test/output/sess_20260726_145000/
 ## 6. Execution & Verification
 
 Run via root `backend/run.bat` menu:
-- Select **Option 1: Launch Unified 5-Screen Netran AI Interview Workflow**
+- Select **Option 1: Launch Unified 6-Screen Netran AI Interview Workflow**
   - Mode 1: Kivy Desktop GUI Client (`front.py`)
   - Mode 2: Headless CLI Test Harness (`test_pipeline.py`)
 
@@ -132,7 +132,7 @@ model/workflow/test/output/sess_20260726_145000/
 ## 6. Execution & Verification
 
 Run via root `backend/run.bat` menu:
-- Select **Option 1: Launch Unified 5-Screen Netran AI Interview Workflow**
+- Select **Option 1: Launch Unified 6-Screen Netran AI Interview Workflow**
   - Mode 1: Kivy Desktop GUI Client (`front.py`)
   - Mode 2: Headless CLI Test Harness (`test_pipeline.py`)
 
