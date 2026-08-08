@@ -429,6 +429,11 @@ def listen_and_transcribe(
     # Initialize VAD state tensors (Silero VAD v3 ONNX: only state is required, no context)
     vad_state = np.zeros((2, 1, 128), dtype=np.float32)
     sr_scalar = np.array(RATE, dtype=np.int64)
+    # Streaming IIR DC blocker state (applied per-frame BEFORE VAD to remove DC offset).
+    # Carries state across chunks for temporal continuity (Rule 11 compliant).
+    _dc_prev_in = 0.0
+    _dc_prev_out = 0.0
+    
     # _ratecv_state is already initialized by calibration
     _listen_start_time = time.monotonic()  # Wall-clock start for pre-speech idle timeout
 
@@ -461,32 +466,41 @@ def listen_and_transcribe(
                 )
                 original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
-            # 2. Prepare VAD frame from raw (pre-noise-suppression) audio
-            #    IMPORTANT: Silero VAD must receive the un-suppressed signal.
-            #    Noise suppression zeros out speech components too aggressively,
-            #    causing prob=0.001 even when the user is speaking loudly.
+            # --- Hardware Pre-Gain ---
+            # The diagnostic tool revealed the user's mic hardware captures at -78.4 dBFS.
+            # Apply a fixed 20x multiplier here so the entire pipeline (VAD, calibration, STT)
+            # sees normal volume levels without destroying the signal envelope.
+            original_frame = original_frame * 20.0
+            
+            # 2. Prepare VAD frame: apply streaming DC blocker BEFORE Silero VAD.
+            #    Silero VAD is trained on zero-centered audio. Even a tiny DC offset
+            #    (+0.005) causes the RNN hidden state to saturate -> prob = 0.000.
+            #    The IIR high-pass (alpha=0.995, ~5Hz cutoff) removes DC drift while
+            #    preserving speech energy, maintaining temporal continuity across chunks.
             vad_frame = original_frame.copy()
+            _dc_alpha = 0.995
+            for _s in range(len(vad_frame)):
+                _in_val = float(vad_frame[_s])
+                _dc_prev_out = _dc_alpha * (_dc_prev_out + _in_val - _dc_prev_in)
+                _dc_prev_in = _in_val
+                vad_frame[_s] = _dc_prev_out
             if len(vad_frame) < CHUNK:
                 vad_frame = np.pad(vad_frame, (0, CHUNK - len(vad_frame)), mode='edge')
 
             # Compute RMS on the VAD (raw) frame for gate decisions
             rms = float(np.sqrt(np.mean(vad_frame ** 2)))
 
-            # --- Noise suppression for recording/Whisper only (NOT for VAD) ---
-            # Apply Wiener filter to produce a clean frame for Whisper + WAV recording.
-            clean_frame = vad_frame.copy()
-            if noise_reducer is not None:
-                clean_frame = noise_reducer.suppress(clean_frame)
+            # --- Noise suppression DEFERRED to post-buffer (Bug #2 fix) ---
+            # Noise reduction is now applied ONCE on the full contiguous buffer
+            # before STT, eliminating windowing artifacts.
 
-            # Apply a constant volume boost for the output recording (Whisper + WAV)
-            proc_frame = clean_frame * 3.0
-            proc_frame = np.clip(proc_frame, -1.0, 1.0)
+            proc_frame = np.clip(vad_frame.copy(), -1.0, 1.0)
 
             if mic_writer:
                 mic_writer.write_frame(proc_frame)
 
-            # Prepare VAD inputs: shape [1, 512]. Feed RAW (un-suppressed) audio to VAD.
-            audio_input = np.expand_dims(vad_frame, axis=0)
+            # Prepare VAD inputs: shape [1, 512]. Feed the DC-filtered, 20x-boosted audio to VAD.
+            audio_input = np.expand_dims(proc_frame, axis=0)
 
             # 3. Run Silero VAD v3 — 3 inputs: input, state, sr
             ort_inputs = {
@@ -611,7 +625,7 @@ def listen_and_transcribe(
 
             # Accumulate clean (noise-suppressed) audio for Whisper while speech is active
             if has_spoken:
-                audio_buffer.append(clean_frame.copy())
+                audio_buffer.append(vad_frame.copy())
                 total_frames_counter += 1
 
 
@@ -741,11 +755,26 @@ def listen_and_transcribe(
     if not audio_buffer:
         return ""
 
-    # Combine accumulated (already DC-offset + auto-gain processed) frames
+    # Combine accumulated (DC-filtered via streaming IIR) frames
     audio_array = np.concatenate(audio_buffer)
 
-    # IIR high-pass filter to remove per-chunk DC drift without creating
-    # step discontinuities at chunk boundaries.
+    # Apply noise reduction ONCE on the full contiguous buffer (avoids 31Hz
+    # windowing artifacts caused by per-chunk Hann window tapering).
+    # Uses the noise profile captured during calibration for Wiener spectral gating.
+    if noise_reducer is not None:
+        try:
+            import noisereduce as nr
+            audio_array = nr.reduce_noise(
+                y=audio_array,
+                sr=16000,
+                y_noise=noise_reducer.noise_clip,
+                stationary=True,
+                prop_decrease=0.85,
+            ).astype(np.float32)
+        except Exception:
+            pass
+
+    # Safety IIR high-pass filter (redundant with streaming DC blocker, but harmless).
     # y[n] = alpha * (y[n-1] + x[n] - x[n-1]), alpha=0.995 -> ~5Hz cutoff at 16kHz
     alpha = 0.995
     filtered = np.empty_like(audio_array)

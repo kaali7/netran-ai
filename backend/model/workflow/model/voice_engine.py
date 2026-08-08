@@ -30,6 +30,7 @@ try:
         preload_models as preload_speaker,
     )
     from model.voice_to_voice_model.model.speaker import speak_text
+    from model.voice_to_voice_model.model.session_state import SessionState
 except ImportError:
     from voice_to_voice_model.model import brain
     from voice_to_voice_model.model.listener import (
@@ -38,6 +39,7 @@ except ImportError:
     )
     from voice_to_voice_model.model.session_logger import SessionLogger
     from voice_to_voice_model.model.speaker import speak_text
+    from voice_to_voice_model.model.session_state import SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ class WorkflowVoiceEngine:
         
         self.question_tree: list[dict[str, Any]] = []
         self.system_prompt_text: str = ""
+        self.session_state = SessionState()
         self._load_stage2_artifacts()
         
     def _load_stage2_artifacts(self):
@@ -144,7 +147,7 @@ class WorkflowVoiceEngine:
                     
                 audio_start_perf = session_log.elapsed_sec()
                 
-                transcription_result = listen_and_transcribe()
+                transcription_result = listen_and_transcribe(state=self.session_state)
                 if isinstance(transcription_result, dict):
                     candidate_transcript = transcription_result.get("text", "").strip()
                     stt_latency = transcription_result.get("latency_ms", 0.0)
@@ -219,12 +222,5 @@ class WorkflowVoiceEngine:
     def stop(self):
         """Stops the voice interview loop immediately and unblocks microphone listening."""
         self.stop_event.set()
-        try:
-            from model.voice_to_voice_model.model.listener import trigger_speech_done
-            trigger_speech_done()
-        except Exception:
-            try:
-                from listener import trigger_speech_done
-                trigger_speech_done()
-            except Exception:
-                pass
+        if hasattr(self, 'session_state'):
+            self.session_state.force_speech_done.set()

@@ -93,16 +93,17 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 ### 4. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
 * **Audio Capture Engine**: Built using `sounddevice`. Always opens the stream at the device's native sample rate (e.g. 44100Hz MME, 48000Hz WASAPI) and applies Python-side resampling.
 * **Python-Side Resampling**: Boxcar decimation for 48000Hz WASAPI, and `audioop.ratecv` with persistent inter-chunk state for 44100Hz MME.
-* **Wiener Filter Noise Suppression (`NoiseReducer`)**: Replaced basic FFT power subtraction with `noisereduce` library (Wiener filter + spectral gating). Handles BOTH stationary noise (fan, AC, HVAC) AND transient bursts (keyboard clicks, mouse, door slams). Applied per-chunk to `vad_frame` BEFORE Silero VAD inference.
+* **Wiener Filter Noise Suppression (`NoiseReducer`)**: Uses `noisereduce` library (Wiener filter + spectral gating). Handles BOTH stationary noise (fan, AC, HVAC) AND transient bursts (keyboard clicks, mouse, door slams). Applied **ONCE on the full contiguous audio buffer** before STT — NOT per-chunk (per-chunk STFT with `n_fft=512` on exactly 512-sample frames caused 31Hz Hann-window amplitude modulation artifacts that degraded SpeakerVerifier embeddings and Whisper transcription accuracy).
 * **Post-TTS Echo Guard Window**: Monotonic timestamp guard (`_echo_guard_until = time.monotonic() + 0.30`) suppresses VAD triggers for 300ms after `state.is_agent_speaking` clears to absorb room acoustic reflections of Eva's last sentence, preventing false barge-in and self-capture.
 * **Offline Speaker Verification (`speaker_verifier.py`)**: Employs SpeechBrain `speechbrain/spkrec-ecapa-voxceleb` (192-dim ECAPA-TDNN) to verify candidate identity before STT transcription.
   - **Auto-Enrollment**: Automatically captures 192-dim candidate speaker embedding from the first ICEBREAKER utterance >= 2 seconds.
-  - **Verification Gate**: Evaluates cosine similarity of completed audio buffers against enrolled embedding (threshold 0.55 configurable via `.env` SV_THRESHOLD). Rejects foreign speech (students, teacher, TV, phone) with zero impact on per-frame VAD latency (~15ms per utterance).
+  - **Verification Gate**: Evaluates cosine similarity of completed audio buffers against enrolled embedding (threshold 0.45 configurable via `.env` SV_THRESHOLD, default 0.55 in `config.py`). Rejects foreign speech (students, teacher, TV, phone) with zero impact on per-frame VAD latency (~15ms per utterance). Audio buffers fed to SpeakerVerifier are DC-filtered raw frames (no noise suppression artifacts) for clean spectral feature extraction.
 * **Inline Dynamic Noise Floor Calibration**: Calibration samples ambient noise directly from the active producer queue during the first 960ms of `listen_and_transcribe()`. Eliminates PortAudio driver lockups (silent `0.0000` audio buffers) on Windows caused by rapid stream open/close cycles.
 * **Adaptive Speech Gates**: All thresholds computed relative to `ambient_floor`:
   - Speech START: `(VAD prob >= 0.30 AND rms >= 2.5× ambient_floor)` OR `VAD prob >= 0.50`
   - Speech CONTINUATION: silence counter increments only when `rms < 1.8× ambient_floor`
-* **Per-Frame Auto-Gain**: Utterance-level peak auto-gain up to **15x boost** applied to the full audio buffer before Whisper STT.
+* **Streaming IIR DC Blocker (Pre-VAD)**: A per-sample IIR high-pass filter (`alpha=0.995`, ~5Hz cutoff at 16kHz) is applied to every audio frame BEFORE Silero VAD inference. This removes microphone DC offset that caused the Silero RNN hidden state to saturate (`prob ≈ 0.000` on all frames). The filter carries state across chunks for temporal continuity (Rule 11 compliant — no per-chunk mean subtraction).
+* **Hardware Pre-Gain**: A fixed 20x pre-gain multiplier is applied at the very top of the audio pipeline (right after resampling) to correct extremely low microphone capture hardware (-78 dBFS). This ensures the neural network VAD, calibration gates, and Whisper all receive a consistent, properly-scaled signal without dynamic AGC destroying the temporal envelope.
 * **Continuous Mic Writer (`ContinuousMicWriter`)**: Writes 3x-boosted 16kHz 16-bit Mono WAV frames directly to `recording.wav`.
 * **Faster-Whisper Anti-Hallucination Tuning**: `condition_on_previous_text=False`, `no_speech_threshold=0.6`, `hallucination_silence_threshold=2.0`, `temperature=0.0`, `beam_size=1`.
 * **Input Modes (Auto-VAD vs Push-To-Talk)**: Supports both automatic VAD speech endpointing and PTT mode.
@@ -112,7 +113,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
   - Implements Case 3 Hybrid Architecture to determine if candidate speech is a complete thought or an interrupted thinking pause.
   - **Tier 0 (Ollama Liveness Probe)**: Skips Tier 2 if Ollama is unreachable.
   - **Tier 1 (Regex/Lexical - 0ms)**: Checks trailing conjunctions and filler words.
-  - **Tier 2 (Qwen2.5 Probe - ~100ms)**: Calls local Ollama model using `OLLAMA_MODEL` (aligned with `brain.py` to prevent latency from model swapping in GPU/RAM memory) with a safety timeout limit.
+  - **Tier 2 (Qwen2.5 Probe - ~100ms)**: Calls local Ollama model using `OLLAMA_MODEL` (aligned with `brain.py` to prevent latency from model swapping in GPU/RAM memory) with a safety timeout limit. Non-200 HTTP responses now correctly return `"COMPLETE"` via explicit fallback return (previously could implicitly return `None`).
   - When initial 800ms silence threshold is hit, dynamic pause extends up to 2300ms if thought is incomplete.
 * **Full-Duplex Real-Time Barge-In (v3)**: VAD runs continuously even while `state.is_agent_speaking` is set. When `speech_prob > 0.65`:
   1. **Cooldown check** (`interrupt_cooldown_sec=0.3s`) prevents rapid re-triggering.

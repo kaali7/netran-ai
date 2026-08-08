@@ -112,6 +112,7 @@ def check_thought_completion(transcript: str) -> str:
         return "COMPLETE"
 
     # Default fallback if uncertain
+    return "COMPLETE"
 
 if __name__ == "__main__":
     test_cases = [

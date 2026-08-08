@@ -58,7 +58,7 @@ class Stage3Config:
     kokoro_model: str = field(default_factory=resolve_kokoro_model_path)
     max_questions: int = field(default=15)
     sv_enabled: bool = field(default_factory=lambda: os.getenv("SV_ENABLED", "1") == "1")
-    sv_threshold: float = field(default_factory=lambda: float(os.getenv("SV_THRESHOLD", "0.72")))
+    sv_threshold: float = field(default_factory=lambda: float(os.getenv("SV_THRESHOLD", "0.55")))
     sv_model: str = field(default_factory=lambda: os.getenv(
         "SV_MODEL", "speechbrain/spkrec-ecapa-voxceleb"
     ))
@@ -74,7 +74,7 @@ WHISPER_MODEL = resolve_whisper_model_path()
 KOKORO_MODEL = resolve_kokoro_model_path()
 MAX_QUESTIONS = 15
 SV_ENABLED = os.getenv("SV_ENABLED", "1") == "1"
-SV_THRESHOLD = float(os.getenv("SV_THRESHOLD", "0.72"))
+SV_THRESHOLD = float(os.getenv("SV_THRESHOLD", "0.55"))
 SV_MODEL = os.getenv("SV_MODEL", "speechbrain/spkrec-ecapa-voxceleb")
 
 
