@@ -30,6 +30,27 @@ def check_ollama_model(model_name):
         print(f"[ERROR] Failed to run Ollama: {e}")
         return False
 
+def check_hf_model(repo_id):
+    folder_name = "models--" + repo_id.replace("/", "--")
+    cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+    model_path = os.path.join(cache_dir, folder_name)
+    
+    if os.path.exists(model_path) and os.path.isdir(model_path):
+        print(f"[OK] Hugging Face model '{repo_id}' is cached.")
+        return True
+    else:
+        print(f"[WARNING] Hugging Face model '{repo_id}' is missing. Will auto-download on first run.")
+        return False
+
+def check_silero_vad():
+    vad_path = os.path.join("model", "voice_to_voice_model", "model", "silero_vad.onnx")
+    if os.path.exists(vad_path):
+        print(f"[OK] Silero VAD model found at '{vad_path}'.")
+        return True
+    else:
+        print(f"[WARNING] Silero VAD model is missing. Run option 13 in run.bat to download.")
+        return False
+
 def check_env():
     if os.path.exists(".env"):
         print("[OK] .env file found.")
@@ -78,8 +99,22 @@ def main():
     print("\n--- Environment Variables ---")
     check_env()
     
+    print("\n--- Audio & AI Models ---")
+    models_ok = True
+    if not check_silero_vad():
+        models_ok = False
+        
+    hf_models = [
+        "Systran/faster-whisper-small",
+        "hexgrad/Kokoro-82M",
+        "speechbrain/spkrec-ecapa-voxceleb"
+    ]
+    for hf_model in hf_models:
+        if not check_hf_model(hf_model):
+            models_ok = False
+    
     print("\n========================================")
-    if all_pkgs_ok and ollama_ok:
+    if all_pkgs_ok and ollama_ok and models_ok:
         print("[SUCCESS] All crucial dependencies appear to be met!")
         print("          If you face issues with models (e.g. Silero/Faster-Whisper), they will auto-download on first run.")
     else:
