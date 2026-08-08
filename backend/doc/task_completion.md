@@ -223,4 +223,26 @@ Both `listen_and_transcribe()` and `BargeInWatcher._watch_loop()` used the Metho
 ### Verification
 - `ast.parse()` syntax check: ✅ PASS on all modified files
 - WAV forensics: confirmed aliased audio → VAD `prob=0.001` → root cause established
-- Spectral subtraction algorithm: mathematically correct, no external dependencies (pure NumPy FFT)
+- Spectral subtraction algorithm: mathematically correct, no external dependencies (pure NumPy FFT)
+---
+
+## Session Log � 2026-08-08 | Stage 3: Low Volume Mic & State Integration Fixes
+
+### Problem
+Microphone hardware output was extremely low (-78 dBFS). The dynamic AGC implementation was failing because it destroyed the signal envelope, causing the Silero VAD neural network to output near-zero probabilities ( .001). Additionally, `workflow/model/voice_engine.py` was losing the pause tolerance configuration due to missing state integration.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| `listener.py` | Removed dynamic AGC; introduced **fixed 20x hardware pre-gain multiplier** applied strictly to `original_frame`. |
+| `listener.py` | Verified IIR High-Pass DC Filter is now correctly running as a streaming per-frame pre-VAD operation. |
+| `voice_engine.py` | Instantiated and injected `SessionState()` into `listen_and_transcribe()` to persist barge-in signaling and pause tolerances. |
+| `voice_engine.py` | Fixed silent crash in `stop()` method by correctly triggering `self.session_state.force_speech_done.set()` instead of importing a removed function. |
+| `volume_diagnostic.py` | Created standalone diagnostic script to analyze raw microphone capture hardware and calculate recommended pre-gain values. |
+| Global Docs | Synchronized `tech_stack.md`, `rule.md`, `folder_strucuture.md`, and `backend_plan.md` to formally document the fixed 20x pre-gain architecture and WebSockets DSP protocol. |
+
+### Verification
+- Full Stage 3 pipeline tested cleanly.
+- `scan_code_quality.py` run on backend codebase (Passed Radon CC & MI).
+- Git commits executed via automated documentation safety checks.
