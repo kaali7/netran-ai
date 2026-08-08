@@ -121,9 +121,9 @@ The first time you launch Stage 3 or hardware diagnostics (`listener.py`, `speak
 If you want to manually pre-download all Hugging Face models before starting the application, use `huggingface-cli` (included in `requirements.txt`):
 
 ```cmd
-huggingface-cli download Systran/faster-whisper-small
-huggingface-cli download hexgrad/Kokoro-82M
-huggingface-cli download speechbrain/spkrec-ecapa-voxceleb
+hf download Systran/faster-whisper-small
+hf download hexgrad/Kokoro-82M
+hf download speechbrain/spkrec-ecapa-voxceleb
 ```
 
 ---
