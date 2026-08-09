@@ -15,16 +15,16 @@ from typing import Any
 try:
     from .cache import WorkflowCache
     from .config import OUTPUT_BASE_DIR, PROCESS_BASE_DIR
-    from .voice_engine import WorkflowVoiceEngine
+    from model.voice_to_voice_model.model.voice_engine import WorkflowVoiceEngine
 except ImportError:
     try:
         from model.workflow.model.cache import WorkflowCache
         from model.workflow.model.config import OUTPUT_BASE_DIR, PROCESS_BASE_DIR
-        from model.workflow.model.voice_engine import WorkflowVoiceEngine
+        from model.voice_to_voice_model.model.voice_engine import WorkflowVoiceEngine
     except ImportError:
         from cache import WorkflowCache
         from config import OUTPUT_BASE_DIR, PROCESS_BASE_DIR
-        from voice_engine import WorkflowVoiceEngine
+        from voice_to_voice_model.model.voice_engine import WorkflowVoiceEngine
 
 try:
     from model.research_model.model.pipeline import Stage1Pipeline

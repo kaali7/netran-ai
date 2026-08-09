@@ -345,3 +345,25 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 ### Verification
 - Ran code quality audit scanner on the repository to verify file integrity.
 - Zero syntax or schema issues found.
+
+---
+
+## Session Log - 2026-08-09 | Relocation of voice_engine.py to Stage 3
+
+### Problem
+oice_engine.py was located in model/workflow/model/, creating an architecture misalignment where Stage 3's core voice loop controller resided outside the oice_to_voice_model package.
+
+### Fixes Applied
+
+| File | Change |
+|---|---|
+| model/voice_to_voice_model/model/voice_engine.py | Created WorkflowVoiceEngine inside oice_to_voice_model package. |
+| model/voice_to_voice_model/model/pipeline.py | Updated to import WorkflowVoiceEngine directly from local .voice_engine module. |
+| model/workflow/model/voice_engine.py | Deleted legacy duplicate file from workflow directory. |
+| model/workflow/model/orchestrator.py | Updated import path to load WorkflowVoiceEngine from model.voice_to_voice_model.model.voice_engine. |
+| doc/folder_strucuture.md | Updated directory tree matrix reflecting oice_engine.py under Stage 3. |
+| doc/current.md | Updated Stage 3 and Workflow core file listings. |
+
+### Verification
+- Module import check verified via python execution (rom model.workflow.model.orchestrator import WorkflowVoiceEngine).
+- Automated code quality audit executed via scan_code_quality.py.

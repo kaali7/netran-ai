@@ -1,7 +1,7 @@
 """
-Netran AI — Workflow Orchestrator
+Netran AI — Stage 3: Live Voice-to-Voice Loop
 Module: voice_engine.py
-Description: Stage 3 voice loop adapter that injects Stage 2's dynamic prompt (`system_prompt.txt`)
+Description: Stage 3 voice loop adapter that injects Stage 2's dynamic prompt (`interviewer_behavior.json`)
              into Ollama Qwen2.5 persona, iterates through the 15-question tree (`interview_questions.json`),
              and manages continuous mic audio recording.
 """
@@ -15,43 +15,47 @@ from collections.abc import Callable
 from typing import Any
 
 try:
-    from .config import OLLAMA_MODEL
+    from . import brain
+    from .listener import ContinuousMicWriter, listen_and_transcribe
+    from .question_manager import QuestionManager
+    from .schemas import InterviewQuestionInput
+    from .session_logger import SessionLogger
+    from .session_state import SessionState
+    from .speaker import preload_models as preload_speaker
+    from .speaker import speak_text
 except ImportError:
-    pass
-
-try:
-    from model.voice_to_voice_model.model import brain
-    from model.voice_to_voice_model.model.listener import (
-        ContinuousMicWriter,
-        listen_and_transcribe,
-    )
-    from model.voice_to_voice_model.model.session_logger import SessionLogger
-    from model.voice_to_voice_model.model.speaker import (
-        preload_models as preload_speaker,
-    )
-    from model.voice_to_voice_model.model.speaker import speak_text
-    from model.voice_to_voice_model.model.session_state import SessionState
-    from model.voice_to_voice_model.model.question_manager import QuestionManager
-    from model.voice_to_voice_model.model.schemas import InterviewQuestionInput
-except ImportError:
-    from voice_to_voice_model.model import brain
-    from voice_to_voice_model.model.listener import (
-        ContinuousMicWriter,
-        listen_and_transcribe,
-    )
-    from voice_to_voice_model.model.session_logger import SessionLogger
-    from voice_to_voice_model.model.speaker import speak_text
-    from voice_to_voice_model.model.session_state import SessionState
-    from voice_to_voice_model.model.question_manager import QuestionManager
-    from voice_to_voice_model.model.schemas import InterviewQuestionInput
+    try:
+        from model.voice_to_voice_model.model import brain
+        from model.voice_to_voice_model.model.listener import (
+            ContinuousMicWriter,
+            listen_and_transcribe,
+        )
+        from model.voice_to_voice_model.model.question_manager import QuestionManager
+        from model.voice_to_voice_model.model.schemas import InterviewQuestionInput
+        from model.voice_to_voice_model.model.session_logger import SessionLogger
+        from model.voice_to_voice_model.model.session_state import SessionState
+        from model.voice_to_voice_model.model.speaker import (
+            preload_models as preload_speaker,
+        )
+        from model.voice_to_voice_model.model.speaker import speak_text
+    except ImportError:
+        import brain
+        from listener import ContinuousMicWriter, listen_and_transcribe
+        from question_manager import QuestionManager
+        from schemas import InterviewQuestionInput
+        from session_logger import SessionLogger
+        from session_state import SessionState
+        from speaker import preload_models as preload_speaker
+        from speaker import speak_text
 
 logger = logging.getLogger(__name__)
+
 
 class WorkflowVoiceEngine:
     """
     Adapter and controller for Stage 3 Voice-to-Voice Interview Loop.
     Injects dynamic system prompt and question tree from Stage 2.
-    Auto-stops after 15 turns or when stop_event is set.
+    Auto-stops after max_turns or when stop_event is set.
     """
     def __init__(self, session_dir: str, session_id: str):
         self.session_dir = session_dir
@@ -138,7 +142,7 @@ class WorkflowVoiceEngine:
                 time_greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
                 initial_greeting = f"{time_greeting}. I'm Eva, your technical interviewer today. How are you doing?"
                 
-                logger.info(f"--- TURN 0: [ICEBREAKER] ---")
+                logger.info("--- TURN 0: [ICEBREAKER] ---")
                 if status_callback:
                     status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
                     

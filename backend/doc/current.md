@@ -84,7 +84,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 
 ### 3. Stage 3: Voice-to-Voice Model (`voice_to_voice_model`)
 - **Location**: `backend/model/voice_to_voice_model/model/`
-- **Core Files:** `pipeline.py`, `listener.py`, `brain.py`, `speaker.py`, `turn_classifier.py`, `session_logger.py`, `benchmark.py`, `question_manager.py`, `schemas.py`, `download_vad.py`, `front.py`.
+- **Core Files:** `pipeline.py`, `voice_engine.py`, `listener.py`, `brain.py`, `speaker.py`, `turn_classifier.py`, `session_logger.py`, `benchmark.py`, `question_manager.py`, `schemas.py`, `download_vad.py`, `front.py`.
 - **Functionality**: Drives the real-time cascaded voice loop under 100% offline model resolution (`HF_HUB_OFFLINE=1`). Uses Silero VAD v3 + dynamic peak auto-gain. Faster-Whisper (`small` int8) handles STT (dynamically weighted with candidate-specific resume jargon), Ollama `qwen2.5:3b` manages LLM reasoning, and Kokoro-82M executes neural TTS. Includes hybrid turn classifier leveraging Ollama `OLLAMA_MODEL` (qwen2.5:3b by default, aligned with brain.py). Logs gain-boosted continuous PCM mic audio (`recording.wav`) alongside a millisecond-precision timing manifest (`transcript.json`).
 
 ### 4. Stage 4: Reports Model (`reports_model`)
@@ -94,7 +94,7 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 
 ### 5. Workflow Orchestrator (`workflow`)
 - **Location**: `backend/model/workflow/model/`
-- **Core Files**: `front.py`, `orchestrator.py`, `voice_engine.py`, `config.py`, `sample_data.py`, `test_pipeline.py`
+- **Core Files**: `front.py`, `orchestrator.py`, `config.py`, `sample_data.py`, `test_pipeline.py`
 - **Functionality**: Master multi-stage controller. Houses the unified 6-screen Kivy desktop GUI application, orchestrates background pipeline threads, and provides built-in demo testing data.
 
 ---

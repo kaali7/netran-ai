@@ -94,6 +94,7 @@ backend/
     │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
 
     │       ├── turn_classifier.py # Case 3 Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Ollama OLLAMA_MODEL, qwen2.5:3b by default)
+    │       ├── voice_engine.py # Stage 3 adapter with dynamic system prompt injection (WorkflowVoiceEngine)
     │       └── _interview_log.txt # Consolidated session logging file
     │
     ├── reports_model/         # STAGE 4: Post-Session Multimodal Evaluation Engine
@@ -129,8 +130,7 @@ backend/
             ├── orchestrator.py # Master 4-stage pipeline execution coordinator
             ├── run.bat        # Duplicate workflow launcher script
             ├── sample_data.py # Demo testing data provider (loads test/input/sample_session JSON files)
-            ├── test_pipeline.py # Standalone Headless CLI test harness for Unified Workflow
-            └── voice_engine.py # Stage 3 adapter with dynamic system prompt injection
+            └── test_pipeline.py # Standalone Headless CLI test harness for Unified Workflow
 ```
 
 ---

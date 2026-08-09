@@ -5,11 +5,14 @@ Description: Master Stage 3 pipeline entry point re-exporting WorkflowVoiceEngin
 """
 
 try:
-    from model.workflow.model.voice_engine import WorkflowVoiceEngine
+    from .voice_engine import WorkflowVoiceEngine
 except ImportError:
     try:
-        from voice_engine import WorkflowVoiceEngine
+        from model.voice_to_voice_model.model.voice_engine import WorkflowVoiceEngine
     except ImportError:
-        WorkflowVoiceEngine = None
+        try:
+            from voice_engine import WorkflowVoiceEngine
+        except ImportError:
+            WorkflowVoiceEngine = None
 
 Stage3Pipeline = WorkflowVoiceEngine
