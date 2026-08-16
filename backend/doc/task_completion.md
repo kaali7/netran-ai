@@ -371,48 +371,54 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 
 ---
 
-## ✅ Session Log - 2026-08-16 | FastAPI Gateway, Auth & Document Ingestion Engine
+## ✅ Session Log - 2026-08-16 | FastAPI Gateway, Auth, Ingestion & Stage 1/2 Pipeline Integration
 
 ### Overview
-Established the core FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 schemas, security utilities, dependency injection, and a fully operational Document Ingestion Engine (`/ingest/resume` and `/ingest/jd`).
+Established the core FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models with SQLite auto-migrations, Pydantic v2 schemas, security utilities, dependency injection, a Document Ingestion Engine (/ingest/resume and /ingest/jd), and fully wired Stage 1 (Tavily Research) & Stage 2 (15-Question Tree & Persona Engine) pipeline endpoints (/setup/analyze, /questions/status/{id}, /questions/preview/{id}).
 
 ### ✅ Completed Tasks & Deliverables
 
 | Component / File | Description | Status |
 |---|---|---|
-| `api/__init__.py` | Created root package initialization for FastAPI gateway. | ✅ Completed |
-| `api/config.py` | Created central settings loader parsing `.env` keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
-| `api/db.py` | Configured SQLAlchemy engine, `SessionLocal`, SQLite multi-thread compatibility, and `get_db()` dependency. | ✅ Completed |
-| `api/models.py` | Created ORM models: `User` (candidate/admin RBAC), `Session` (lifecycle states), and `SessionArtifact` (JSON stage artifacts). | ✅ Completed |
-| `api/schemas.py` | Defined Pydantic v2 schemas for Auth (`UserCreate`, `UserLogin`, `UserResponse`), Sessions, `CandidateProfile`, `ParsedJD`, and Ingest payloads. | ✅ Completed |
-| `api/security.py` | Implemented Bcrypt password hashing (`hash_password`, `verify_password`) and JWT token encoding/decoding (`create_access_token`, `decode_token`). | ✅ Completed |
-| `api/dependencies.py` | Created `get_current_user` (Bearer header), `get_ws_user` (WebSocket `?token=` query param), and `require_admin` (RBAC guard). | ✅ Completed |
-| `api/services/text_extractor.py` | Multi-format text extraction supporting `.pdf` (`pypdf`), `.docx` (`python-docx`), `.txt`, and `.tex` files. | ✅ Completed |
-| `api/services/gemini_extractor.py` | Gemini-powered JSON extraction service outputting `CandidateProfile` and `ParsedJD` JSON schemas with `temperature=0.1`. | ✅ Completed |
-| `api/services/cache.py` | SHA-256 cache deduplication lookup preventing redundant Gemini API calls on duplicate uploads/pastes. | ✅ Completed |
-| `api/routers/auth.py` | Implemented working `/api/v1/auth/signup`, `/login`, `/token`, and `/me` routes with JWT issuance and password hashing. | ✅ Completed |
-| `api/routers/ingest.py` | Full implementation of `POST /api/v1/ingest/resume` (file upload) and `POST /api/v1/ingest/jd` (pasted text) storing artifacts in SQLite. | ✅ Completed |
-| `api/main.py` | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI `/docs`, `/health` ping, and router mounting. | ✅ Completed |
-| `requirements.txt` | Added `fastapi`, `uvicorn`, `python-jose`, `passlib`, `sqlalchemy`, `python-multipart`, `email-validator`, and updated `pypdf>=4.0.0`. | ✅ Completed |
-| `.env` | Added `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `DATABASE_URL`, and `API_CORS_ORIGINS`. | ✅ Completed |
-| `run.bat` | Relocated launcher to root workspace directory (`run.bat`) and configured Option 1 to start FastAPI Uvicorn server (`api.main:app`). | ✅ Completed |
-| `doc/current.md` | Updated subsystem architecture status matrix to include `api` (Web API Gateway) and ingestion services. | ✅ Completed |
-| `doc/folder_strucuture.md` | Updated directory tree and file inventory with `api/` and `api/services/` packages. | ✅ Completed |
+| pi/__init__.py | Created root package initialization for FastAPI gateway. | ✅ Completed |
+| pi/config.py | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
+| pi/db.py | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, auto-column migration (progress_message), and get_db() dependency. | ✅ Completed |
+| pi/models.py | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states + progress_message), and SessionArtifact (JSON stage artifacts). | ✅ Completed |
+| pi/schemas.py | Defined Pydantic v2 schemas for Auth (UserCreate, UserLogin, UserResponse), Sessions, CandidateProfile, ParsedJD, Ingest, Setup (AnalyzeRequest), Status (SessionStatusResponse), and QuestionPreviewResponse. | ✅ Completed |
+| pi/security.py | Implemented Bcrypt password hashing (hash_password, erify_password) and JWT token encoding/decoding (create_access_token, decode_token). | ✅ Completed |
+| pi/dependencies.py | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and 
+equire_admin (RBAC guard). | ✅ Completed |
+| pi/services/text_extractor.py | Multi-format text extraction supporting .pdf (pypdf), .docx (python-docx), .txt, and .tex files. | ✅ Completed |
+| pi/services/gemini_extractor.py | Gemini-powered JSON extraction service outputting CandidateProfile and ParsedJD JSON schemas with 	emperature=0.1. | ✅ Completed |
+| pi/services/cache.py | SHA-256 cache deduplication lookup preventing redundant Gemini API calls on duplicate uploads/pastes. | ✅ Completed |
+| pi/services/pipeline_runner.py | Background worker executing Stage1Pipeline (Tavily research) and Stage2Pipeline (15-question tree + Eva system prompt) with live progress reporting. | ✅ Completed |
+| pi/routers/auth.py | Implemented working /api/v1/auth/signup, /login, /token, and /me routes with JWT issuance and password hashing. | ✅ Completed |
+| pi/routers/ingest.py | Full implementation of POST /api/v1/ingest/resume (file upload) and POST /api/v1/ingest/jd (pasted text) storing artifacts in SQLite. | ✅ Completed |
+| pi/routers/setup.py | Full implementation of POST /api/v1/setup/analyze triggering async background pipeline execution with 202 Accepted. | ✅ Completed |
+| pi/routers/questions.py | Full implementation of GET /api/v1/questions/status/{session_id} (live progress polling) and GET /api/v1/questions/preview/{session_id} (15-question tree & system prompt). | ✅ Completed |
+| pi/main.py | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
+| 
+equirements.txt | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator, and updated pypdf>=4.0.0. | ✅ Completed |
+| .env | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. | ✅ Completed |
+| 
+un.bat | Relocated launcher to root workspace directory (
+un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
+| doc/current.md | Updated subsystem architecture status matrix to include pi (Web API Gateway) and Stage 1/2 pipeline services. | ✅ Completed |
+| doc/folder_strucuture.md | Updated directory tree and file inventory with pi/ and pi/services/ packages. | ✅ Completed |
 
 ### ⏳ Pending & Incomplete Roadmap Tasks
 
 | Feature / Module | Target File | Description & Requirements | Status |
 |---|---|---|---|
-| Pipeline Setup API | `api/routers/setup.py` | Wire `POST /api/v1/setup/analyze` to trigger Stage 1 (Tavily research) & Stage 2 (question tree & prompt generation) via `fastapi.BackgroundTasks`. | ⏳ Pending |
-| Questions Preview API | `api/routers/questions.py` | Wire `GET /api/v1/questions/preview/{session_id}` to retrieve generated 15-question tree & interviewer behavior payload from DB. | ⏳ Pending |
-| Voice WebSocket API | `api/routers/voice.py` | Implement `WS /api/v1/voice/stream/{session_id}` full-duplex binary PCM audio handler (Silero VAD, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in). | ⏳ Pending |
-| Multimodal Reports API | `api/routers/reports.py` | Wire `POST /api/v1/reports/generate/{session_id}` and `GET /api/v1/reports/{session_id}` to execute 3-branch Gemini multimodal evaluation. | ⏳ Pending |
-| Next.js Web Frontend | `frontend/` | Build React 18/19 Next.js web application with AudioWorklet client, WebSockets connection, setup screens, live call UI, and evaluation dashboard. | ⏳ Pending |
+| **Voice WebSocket API** | pi/routers/voice.py | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler (Silero VAD, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in). | ⏳ Pending |
+| **Multimodal Reports API** | pi/routers/reports.py | Wire POST /api/v1/reports/generate/{session_id} and GET /api/v1/reports/{session_id} to execute 3-branch Gemini multimodal evaluation. | ⏳ Pending |
+| **Next.js Web Frontend** | rontend/ | Build React 18/19 Next.js web application with AudioWorklet client, WebSockets connection, setup screens, live call UI, and evaluation dashboard. | ⏳ Pending |
 
 ### ✅ Verification & Quality Assurance
-- ✅ Installed all required dependencies (`fastapi`, `uvicorn`, `sqlalchemy`, `python-jose`, `passlib`, `pypdf>=4.0.0`).
-- ✅ Relocated `run.bat` launcher to workspace root (`c:\kali\product\netran ai\run.bat`) with auto-cd backend context.
-- ✅ Verified database initialization and table auto-creation (`users`, `sessions`, `session_artifacts`).
-- ✅ Verified Swagger UI (`/docs`) and API authentication endpoints (`/signup`, `/login`, `/token`, `/me`).
-- ✅ Resolved Swagger UI Authorize `422 Unprocessable Entity` error by setting `tokenUrl="/api/v1/auth/token"`.
-- ✅ Executed automated test suite (26/26 tests passed) verifying document text extraction (`.pdf`, `.docx`, `.txt`), SHA-256 cache deduplication, Gemini JSON parsing (`CandidateProfile` & `ParsedJD`), and SQLite artifact persistence.
+- ✅ Installed all required dependencies (astapi, uvicorn, sqlalchemy, python-jose, passlib, pypdf>=4.0.0).
+- ✅ Relocated 
+un.bat launcher to workspace root (c:\kali\product\netran ai\run.bat) with auto-cd backend context.
+- ✅ Verified database initialization, auto-column migration (progress_message), and table auto-creation (users, sessions, session_artifacts).
+- ✅ Verified Swagger UI (/docs) and API authentication endpoints (/signup, /login, /token, /me).
+- ✅ Verified Document Ingestion pipeline end-to-end via 26 automated unit and integration tests (scratch/test_ingest.py).
+- ✅ Verified Stage 1 & Stage 2 Setup & Questions Pipeline end-to-end via 22 automated integration tests (scratch/test_setup_pipeline.py): async background task execution, 7-checkpoint status polling (/questions/status/{session_id}), and 15-question tree preview payload (/questions/preview/{session_id}).

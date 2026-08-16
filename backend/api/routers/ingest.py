@@ -65,20 +65,41 @@ async def ingest_resume(
     cached_result = cache.lookup_resume_cache(db, resume_hash)
 
     if cached_result:
-        # Return existing session for this hash
-        existing_session = (
+        # Check if current user already has a session with this resume_hash
+        user_session = (
             db.query(SessionModel)
-            .filter(SessionModel.resume_hash == resume_hash)
+            .filter(
+                SessionModel.resume_hash == resume_hash,
+                SessionModel.user_id == current_user.id,
+            )
             .order_by(SessionModel.created_at.desc())
             .first()
         )
+        if not user_session:
+            # Create a new session for current_user using cached result
+            user_session = SessionModel(
+                user_id=current_user.id,
+                resume_hash=resume_hash,
+                status=SessionStatus.SETUP,
+            )
+            db.add(user_session)
+            db.flush()
+            artifact = SessionArtifact(
+                session_id=user_session.id,
+                parsed_resume=cached_result,
+            )
+            db.add(artifact)
+            db.commit()
+            db.refresh(user_session)
+
         return IngestResumeResponse(
-            session_id=existing_session.id,
+            session_id=user_session.id,
             resume_hash=resume_hash,
             parsed_resume=CandidateProfile(**cached_result),
             cached=True,
             message="Resume already parsed. Returning cached result.",
         )
+
 
     # ── 4. Call Gemini for structured extraction ─────────────────────────────
     parsed_dict = gemini_extractor.parse_resume(raw_text)
@@ -168,22 +189,51 @@ def ingest_jd(
 
     # ── 3. Return cached result if hash already stored ───────────────────────
     if cached_result:
-        existing_session = (
-            db.query(SessionModel)
-            .filter(SessionModel.jd_hash == jd_hash)
-            .order_by(SessionModel.created_at.desc())
-            .first()
-        )
+        if not target_session:
+            target_session = (
+                db.query(SessionModel)
+                .filter(
+                    SessionModel.jd_hash == jd_hash,
+                    SessionModel.user_id == current_user.id,
+                )
+                .order_by(SessionModel.created_at.desc())
+                .first()
+            )
+        if not target_session:
+            target_session = SessionModel(
+                user_id=current_user.id,
+                jd_hash=jd_hash,
+                status=SessionStatus.SETUP,
+            )
+            db.add(target_session)
+            db.flush()
+
+        target_session.jd_hash = jd_hash
+        if target_session.artifacts:
+            target_session.artifacts.parsed_jd = cached_result
+        else:
+            artifact = SessionArtifact(
+                session_id=target_session.id,
+                parsed_jd=cached_result,
+            )
+            db.add(artifact)
+
+        db.commit()
+        db.refresh(target_session)
+
         return IngestJDResponse(
-            session_id=existing_session.id,
+            session_id=target_session.id,
             jd_hash=jd_hash,
             parsed_jd=ParsedJD(**cached_result),
             cached=True,
-            message="JD already parsed. Returning cached result.",
+            message="JD already parsed. Attached cached result to session.",
         )
+
 
     # ── 4. Call Gemini for structured extraction ─────────────────────────────
     parsed_dict = gemini_extractor.parse_jd(raw_jd_text)
+    parsed_dict["raw_jd_text"] = raw_jd_text
+
 
     # ── 5. Persist: Update existing session or create new one ────────────────
     if target_session:

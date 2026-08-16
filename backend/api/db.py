@@ -32,8 +32,20 @@ Base = declarative_base()
 
 
 def init_db() -> None:
-    """Initialize database tables."""
+    """Initialize database tables and run lightweight column migrations."""
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight column migration check for SQLite
+    if settings.DATABASE_URL.startswith("sqlite"):
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            # Check if progress_message column exists on sessions table
+            res = conn.execute(text("PRAGMA table_info(sessions);")).fetchall()
+            columns = [row[1] for row in res]
+            if "progress_message" not in columns:
+                conn.execute(text("ALTER TABLE sessions ADD COLUMN progress_message VARCHAR;"))
+                conn.commit()
+
 
 
 def get_db() -> Generator:

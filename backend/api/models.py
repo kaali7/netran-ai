@@ -62,7 +62,9 @@ class Session(Base):
     resume_hash = Column(String, nullable=True, index=True)
     jd_hash = Column(String, nullable=True, index=True)
     status = Column(Enum(SessionStatus), default=SessionStatus.SETUP, nullable=False)
+    progress_message = Column(String, nullable=True, default=None)
     created_at = Column(DateTime, default=utc_now, nullable=False)
+
 
     # Relationships
     user = relationship("User", back_populates="sessions")

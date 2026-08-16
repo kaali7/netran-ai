@@ -132,6 +132,8 @@ class ParsedJD(BaseModel):
     experience_years_max: Optional[int] = None
     domain: Optional[str] = None
     raw_text_length: Optional[int] = None
+    raw_jd_text: Optional[str] = None
+
 
 
 class IngestJDRequest(BaseModel):
@@ -156,6 +158,43 @@ class IngestJDResponse(BaseModel):
     parsed_jd: ParsedJD
     cached: bool = False
     message: str = "Job description parsed successfully"
+
+
+# --- Setup & Pipeline Schemas ---
+
+class AnalyzeRequest(BaseModel):
+    """Request to trigger Stage 1 & Stage 2 pipeline analysis."""
+    session_id: str
+    target_seniority: Optional[str] = "Senior"
+    force_refresh: Optional[bool] = False
+
+
+class AnalyzeStatusResponse(BaseModel):
+    """Immediate response after triggering background pipeline analysis."""
+    session_id: str
+    status: SessionStatus = SessionStatus.ANALYZING
+    progress_message: str = "Starting pipeline..."
+    message: str = "Pipeline analysis started in background."
+
+
+class SessionStatusResponse(BaseModel):
+    """Status polling response for interview setup pipeline."""
+    session_id: str
+    status: SessionStatus
+    progress_message: Optional[str] = None
+
+
+class QuestionPreviewResponse(BaseModel):
+    """Response payload containing generated 15-question tree & interviewer behavior prompt."""
+    session_id: str
+    status: SessionStatus
+    total_questions: int
+    question_tree: list[dict[str, Any]]
+    resume_analysis: Optional[dict[str, Any]] = None
+    interview_behavior: Optional[dict[str, Any]] = None
+    jd_detail: Optional[dict[str, Any]] = None
+    cached: bool = False
+
 
 
 
