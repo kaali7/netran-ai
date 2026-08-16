@@ -16,9 +16,9 @@ backend/
 ├── check_dependencies.py      # Environment, Ollama, HuggingFace model & API key checker
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
-├── run.bat                    # Interactive Windows batch launcher (20-option menu)
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
 ├── skills-lock.json           # Locked agent skill registry
+
 ├── api/                       # FastAPI Web API Gateway
 │   ├── __init__.py            # API package initializer
 │   ├── main.py                # FastAPI entry point, CORS middleware, app initialization

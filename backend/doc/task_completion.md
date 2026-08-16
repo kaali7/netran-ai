@@ -402,6 +402,9 @@ equire_admin (RBAC guard). | ✅ Completed |
 | [doc/folder_strucuture.md](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md) | Updated directory tree and file inventory with pi/ and data/ packages. | ✅ Completed |
 
 ### ✅ Verification
-- ✅ Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
+- ✅ Executed pip install
+- ✅ Relocated run.bat to outer workspace root (c:\kali\product\netran ai\run.bat) with auto-cd backend context.
+- ✅ Configured FastAPI Web API Gateway server option 1 in root run.bat.
+ to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
 - ✅ Verified database initialization and table creation (users, sessions, session_artifacts).
 - ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via scratch/verify_api.py test suite.

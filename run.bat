@@ -1,5 +1,8 @@
 @echo off
-title Netran AI - Backend & Model Operations Suite
+title Netran AI - Master Operational Suite
+
+:: Change execution directory to backend
+cd /d "%~dp0backend"
 
 :: Check if virtual environment exists
 if not exist ".venv\Scripts\python.exe" (
@@ -12,71 +15,77 @@ if not exist ".venv\Scripts\python.exe" (
 :menu
 cls
 echo ===================================================================
-echo             NETRAN AI - BACKEND MODEL OPERATIONAL SUITE
+echo             NETRAN AI - MASTER OPERATIONAL SUITE
 echo ===================================================================
 echo.
-echo  --- COMBINED PIPELINE ---
-echo   1. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
+echo  --- BACKEND API ^& WORKFLOW RUNNERS ---
+echo   1. Launch FastAPI Web API Server (uvicorn api.main:app --reload)
+echo   2. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
 echo  --- INDIVIDUAL STAGE MODELS ---
-echo   2. Run Stage 1: JD Research ^& Market Intelligence Engine
-echo   3. Run Stage 2: Contextual Question Tree ^& Prompt Engine
-echo   4. Run Stage 3: Voice-to-Voice Interview Loop
-echo   5. Run Stage 4: Post-Session Multimodal Report Generator Engine
+echo   3. Run Stage 1: JD Research ^& Market Intelligence Engine
+echo   4. Run Stage 2: Contextual Question Tree ^& Prompt Engine
+echo   5. Run Stage 3: Voice-to-Voice Interview Loop
+echo   6. Run Stage 4: Post-Session Multimodal Report Generator Engine
 echo.
 echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
-echo   6. Test Speech-to-Text ^& Silero VAD (listener.py)
-echo   7. Test Text-to-Speech Kokoro-82M (speaker.py)
-echo   8. Test Ollama Qwen2.5 Streaming Brain (brain.py)
-echo   9. Test Hybrid Turn Classifier (turn_classifier.py)
-echo  10. Test Conversation State Manager (question_manager.py)
-echo  11. Test Speaker Verifier (speaker_verifier.py)
+echo   7. Test Speech-to-Text ^& Silero VAD (listener.py)
+echo   8. Test Text-to-Speech Kokoro-82M (speaker.py)
+echo   9. Test Ollama Qwen2.5 Streaming Brain (brain.py)
+echo  10. Test Hybrid Turn Classifier (turn_classifier.py)
+echo  11. Test Conversation State Manager (question_manager.py)
+echo  12. Test Speaker Verifier (speaker_verifier.py)
 echo.
-echo   --- SETUP TOOLS ---
-echo  12. Install / Update Backend Dependencies (requirements.txt)
-echo  13. Download / Verify Silero VAD Model Weights or Other HuggingFace Models (download_vad.py)
-echo  14. Check System Requirements ^& Dependencies (check_dependencies.py)
+echo  --- SETUP TOOLS ---
+echo  13. Install / Update Backend Dependencies (requirements.txt)
+echo  14. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  15. Check System Requirements ^& Dependencies (check_dependencies.py)
 echo.
-echo   --- MAINTENANCE ^& DATA CLEANING ---
-echo  15. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
-echo  16. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  17. Clean SQLite Research Cache Database (cache.db)
-echo  18. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log, _interview_log.txt)
-echo  19. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
-echo  20. Run Code Quality Audit (scan_code_quality.py)
-echo.
-echo   --- FASTAPI WEB API GATEWAY ---
-echo  21. Launch FastAPI Web API Server (uvicorn api.main:app --reload)
+echo  --- MAINTENANCE ^& DATA CLEANING ---
+echo  16. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
+echo  17. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
+echo  18. Clean SQLite Research Cache Database (cache.db)
+echo  19. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
+echo  20. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  21. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
 set /p choice="Enter your choice (0-21): "
 
-if "%choice%"=="1" goto run_unified_workflow
-if "%choice%"=="2" goto run_research_model
-if "%choice%"=="3" goto run_question_model_cli
-if "%choice%"=="4" goto run_voice_model
-if "%choice%"=="5" goto run_report_model
-if "%choice%"=="6" goto test_listener
-if "%choice%"=="7" goto test_speaker
-if "%choice%"=="8" goto test_brain
-if "%choice%"=="9" goto test_classifier
-if "%choice%"=="10" goto test_manager
-if "%choice%"=="11" goto test_verifier
-if "%choice%"=="12" goto install_reqs
-if "%choice%"=="13" goto run_vad
-if "%choice%"=="14" goto check_deps
-if "%choice%"=="15" goto clean_test_outputs
-if "%choice%"=="16" goto clean_sessions
-if "%choice%"=="17" goto clean_cache_db
-if "%choice%"=="18" goto clean_bytecode_trash
-if "%choice%"=="19" goto clean_full_deep
-if "%choice%"=="20" goto run_quality_audit
-if "%choice%"=="21" goto run_fastapi_server
+if "%choice%"=="1" goto run_fastapi_server
+if "%choice%"=="2" goto run_unified_workflow
+if "%choice%"=="3" goto run_research_model
+if "%choice%"=="4" goto run_question_model_cli
+if "%choice%"=="5" goto run_voice_model
+if "%choice%"=="6" goto run_report_model
+if "%choice%"=="7" goto test_listener
+if "%choice%"=="8" goto test_speaker
+if "%choice%"=="9" goto test_brain
+if "%choice%"=="10" goto test_classifier
+if "%choice%"=="11" goto test_manager
+if "%choice%"=="12" goto test_verifier
+if "%choice%"=="13" goto install_reqs
+if "%choice%"=="14" goto run_vad
+if "%choice%"=="15" goto check_deps
+if "%choice%"=="16" goto clean_test_outputs
+if "%choice%"=="17" goto clean_sessions
+if "%choice%"=="18" goto clean_cache_db
+if "%choice%"=="19" goto clean_bytecode_trash
+if "%choice%"=="20" goto clean_full_deep
+if "%choice%"=="21" goto run_quality_audit
 if "%choice%"=="0" goto end
 
 goto menu
 
+:: ── BACKEND API GATEWAY ───────────────────────────────────────────────
+
+:run_fastapi_server
+echo.
+echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000)...
+.venv\Scripts\python.exe -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+pause
+goto menu
 
 :: ── COMBINED PIPELINE ────────────────────────────────────────────────
 
@@ -196,7 +205,6 @@ echo [TESTING] Speaker Verifier (ECAPA-TDNN Enrollment ^& Verification)...
 pause
 goto menu
 
-
 :: ── SETUP TOOLS ─────────────────────────────────────────────────────
 
 :install_reqs
@@ -244,6 +252,7 @@ echo.
 echo [CLEANING] Deleting SQLite cache databases (cache.db)...
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
+if exist "data\cache.db" del /f /q "data\cache.db"
 echo Clean complete: SQLite cache.db files deleted.
 pause
 goto menu
@@ -267,6 +276,7 @@ if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'mod
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
+if exist "data\cache.db" del /f /q "data\cache.db"
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','_interview_log.txt' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo.
@@ -277,14 +287,7 @@ goto menu
 :run_quality_audit
 echo.
 echo [QUALITY AUDIT] Running Ruff, Bandit, and Radon Code Quality Scanners...
-.venv\Scripts\python.exe scan_code_quality.py
-pause
-goto menu
-
-:run_fastapi_server
-echo.
-echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000)...
-.venv\Scripts\python.exe -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+.\.venv\Scripts\python.exe scan_code_quality.py
 pause
 goto menu
 
