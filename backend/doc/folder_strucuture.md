@@ -10,6 +10,7 @@ This document details the complete, clean directory structure and file inventory
 .agents/                       # AI Agent custom instructions and tool skills (Root Level)
 ├── AGENTS.md                  # AI Agent Workspace Rules
 └── skills/                    # AI capability extensions (gemini-interactions-api)
+skills-lock.json               # Locked agent skill registry (Root Level)
 
 backend/
 ├── .env                       # Root environment secrets (GEMINI_API_KEY, TAVILY_API_KEY, OLLAMA_MODEL)
@@ -18,7 +19,6 @@ backend/
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
-├── skills-lock.json           # Locked agent skill registry
 
 ├── api/                       # FastAPI Web API Gateway
 │   ├── __init__.py            # API package initializer
