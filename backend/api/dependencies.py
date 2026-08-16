@@ -12,8 +12,9 @@ from api.db import get_db
 from api.models import User, UserRole
 from api.security import decode_token
 
-# OAuth2 bearer scheme for HTTP Authorization header
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+# OAuth2 bearer scheme for HTTP Authorization header (points to form-data OAuth2 token endpoint)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+
 
 
 def get_current_user(

@@ -56,11 +56,12 @@ def login(user_in: UserLogin, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/token", response_model=TokenResponse, include_in_schema=False)
+@router.post("/token", response_model=TokenResponse, summary="OAuth2 Token Login (Swagger Authorize)")
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+
     """OAuth2 password form login endpoint compatibility for Swagger UI Authorize button."""
     user = db.query(User).filter(User.email == form_data.username.lower()).first()
     if not user or not verify_password(form_data.password, user.hashed_password):

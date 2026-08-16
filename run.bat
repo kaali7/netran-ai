@@ -78,7 +78,7 @@ if "%choice%"=="0" goto end
 
 goto menu
 
-:: ── BACKEND API GATEWAY ───────────────────────────────────────────────
+:: ----- BACKEND API GATEWAY -----
 
 :run_fastapi_server
 echo.
@@ -87,7 +87,7 @@ echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000
 pause
 goto menu
 
-:: ── COMBINED PIPELINE ────────────────────────────────────────────────
+:: ----- COMBINED PIPELINE -----
 
 :run_unified_workflow
 echo.
@@ -103,7 +103,7 @@ if "%wchoice%"=="2" (
 pause
 goto menu
 
-:: ── INDIVIDUAL STAGES ────────────────────────────────────────────────
+:: ----- INDIVIDUAL STAGES -----
 
 :run_research_model
 echo.
@@ -161,7 +161,7 @@ if "%repchoice%"=="2" (
 pause
 goto menu
 
-:: ── COMPONENT DIAGNOSTICS ───────────────────────────────────────────
+:: ----- COMPONENT DIAGNOSTICS -----
 
 :test_listener
 echo.
@@ -205,7 +205,7 @@ echo [TESTING] Speaker Verifier (ECAPA-TDNN Enrollment ^& Verification)...
 pause
 goto menu
 
-:: ── SETUP TOOLS ─────────────────────────────────────────────────────
+:: ----- SETUP TOOLS -----
 
 :install_reqs
 echo.
@@ -228,7 +228,7 @@ echo [SETUP] Checking System Requirements ^& Dependencies...
 pause
 goto menu
 
-:: ── MAINTENANCE & DATA CLEANING ─────────────────────────────────────
+:: ----- MAINTENANCE & DATA CLEANING -----
 
 :clean_test_outputs
 echo.

@@ -424,4 +424,5 @@ un.bat to outer workspace root (c:\kali\product\netran ai\run.bat) with auto-cd 
 - ✅ Configured FastAPI Web API Gateway server Option 1 in root 
 un.bat.
 - ✅ Verified database initialization and table creation (users, sessions, session_artifacts).
-- ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via test suite.
+- ✅ Verified Swagger UI and API endpoints
+- ✅ Resolved Swagger UI Authorize 422 Unprocessable Entity error by updating tokenUrl to /api/v1/auth/token for OAuth2PasswordRequestForm compatibility. (/health, /api/v1/auth/signup, /login, /me) via test suite.
