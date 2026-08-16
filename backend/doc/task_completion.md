@@ -280,7 +280,7 @@ Microphone hardware output was extremely low (-78 dBFS). The dynamic AGC impleme
 | oice_engine.py | Fixed silent crash in stop() method by correctly triggering self.session_state.force_speech_done.set() instead of importing a removed function. |
 | olume_diagnostic.py | Created standalone diagnostic script to analyze raw microphone capture hardware and calculate recommended pre-gain values. |
 | Global Docs | Synchronized 	ech_stack.md, 
-ule.md, and older_strucuture.md to formally document the fixed 20x pre-gain architecture. |
+ule.md, and older_strucuture.md to formally document the fixed 20x pre-gain architecture. |
 
 ### Verification
 - Full Stage 3 pipeline tested cleanly.
@@ -365,7 +365,7 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 | doc/current.md | Updated Stage 3 and Workflow core file listings. |
 
 ### Verification
-- Module import check verified via python execution (rom model.workflow.model.orchestrator import WorkflowVoiceEngine).
+- Module import check verified via python execution (rom model.workflow.model.orchestrator import WorkflowVoiceEngine).
 - Automated code quality audit executed via scan_code_quality.py.
 
 
@@ -374,7 +374,7 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 ## ✅ Session Log - 2026-08-16 | FastAPI Backend Gateway & Auth Infrastructure Creation
 
 ### Overview
-Built the foundational ackend/api/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
+Built the foundational backend pi/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
 
 ### ✅ Completed Tasks & Additions Applied
 
@@ -397,7 +397,8 @@ equire_admin (RBAC guard). | ✅ Completed |
 | [api/main.py](file:///c:/kali/product/netran%20ai/backend/api/main.py) | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
 | [requirements.txt](file:///c:/kali/product/netran%20ai/backend/requirements.txt) | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator. | ✅ Completed |
 | [.env](file:///c:/kali/product/netran%20ai/backend/.env) | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. | ✅ Completed |
-| [run.bat](file:///c:/kali/product/netran%20ai/run.bat) | Relocated launcher to root workspace directory (c:\kali\product\netran ai\run.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
+| [run.bat](file:///c:/kali/product/netran%20ai/run.bat) | Relocated launcher to root workspace directory (
+un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
 | [doc/current.md](file:///c:/kali/product/netran%20ai/backend/doc/current.md) | Updated subsystem architecture status matrix to include pi (Web API Gateway). | ✅ Completed |
 | [doc/folder_strucuture.md](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md) | Updated directory tree and file inventory with pi/ and data/ packages. | ✅ Completed |
 
@@ -405,24 +406,20 @@ equire_admin (RBAC guard). | ✅ Completed |
 
 | Feature / Module | Pending Details | Status |
 |---|---|---|
-| **Document Ingestion API (
-outers/ingest.py)** | Wire POST /api/v1/ingest/resume (.pdf, .docx, .txt) and POST /api/v1/ingest/jd to pypdf/python-docx and Gemini JSON parsing to populate parsed_resume and parsed_jd in SQLite. | ⏳ Pending |
-| **Pipeline Setup API (
-outers/setup.py)** | Wire POST /api/v1/setup/analyze to trigger Stage 1 (Tavily research) & Stage 2 (resume fit matrix & 15-question tree) via astapi.BackgroundTasks and save artifacts to DB. | ⏳ Pending |
-| **Questions Preview API (
-outers/questions.py)** | Wire GET /api/v1/questions/preview/{session_id} to retrieve generated 15-question tree & interviewer behavior payload from DB. | ⏳ Pending |
-| **Voice Streaming WebSocket API (
-outers/voice.py)** | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler, connecting Silero VAD v3, SpeechBrain verification, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, and barge-in event protocol. | ⏳ Pending |
-| **Multimodal Reports API (
-outers/reports.py)** | Wire POST /api/v1/reports/generate/{session_id} and GET /api/v1/reports/{session_id} to execute non-destructive audio slicing and 3-branch Gemini multimodal evaluation. | ⏳ Pending |
-| **Next.js Web Frontend Integration** | Build React/Next.js frontend with AudioWorklet client, WebSockets connection, setup screens, live interview UI, and evaluation dashboard. | ⏳ Pending |
+| Ingest API (pi/routers/ingest.py) | Wire POST /api/v1/ingest/resume (.pdf, .docx, .txt) and POST /api/v1/ingest/jd to pypdf/python-docx and Gemini JSON parsing to populate parsed_resume and parsed_jd in SQLite. | ⏳ Pending |
+| Setup API (pi/routers/setup.py) | Wire POST /api/v1/setup/analyze to trigger Stage 1 (Tavily research) & Stage 2 (resume fit matrix & 15-question tree) via astapi.BackgroundTasks and save artifacts to DB. | ⏳ Pending |
+| Preview API (pi/routers/questions.py) | Wire GET /api/v1/questions/preview/{session_id} to retrieve generated 15-question tree & interviewer behavior payload from DB. | ⏳ Pending |
+| Voice WebSocket API (pi/routers/voice.py) | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler, connecting Silero VAD v3, SpeechBrain verification, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, and barge-in event protocol. | ⏳ Pending |
+| Reports API (pi/routers/reports.py) | Wire POST /api/v1/reports/generate/{session_id} and GET /api/v1/reports/{session_id} to execute non-destructive audio slicing and 3-branch Gemini multimodal evaluation. | ⏳ Pending |
+| Next.js Web Frontend | Build React/Next.js frontend with AudioWorklet client, WebSockets connection, setup screens, live interview UI, and evaluation dashboard. | ⏳ Pending |
 
 ### ✅ Verification
 - ✅ Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
 - ✅ Relocated 
-un.bat to outer workspace root (c:\kali\product\netran ai\run.bat) with auto-cd backend context.
+un.bat to outer workspace root (
+un.bat) with auto-cd backend context.
 - ✅ Configured FastAPI Web API Gateway server Option 1 in root 
 un.bat.
 - ✅ Verified database initialization and table creation (users, sessions, session_artifacts).
-- ✅ Verified Swagger UI and API endpoints
-- ✅ Resolved Swagger UI Authorize 422 Unprocessable Entity error by updating tokenUrl to /api/v1/auth/token for OAuth2PasswordRequestForm compatibility. (/health, /api/v1/auth/signup, /login, /me) via test suite.
+- ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via test suite.
+- ✅ Resolved Swagger UI Authorize 422 Unprocessable Entity error by updating tokenUrl to /api/v1/auth/token for OAuth2PasswordRequestForm compatibility.
