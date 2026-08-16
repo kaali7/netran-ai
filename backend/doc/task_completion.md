@@ -417,7 +417,7 @@ un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). 
 ### ✅ Verification & Quality Assurance
 - ✅ Installed all required dependencies (astapi, uvicorn, sqlalchemy, python-jose, passlib, pypdf>=4.0.0).
 - ✅ Relocated 
-un.bat launcher to workspace root (c:\kali\product\netran ai\run.bat) with auto-cd backend context.
+un.bat launcher to workspace root (c:/kali/product/netran ai/run.bat) with auto-cd backend context.
 - ✅ Verified database initialization, auto-column migration (progress_message), and table auto-creation (users, sessions, session_artifacts).
 - ✅ Verified Swagger UI (/docs) and API authentication endpoints (/signup, /login, /token, /me).
 - ✅ Verified Document Ingestion pipeline end-to-end via 26 automated unit and integration tests (scratch/test_ingest.py).
