@@ -7,12 +7,13 @@ This document details the complete, clean directory structure and file inventory
 ## 🏗️ Master Tree Overview
 
 ```text
+.agents/                       # AI Agent custom instructions and tool skills (Root Level)
+├── AGENTS.md                  # AI Agent Workspace Rules
+└── skills/                    # AI capability extensions (gemini-interactions-api)
+
 backend/
 ├── .env                       # Root environment secrets (GEMINI_API_KEY, TAVILY_API_KEY, OLLAMA_MODEL)
 ├── .gitignore                 # Git ignore rules (virtual environment, cache DB, WAV audio, test_output)
-├── .agents/                   # AI Agent custom instructions and tool skills
-│   ├── AGENTS.md              # AI Agent Workspace Rules
-│   └── skills/                # AI capability extensions (gemini-interactions-api)
 ├── check_dependencies.py      # Environment, Ollama, HuggingFace model & API key checker
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
