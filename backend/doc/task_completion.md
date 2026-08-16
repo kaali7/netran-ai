@@ -226,7 +226,7 @@ Both `listen_and_transcribe()` and `BargeInWatcher._watch_loop()` used the Metho
 - Spectral subtraction algorithm: mathematically correct, no external dependencies (pure NumPy FFT)
 ---
 
-## Session Log � 2026-08-08 | Stage 3: Low Volume Mic & State Integration Fixes
+## Session Log  2026-08-08 | Stage 3: Low Volume Mic & State Integration Fixes
 
 ### Problem
 Microphone hardware output was extremely low (-78 dBFS). The dynamic AGC implementation was failing because it destroyed the signal envelope, causing the Silero VAD neural network to output near-zero probabilities ( .001). Additionally, `workflow/model/voice_engine.py` was losing the pause tolerance configuration due to missing state integration.
@@ -371,36 +371,37 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 
 ---
 
-## Session Log - 2026-08-16 | FastAPI Backend Gateway & Auth Infrastructure Creation
+## ✅ Session Log - 2026-08-16 | FastAPI Backend Gateway & Auth Infrastructure Creation
 
 ### Overview
-Built the foundational backend/api/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
+Built the foundational ackend/api/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
 
-### Fixes & Additions Applied
+### ✅ Fixes & Additions Applied
 
-| File | Change |
-|---|---|
-| api/__init__.py | Created root package initialization for FastAPI gateway. |
-| api/config.py | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). |
-| api/db.py | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, and get_db() dependency. |
-| api/models.py | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states), and SessionArtifact (JSON stage artifacts). |
-| api/schemas.py | Defined Pydantic v2 request/response schemas for Auth (UserCreate, UserLogin, UserResponse, TokenResponse), Sessions, and Health. |
-| api/security.py | Implemented Bcrypt password hashing (hash_password, verify_password) and JWT token encoding/decoding (create_access_token, decode_token). |
-| api/dependencies.py | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and require_admin (RBAC guard). |
-| api/routers/auth.py | Implemented fully working /api/v1/auth/signup, /login, and /me routes with JWT issuance and password hashing. |
-| api/routers/ingest.py | Created route stub for /api/v1/ingest/resume and /ingest/jd. |
-| api/routers/setup.py | Created route stub for /api/v1/setup/analyze (Stage 1 & 2 pipeline trigger). |
-| api/routers/questions.py | Created route stub for /api/v1/questions/preview/{session_id}. |
-| api/routers/voice.py | Created WebSocket route stub for /api/v1/voice/stream/{session_id}. |
-| api/routers/reports.py | Created route stub for /api/v1/reports/generate/{session_id} and /reports/{session_id}. |
-| api/main.py | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. |
-| requirements.txt | Added fastapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator. |
-| .env | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. |
-| run.bat | Synchronized launcher menu with option 21 to start FastAPI Uvicorn server (api.main:app). |
-| doc/current.md | Updated subsystem architecture status matrix to include api (Web API Gateway). |
-| doc/folder_strucuture.md | Updated directory tree and file inventory with api/ and data/ packages. |
+| File | Change | Status |
+|---|---|---|
+| [api/__init__.py](file:///c:/kali/product/netran%20ai/backend/api/__init__.py) | Created root package initialization for FastAPI gateway. | ✅ Completed |
+| [api/config.py](file:///c:/kali/product/netran%20ai/backend/api/config.py) | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
+| [api/db.py](file:///c:/kali/product/netran%20ai/backend/api/db.py) | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, and get_db() dependency. | ✅ Completed |
+| [api/models.py](file:///c:/kali/product/netran%20ai/backend/api/models.py) | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states), and SessionArtifact (JSON stage artifacts). | ✅ Completed |
+| [api/schemas.py](file:///c:/kali/product/netran%20ai/backend/api/schemas.py) | Defined Pydantic v2 request/response schemas for Auth (UserCreate, UserLogin, UserResponse, TokenResponse), Sessions, and Health. | ✅ Completed |
+| [api/security.py](file:///c:/kali/product/netran%20ai/backend/api/security.py) | Implemented Bcrypt password hashing (hash_password, erify_password) and JWT token encoding/decoding (create_access_token, decode_token). | ✅ Completed |
+| [api/dependencies.py](file:///c:/kali/product/netran%20ai/backend/api/dependencies.py) | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and 
+equire_admin (RBAC guard). | ✅ Completed |
+| [api/routers/auth.py](file:///c:/kali/product/netran%20ai/backend/api/routers/auth.py) | Implemented fully working /api/v1/auth/signup, /login, and /me routes with JWT issuance and password hashing. | ✅ Completed |
+| [api/routers/ingest.py](file:///c:/kali/product/netran%20ai/backend/api/routers/ingest.py) | Created route stub for /api/v1/ingest/resume and /ingest/jd. | ✅ Completed |
+| [api/routers/setup.py](file:///c:/kali/product/netran%20ai/backend/api/routers/setup.py) | Created route stub for /api/v1/setup/analyze (Stage 1 & 2 pipeline trigger). | ✅ Completed |
+| [api/routers/questions.py](file:///c:/kali/product/netran%20ai/backend/api/routers/questions.py) | Created route stub for /api/v1/questions/preview/{session_id}. | ✅ Completed |
+| [api/routers/voice.py](file:///c:/kali/product/netran%20ai/backend/api/routers/voice.py) | Created WebSocket route stub for /api/v1/voice/stream/{session_id}. | ✅ Completed |
+| [api/routers/reports.py](file:///c:/kali/product/netran%20ai/backend/api/routers/reports.py) | Created route stub for /api/v1/reports/generate/{session_id} and /reports/{session_id}. | ✅ Completed |
+| [api/main.py](file:///c:/kali/product/netran%20ai/backend/api/main.py) | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
+| [requirements.txt](file:///c:/kali/product/netran%20ai/backend/requirements.txt) | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator. | ✅ Completed |
+| [.env](file:///c:/kali/product/netran%20ai/backend/.env) | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. | ✅ Completed |
+| [run.bat](file:///c:/kali/product/netran%20ai/backend/run.bat) | Synchronized launcher menu with option 21 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
+| [doc/current.md](file:///c:/kali/product/netran%20ai/backend/doc/current.md) | Updated subsystem architecture status matrix to include pi (Web API Gateway). | ✅ Completed |
+| [doc/folder_strucuture.md](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md) | Updated directory tree and file inventory with pi/ and data/ packages. | ✅ Completed |
 
-### Verification
-- Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
-- Verified database initialization and table creation (users, sessions, session_artifacts).
-- Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via scratch/verify_api.py test suite.
+### ✅ Verification
+- ✅ Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
+- ✅ Verified database initialization and table creation (users, sessions, session_artifacts).
+- ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via scratch/verify_api.py test suite.
