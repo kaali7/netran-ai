@@ -105,3 +105,19 @@ Before modifying any source code in a model stage:
 * **Override Support**: If hardware decimation causes audio aliasing (robotic/buzzing voice), users MUST use the `.env` override `MIC_DEVICE_INDEX=0` to force MME/DirectSound. `listener.py` natively supports OS-level 16kHz resampling, which provides perfect voice quality for STT when MME is selected.
 * **DC Drift**: DC offset is mitigated by a streaming IIR high-pass filter applied per-frame BEFORE Silero VAD. The filter carries state across chunks for temporal continuity. Do not revert to per-chunk mean subtraction.
 * If encountering audio issues, focus strictly on the **alignment** of the three core components (`listener.py`, `brain.py`, `speaker.py`), such as barge-in logic, silence thresholds, turn-taking timing, or prompt alignment.
+
+---
+
+## 📌 Rule 12: Frontend Design and Skill Utilization
+* When designing or writing code for the frontend, you MUST use the specialized UI/UX skills available in `.agents/skills/` based on the specific requirement:
+  - **`add-ui`**: Use when creating new UI components, sections, pages, or redesigning existing ones to generate multiple production-grade variations.
+  - **`animate`**: Use when asked to build new animations, transitions, or add motion to components from scratch.
+  - **`brand`**: Use for injecting brand voice, visual identity standards, messaging frameworks, or color palette consistency.
+  - **`critique`**: Use for high-level UX/UI evaluation, assessing visual hierarchy, cognitive load, and overall design quality.
+  - **`design-taste-frontend`**: Use to establish core design architecture, anti-slop guidelines, typography choices, and layout conventions for landing pages or redesigns.
+  - **`improve-animations`**: Use for auditing existing animations across the codebase to create a prioritized roadmap of fixes.
+  - **`review-animations`**: Use for reviewing motion code diffs and ensuring animations meet high craft standards.
+  - **`slides`**: Use when designing strategic HTML presentations or pitch decks with data visualization.
+  - **`ui-ux-pro-max`**: Use for granular UI/UX design intelligence, spacing, accessibility, interaction patterns, responsive layouts, or tech-stack-specific implementation guidance.
+  - **`web-design-guidelines`**: Use to audit UI code against Web Interface Guidelines for best practices and accessibility compliance.
+* You MUST reference and adhere to the specific design system and aesthetic guidelines defined in `DESIGN.md` (e.g., Modern Glassmorphism, Manrope typography, fluid card-based grid) when making frontend UI changes.

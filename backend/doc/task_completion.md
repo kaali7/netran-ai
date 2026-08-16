@@ -37,6 +37,7 @@ This document tracks completed features, system architecture components, verific
 | **Setup & Questions Router** | `api/routers/setup.py`, `api/routers/questions.py` | `POST /setup/analyze`, `GET /questions/status/{id}`, and `GET /questions/preview/{id}` status & preview endpoints. | ✅ Completed |
 | **Stage 3 Voice WebSocket Router** | `api/routers/voice.py`, `api/services/voice_adapter.py` | Full-duplex `WS /voice/stream/{id}` bridge connecting FastAPI event loop to multi-threaded `WorkflowVoiceEngine`. | ✅ Completed |
 | **Stage 4 Reports Router** | `api/routers/reports.py` | `POST /reports/generate/{id}` and `GET /reports/{id}` triggering 3-branch multimodal evaluation. | ✅ Completed |
+| **Agent Skill Configurations** | `.agents/skills/`, `skills-lock.json` | Configured 10 frontend UI/UX skills (`add-ui`, `animate`, `brand`, `critique`, etc.) and updated documentation rules to mandate their use. | ✅ Completed |
 
 ---
 
@@ -56,3 +57,4 @@ This document tracks completed features, system architecture components, verific
 - ✅ **Stage 1 & 2 Setup Pipeline**: 22 integration tests passed (`scratch/test_setup_pipeline.py`), confirming background execution, 7 status checkpoints, and question preview generation.
 - ✅ **Stage 3 Live Voice Engine**: End-to-end full-duplex WebSocket communication verified using Postman (`ws://127.0.0.1:8000/api/v1/voice/stream/{session_id}?token=...`), verifying real-time VAD, Whisper STT, Qwen 2.5 response generation, and exception handling.
 - ✅ **Stage 4 Multimodal Reports API**: Automated test suite passed (`scratch/test_reports_api.py`), verifying `POST 202 Accepted` background generation queue and `GET 200 OK` evaluation report retrieval.
+- ✅ **Agent Frontend Skills Sync**: Configured 10 UI/UX skills in `.agents/skills` and updated `backend/doc/rule.md` and `AGENTS.md` directives to mandate their usage and adherence to `DESIGN.md`.
