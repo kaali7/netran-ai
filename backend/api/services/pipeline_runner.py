@@ -166,3 +166,69 @@ def run_stage1_and_stage2(
         )
     finally:
         db.close()
+
+
+def run_stage4(session_id: str):
+    """
+    Background worker executing Stage 4 Multimodal Evaluation Pipeline.
+    Evaluates turn audio, transcript accuracy, technical responses, and generates
+    candidate report payload saved to SQLite and disk.
+    """
+    db = SessionLocal()
+    try:
+        session_row = db.query(Session).filter(Session.id == session_id).first()
+        if not session_row:
+            logger.error(f"[Stage 4] Session '{session_id}' not found in database.")
+            return
+
+        session_row.status = SessionStatus.EVALUATING
+        session_row.progress_message = "Stage 4: Starting post-session evaluation..."
+        db.commit()
+
+        session_dir = BASE_DIR / "data" / "sessions" / session_id
+        if not session_dir.exists():
+            raise FileNotFoundError(f"Session directory not found at {session_dir}")
+
+        from model.reports_model.model.pipeline import Stage4Pipeline
+        from model.reports_model.model.config import Stage4Config
+
+        s4_config = Stage4Config(
+            gemini_api_key=settings.GEMINI_API_KEY,
+            gemini_model=settings.GEMINI_MODEL,
+        )
+        s4_pipeline = Stage4Pipeline(config=s4_config)
+
+        def progress_callback(cur: int, total: int, msg: str):
+            _update_progress(db, session_id, f"Stage 4 [{cur}/{total}]: {msg}")
+
+        logger.info(f"[Stage 4] Running Stage4Pipeline for session '{session_id}'...")
+        final_report = s4_pipeline.run(
+            session_dir=session_dir,
+            status_callback=progress_callback
+        )
+
+        # Update SessionArtifact in database
+        artifact = db.query(SessionArtifact).filter(SessionArtifact.session_id == session_id).first()
+        if not artifact:
+            artifact = SessionArtifact(session_id=session_id)
+            db.add(artifact)
+
+        artifact.evaluation_report = final_report.model_dump()
+        session_row.status = SessionStatus.COMPLETED
+        session_row.progress_message = "Evaluation complete! Report ready."
+        db.commit()
+
+        logger.info(f"[Stage 4] Successfully generated report for session '{session_id}'.")
+
+    except Exception as exc:
+        logger.exception(f"[Stage 4] Report generation failed for session '{session_id}': {exc}")
+        db.rollback()
+        _update_progress(
+            db,
+            session_id,
+            f"Evaluation failed: {str(exc)[:200]}",
+            status=SessionStatus.EVALUATING,
+        )
+    finally:
+        db.close()
+

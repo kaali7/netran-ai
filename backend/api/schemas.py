@@ -222,6 +222,24 @@ class VoiceSessionStatusResponse(BaseModel):
     interview_started_at: Optional[datetime] = None
 
 
+# --- Stage 4 Report Schemas ---
+
+class ReportGenerateResponse(BaseModel):
+    """Response returned when report generation background task is initiated."""
+    session_id: str
+    status: SessionStatus = SessionStatus.EVALUATING
+    progress_message: str = "Stage 4: Post-session multimodal report generation started..."
+    message: str = "Report generation triggered in background."
+
+
+class ReportResponse(BaseModel):
+    """Payload containing evaluation report JSON and session metadata."""
+    session_id: str
+    status: SessionStatus
+    evaluation_report: Optional[dict[str, Any]] = None
+    progress_message: Optional[str] = None
+
+
 # --- Common Schemas ---
 
 class HealthResponse(BaseModel):
@@ -229,3 +247,4 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     version: str
     project: str
+
