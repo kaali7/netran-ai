@@ -45,9 +45,12 @@ echo  18. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.l
 echo  19. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
 echo  20. Run Code Quality Audit (scan_code_quality.py)
 echo.
+echo   --- FASTAPI WEB API GATEWAY ---
+echo  21. Launch FastAPI Web API Server (uvicorn api.main:app --reload)
+echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-20): "
+set /p choice="Enter your choice (0-21): "
 
 if "%choice%"=="1" goto run_unified_workflow
 if "%choice%"=="2" goto run_research_model
@@ -69,9 +72,11 @@ if "%choice%"=="17" goto clean_cache_db
 if "%choice%"=="18" goto clean_bytecode_trash
 if "%choice%"=="19" goto clean_full_deep
 if "%choice%"=="20" goto run_quality_audit
+if "%choice%"=="21" goto run_fastapi_server
 if "%choice%"=="0" goto end
 
 goto menu
+
 
 :: ── COMBINED PIPELINE ────────────────────────────────────────────────
 
@@ -276,7 +281,15 @@ echo [QUALITY AUDIT] Running Ruff, Bandit, and Radon Code Quality Scanners...
 pause
 goto menu
 
+:run_fastapi_server
+echo.
+echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000)...
+.venv\Scripts\python.exe -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+pause
+goto menu
+
 :end
+
 echo.
 echo Exiting Netran AI Operational Suite. Goodbye!
 exit /b 0

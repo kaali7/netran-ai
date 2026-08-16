@@ -19,14 +19,26 @@ backend/
 ├── run.bat                    # Interactive Windows batch launcher (20-option menu)
 ├── scan_code_quality.py       # Automated code quality and docstring scanner script
 ├── skills-lock.json           # Locked agent skill registry
-├── doc/                       # System-wide backend documentation
-│   ├── backend_plan.md        # Master FastAPI web backend architecture specification
-│   ├── current.md             # Current operational state & component synthesis
-│   ├── folder_strucuture.md   # Detailed directory structure (this file)
-│   ├── rule.md                # Mandatory project rules & agent directives
-│   ├── task_completion.md     # Task verification and sync record
-│   └── tech_stack.md          # Technical stack architecture & dependencies
+├── api/                       # FastAPI Web API Gateway
+│   ├── __init__.py            # API package initializer
+│   ├── main.py                # FastAPI entry point, CORS middleware, app initialization
+│   ├── config.py              # Environment variables loader (JWT secret, DB URL, keys)
+│   ├── db.py                  # SQLAlchemy engine, session maker, DB initialization
+│   ├── models.py              # SQLAlchemy DB table schemas (Users, Sessions, Artifacts)
+│   ├── schemas.py             # Pydantic v2 schemas (Auth, Sessions, Health)
+│   ├── security.py            # Bcrypt hashing & JWT encode/decode logic
+│   ├── dependencies.py        # Dependency injection (get_db, get_current_user, get_ws_user)
+│   └── routers/
+│       ├── __init__.py        # Routers package initializer
+│       ├── auth.py            # Authentication (/signup, /login, /me)
+│       ├── ingest.py          # Document parsing stub (/ingest/resume, /ingest/jd)
+│       ├── setup.py           # Stage 1 & 2 analysis trigger stub (/setup/analyze)
+│       ├── questions.py       # Stage 2 question preview stub (/questions/{session_id})
+│       ├── voice.py           # Stage 3 WebSockets stub (WS /voice/stream/{session_id})
+│       └── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
+├── data/                      # Local SQLite database & session storage (.gitkeep, cache.db)
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )
+
 └── model/                     # Multi-stage AI pipeline core modules
     ├── research_model/        # STAGE 1: JD Research & Market Intelligence Engine
     │   ├── doc/
@@ -144,10 +156,25 @@ backend/
 - **`run.bat`**: Interactive Windows Command Prompt launcher providing a 20-choice menu to run individual stage tests, maintenance routines, or the full workflow app.
 - **`scan_code_quality.py`**: Automated audit script ensuring docstring coverage, single requirements.txt usage, and clean directory hygiene.
 
-### 2. `backend/doc/`
+### 2. `backend/api/` (Web API Gateway)
+- **`main.py`**: FastAPI entry point with CORS middleware, latency tracking telemetry, OpenAPI `/docs`, and router mounting.
+- **`config.py`**: Environment variables loader parsing `.env` keys.
+- **`db.py`**: SQLAlchemy engine, session maker, and DB initialization.
+- **`models.py`**: ORM definitions for `User`, `Session`, and `SessionArtifact`.
+- **`schemas.py`**: Pydantic v2 validation schemas.
+- **`security.py`**: Bcrypt hashing and JWT encoding/decoding.
+- **`dependencies.py`**: Auth and RBAC dependency injection helpers (`get_current_user`, `get_ws_user`, `require_admin`).
+- **`routers/`**: Routers for `auth.py` (working), `ingest.py` (stub), `setup.py` (stub), `questions.py` (stub), `voice.py` (stub), `reports.py` (stub).
+
+### 3. `backend/data/` (Storage Volume)
+- Local SQLite database (`cache.db`) and binary audio session directories.
+
+### 4. `backend/doc/`
 - Contains system-level documentation covering the complete backend architecture (`current.md`), directory structure (`folder_strucuture.md`), mandatory directives (`rule.md`), and the framework stack (`tech_stack.md`).
 
-### 3. `backend/model/`
+
+### 5. `backend/model/`
+
 - Contains all AI model subsystems organized cleanly into `research_model`, `question_model`, `voice_to_voice_model`, `reports_model`, and `workflow`.
 - Includes `workflow/doc/overall_model_process.md` detailing the complete high-level process matrix.
 - Middle process data is saved in `workflow/test/process/sess_<timestamp>/` and final report evaluation artifacts are saved in `workflow/test/output/sess_<timestamp>/`.

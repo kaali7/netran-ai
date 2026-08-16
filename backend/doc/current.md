@@ -25,6 +25,8 @@ Netran AI is an intelligent, multimodal AI technical interviewer. The backend is
 | **Stage 3** | `voice_to_voice_model` | ✅ **Covered** | Silero VAD v3, Faster-Whisper int8, Ollama Qwen2.5:3b, Kokoro-82M TTS, Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Ollama OLLAMA_MODEL). Output: `recording.wav`, `transcript.json` |
 | **Stage 4** | `reports_model` | ✅ **Covered** | Audio slicing, Gemini 3-branch evaluation (Audio/Tech/Comb) with RateLimit retry. Output: `report.json`, `evaluation_summary.md` |
 | **Workflow** | `workflow` | ✅ **Covered** | Master pipeline coordinator (`orchestrator.py`), 6-screen Kivy UI |
+| **Web API Gateway** | `api` | ✅ **Covered (Auth & Core Structure)** | FastAPI 0.115+, Uvicorn, OAuth2 JWT auth (`/signup`, `/login`, `/me`), SQLAlchemy SQLite ORM models (`users`, `sessions`, `session_artifacts`), and 5 stage route stubs |
+
 
 ---
 

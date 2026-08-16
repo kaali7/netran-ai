@@ -367,3 +367,40 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 ### Verification
 - Module import check verified via python execution (rom model.workflow.model.orchestrator import WorkflowVoiceEngine).
 - Automated code quality audit executed via scan_code_quality.py.
+
+
+---
+
+## Session Log - 2026-08-16 | FastAPI Backend Gateway & Auth Infrastructure Creation
+
+### Overview
+Built the foundational backend/api/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
+
+### Fixes & Additions Applied
+
+| File | Change |
+|---|---|
+| api/__init__.py | Created root package initialization for FastAPI gateway. |
+| api/config.py | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). |
+| api/db.py | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, and get_db() dependency. |
+| api/models.py | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states), and SessionArtifact (JSON stage artifacts). |
+| api/schemas.py | Defined Pydantic v2 request/response schemas for Auth (UserCreate, UserLogin, UserResponse, TokenResponse), Sessions, and Health. |
+| api/security.py | Implemented Bcrypt password hashing (hash_password, verify_password) and JWT token encoding/decoding (create_access_token, decode_token). |
+| api/dependencies.py | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and require_admin (RBAC guard). |
+| api/routers/auth.py | Implemented fully working /api/v1/auth/signup, /login, and /me routes with JWT issuance and password hashing. |
+| api/routers/ingest.py | Created route stub for /api/v1/ingest/resume and /ingest/jd. |
+| api/routers/setup.py | Created route stub for /api/v1/setup/analyze (Stage 1 & 2 pipeline trigger). |
+| api/routers/questions.py | Created route stub for /api/v1/questions/preview/{session_id}. |
+| api/routers/voice.py | Created WebSocket route stub for /api/v1/voice/stream/{session_id}. |
+| api/routers/reports.py | Created route stub for /api/v1/reports/generate/{session_id} and /reports/{session_id}. |
+| api/main.py | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. |
+| requirements.txt | Added fastapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator. |
+| .env | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. |
+| run.bat | Synchronized launcher menu with option 21 to start FastAPI Uvicorn server (api.main:app). |
+| doc/current.md | Updated subsystem architecture status matrix to include api (Web API Gateway). |
+| doc/folder_strucuture.md | Updated directory tree and file inventory with api/ and data/ packages. |
+
+### Verification
+- Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
+- Verified database initialization and table creation (users, sessions, session_artifacts).
+- Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via scratch/verify_api.py test suite.
