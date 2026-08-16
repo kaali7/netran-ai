@@ -383,35 +383,35 @@ Established the core FastAPI Web API Gateway for the Phase 2 Web Engine Transiti
 | pi/__init__.py | Created root package initialization for FastAPI gateway. | ✅ Completed |
 | pi/config.py | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
 | pi/db.py | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, auto-column migration (progress_message), and get_db() dependency. | ✅ Completed |
-| pi/models.py | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states + progress_message), and SessionArtifact (JSON stage artifacts). | ✅ Completed |
-| pi/schemas.py | Defined Pydantic v2 schemas for Auth (UserCreate, UserLogin, UserResponse), Sessions, CandidateProfile, ParsedJD, Ingest, Setup (AnalyzeRequest), Status (SessionStatusResponse), and QuestionPreviewResponse. | ✅ Completed |
-| pi/security.py | Implemented Bcrypt password hashing (hash_password, erify_password) and JWT token encoding/decoding (create_access_token, decode_token). | ✅ Completed |
-| pi/dependencies.py | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and 
+|  pi/__init__.py | Created root package initialization for FastAPI gateway. | ✅ Completed |
+|  pi/config.py | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
+|  pi/db.py | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, auto-column migration (progress_message), and get_db() dependency. | ✅ Completed |
+|  pi/models.py | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states + progress_message), and SessionArtifact (JSON stage artifacts). | ✅ Completed |
+|  pi/schemas.py | Defined Pydantic v2 schemas for Auth (UserCreate, UserLogin, UserResponse), Sessions, CandidateProfile, ParsedJD, Ingest, Setup (AnalyzeRequest), Status (SessionStatusResponse), and QuestionPreviewResponse. | ✅ Completed |
+|  pi/security.py | Implemented Bcrypt password hashing (hash_password,  erify_password) and JWT token encoding/decoding (create_access_token, decode_token). | ✅ Completed |
+|  pi/dependencies.py | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and 
 equire_admin (RBAC guard). | ✅ Completed |
-| pi/services/text_extractor.py | Multi-format text extraction supporting .pdf (pypdf), .docx (python-docx), .txt, and .tex files. | ✅ Completed |
-| pi/services/gemini_extractor.py | Gemini-powered JSON extraction service outputting CandidateProfile and ParsedJD JSON schemas with 	emperature=0.1. | ✅ Completed |
-| pi/services/cache.py | SHA-256 cache deduplication lookup preventing redundant Gemini API calls on duplicate uploads/pastes. | ✅ Completed |
-| pi/services/pipeline_runner.py | Background worker executing Stage1Pipeline (Tavily research) and Stage2Pipeline (15-question tree + Eva system prompt) with live progress reporting. | ✅ Completed |
-| pi/routers/auth.py | Implemented working /api/v1/auth/signup, /login, /token, and /me routes with JWT issuance and password hashing. | ✅ Completed |
-| pi/routers/ingest.py | Full implementation of POST /api/v1/ingest/resume (file upload) and POST /api/v1/ingest/jd (pasted text) storing artifacts in SQLite. | ✅ Completed |
-| pi/routers/setup.py | Full implementation of POST /api/v1/setup/analyze triggering async background pipeline execution with 202 Accepted. | ✅ Completed |
-| pi/routers/questions.py | Full implementation of GET /api/v1/questions/status/{session_id} (live progress polling) and GET /api/v1/questions/preview/{session_id} (15-question tree & system prompt). | ✅ Completed |
-| pi/main.py | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
-| 
-equirements.txt | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator, and updated pypdf>=4.0.0. | ✅ Completed |
+|  pi/services/text_extractor.py | Multi-format text extraction supporting .pdf (pypdf), .docx (python-docx), .txt, and .tex files. | ✅ Completed |
+|  pi/services/gemini_extractor.py | Gemini-powered JSON extraction service outputting CandidateProfile and ParsedJD JSON schemas with 	emperature=0.1. | ✅ Completed |
+|  pi/services/cache.py | SHA-256 cache deduplication lookup preventing redundant Gemini API calls on duplicate uploads/pastes. | ✅ Completed |
+|  pi/services/pipeline_runner.py | Background worker executing Stage1Pipeline (Tavily research) and Stage2Pipeline (15-question tree + Eva system prompt) with live progress reporting. | ✅ Completed |
+|  pi/routers/auth.py | Implemented working /api/v1/auth/signup, /login, /token, and /me routes with JWT issuance and password hashing. | ✅ Completed |
+|  pi/routers/ingest.py | Full implementation of POST /api/v1/ingest/resume (file upload) and POST /api/v1/ingest/jd (pasted text) storing artifacts in SQLite. | ✅ Completed |
+|  pi/routers/setup.py | Full implementation of POST /api/v1/setup/analyze triggering async background pipeline execution with 202 Accepted. | ✅ Completed |
+|  pi/routers/questions.py | Full implementation of GET /api/v1/questions/status/{session_id} (live progress polling) and GET /api/v1/questions/preview/{session_id} (15-question tree & system prompt). | ✅ Completed |
+|  pi/routers/voice.py | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler (Silero VAD, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in). | ✅ Completed |
+|  pi/main.py | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
+|  equirements.txt | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator, and updated pypdf>=4.0.0. | ✅ Completed |
 | .env | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. | ✅ Completed |
-| 
-un.bat | Relocated launcher to root workspace directory (
-un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
-| doc/current.md | Updated subsystem architecture status matrix to include pi (Web API Gateway) and Stage 1/2 pipeline services. | ✅ Completed |
-| doc/folder_strucuture.md | Updated directory tree and file inventory with pi/ and pi/services/ packages. | ✅ Completed |
+|  un.bat | Relocated launcher to root workspace directory ( run.bat) and configured Option 1 to start FastAPI Uvicorn server ( pi.main:app). | ✅ Completed |
+| doc/current.md | Updated subsystem architecture status matrix to include  pi (Web API Gateway) and Stage 1/2 pipeline services. | ✅ Completed |
+| doc/folder_strucuture.md | Updated directory tree and file inventory with  pi/ and  pi/services/ packages. | ✅ Completed |
 
 ### ⏳ Pending & Incomplete Roadmap Tasks
 
 | Feature / Module | Target File | Description & Requirements | Status |
 |---|---|---|---|
-| **Voice WebSocket API** | pi/routers/voice.py | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler (Silero VAD, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in). | ⏳ Pending |
-| **Multimodal Reports API** | pi/routers/reports.py | Wire POST /api/v1/reports/generate/{session_id} and GET /api/v1/reports/{session_id} to execute 3-branch Gemini multimodal evaluation. | ⏳ Pending |
+| **Multimodal Reports API** |  pi/routers/reports.py | Wire POST /api/v1/reports/generate/{session_id} and GET /api/v1/reports/{session_id} to execute 3-branch Gemini multimodal evaluation. | ⏳ Pending |
 | **Next.js Web Frontend** | rontend/ | Build React 18/19 Next.js web application with AudioWorklet client, WebSockets connection, setup screens, live call UI, and evaluation dashboard. | ⏳ Pending |
 
 ### ✅ Verification & Quality Assurance
@@ -422,3 +422,4 @@ un.bat launcher to workspace root (c:/kali/product/netran ai/run.bat) with auto-
 - ✅ Verified Swagger UI (/docs) and API authentication endpoints (/signup, /login, /token, /me).
 - ✅ Verified Document Ingestion pipeline end-to-end via 26 automated unit and integration tests (scratch/test_ingest.py).
 - ✅ Verified Stage 1 & Stage 2 Setup & Questions Pipeline end-to-end via 22 automated integration tests (scratch/test_setup_pipeline.py): async background task execution, 7-checkpoint status polling (/questions/status/{session_id}), and 15-question tree preview payload (/questions/preview/{session_id}).
+- ✅ Verified Stage 3 Voice WebSocket Integration end-to-end via Postman WebSocket connection test, confirming correct full-duplex transmission and exception handling.
