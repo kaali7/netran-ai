@@ -371,10 +371,10 @@ Documentation files (model/question_model/doc/current.md, model/voice_to_voice_m
 
 ---
 
-## ✅ Session Log - 2026-08-16 | FastAPI Backend Gateway & Auth Infrastructure Creation
+## ✅ Session Log - 2026-08-16 | FastAPI Backend Gateway, Auth & Document Ingestion Engine
 
 ### Overview
-Built the foundational backend pi/ layer from scratch to establish the FastAPI Web API Gateway for the Phase 2 Web Engine Transition. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 request/response schemas, security utilities, dependency injection, and 6 API routers.
+Built the foundational ackend/api/ layer from scratch to establish the FastAPI Web API Gateway. Implemented OAuth2 + JWT authentication, SQLAlchemy database ORM models, Pydantic v2 schemas, security utilities, dependency injection, and a fully functional Document Ingestion Engine (/ingest/resume and /ingest/jd).
 
 ### ✅ Completed Tasks & Additions Applied
 
@@ -384,29 +384,31 @@ Built the foundational backend pi/ layer from scratch to establish the FastAPI 
 | [api/config.py](file:///c:/kali/product/netran%20ai/backend/api/config.py) | Created central settings loader parsing .env keys (JWT, Database URL, CORS, Gemini/Tavily keys). | ✅ Completed |
 | [api/db.py](file:///c:/kali/product/netran%20ai/backend/api/db.py) | Configured SQLAlchemy engine, SessionLocal, SQLite multi-thread compatibility, and get_db() dependency. | ✅ Completed |
 | [api/models.py](file:///c:/kali/product/netran%20ai/backend/api/models.py) | Created ORM models: User (candidate/admin RBAC), Session (lifecycle states), and SessionArtifact (JSON stage artifacts). | ✅ Completed |
-| [api/schemas.py](file:///c:/kali/product/netran%20ai/backend/api/schemas.py) | Defined Pydantic v2 request/response schemas for Auth (UserCreate, UserLogin, UserResponse, TokenResponse), Sessions, and Health. | ✅ Completed |
+| [api/schemas.py](file:///c:/kali/product/netran%20ai/backend/api/schemas.py) | Defined Pydantic v2 schemas for Auth (UserCreate, UserLogin, UserResponse), Sessions, CandidateProfile, ParsedJD, and Ingest payloads. | ✅ Completed |
 | [api/security.py](file:///c:/kali/product/netran%20ai/backend/api/security.py) | Implemented Bcrypt password hashing (hash_password, erify_password) and JWT token encoding/decoding (create_access_token, decode_token). | ✅ Completed |
 | [api/dependencies.py](file:///c:/kali/product/netran%20ai/backend/api/dependencies.py) | Created get_current_user (Bearer header), get_ws_user (WebSocket ?token= query param), and 
 equire_admin (RBAC guard). | ✅ Completed |
-| [api/routers/auth.py](file:///c:/kali/product/netran%20ai/backend/api/routers/auth.py) | Implemented working /api/v1/auth/signup, /login, and /me routes with JWT issuance and password hashing. | ✅ Completed |
-| [api/routers/ingest.py](file:///c:/kali/product/netran%20ai/backend/api/routers/ingest.py) | Created route stub for /api/v1/ingest/resume and /ingest/jd. | ✅ Stub Created |
-| [api/routers/setup.py](file:///c:/kali/product/netran%20ai/backend/api/routers/setup.py) | Created route stub for /api/v1/setup/analyze (Stage 1 & 2 pipeline trigger). | ✅ Stub Created |
-| [api/routers/questions.py](file:///c:/kali/product/netran%20ai/backend/api/routers/questions.py) | Created route stub for /api/v1/questions/preview/{session_id}. | ✅ Stub Created |
-| [api/routers/voice.py](file:///c:/kali/product/netran%20ai/backend/api/routers/voice.py) | Created WebSocket route stub for /api/v1/voice/stream/{session_id}. | ✅ Stub Created |
-| [api/routers/reports.py](file:///c:/kali/product/netran%20ai/backend/api/routers/reports.py) | Created route stub for /api/v1/reports/generate/{session_id} and /reports/{session_id}. | ✅ Stub Created |
+| [api/services/text_extractor.py](file:///c:/kali/product/netran%20ai/backend/api/services/text_extractor.py) | Multi-format text extraction supporting .pdf (pypdf), .docx (python-docx), .txt, and .tex files. | ✅ Completed |
+| [api/services/gemini_extractor.py](file:///c:/kali/product/netran%20ai/backend/api/services/gemini_extractor.py) | Gemini-powered JSON extraction service outputting CandidateProfile and ParsedJD JSON schemas with temperature=0.1. | ✅ Completed |
+| [api/services/cache.py](file:///c:/kali/product/netran%20ai/backend/api/services/cache.py) | SHA-256 cache deduplication lookup preventing redundant Gemini API calls on duplicate uploads/pastes. | ✅ Completed |
+| [api/routers/auth.py](file:///c:/kali/product/netran%20ai/backend/api/routers/auth.py) | Implemented working /api/v1/auth/signup, /login, /token, and /me routes with JWT issuance and password hashing. | ✅ Completed |
+| [api/routers/ingest.py](file:///c:/kali/product/netran%20ai/backend/api/routers/ingest.py) | Full implementation of POST /api/v1/ingest/resume (file upload) and POST /api/v1/ingest/jd (pasted text) storing artifacts in SQLite. | ✅ Completed |
+| [api/routers/setup.py](file:///c:/kali/product/netran%20ai/backend/api/routers/setup.py) | Created route stub for /api/v1/setup/analyze (Stage 1 & 2 pipeline trigger). | ⏳ Pending |
+| [api/routers/questions.py](file:///c:/kali/product/netran%20ai/backend/api/routers/questions.py) | Created route stub for /api/v1/questions/preview/{session_id}. | ⏳ Pending |
+| [api/routers/voice.py](file:///c:/kali/product/netran%20ai/backend/api/routers/voice.py) | Created WebSocket route stub for /api/v1/voice/stream/{session_id}. | ⏳ Pending |
+| [api/routers/reports.py](file:///c:/kali/product/netran%20ai/backend/api/routers/reports.py) | Created route stub for /api/v1/reports/generate/{session_id} and /reports/{session_id}. | ⏳ Pending |
 | [api/main.py](file:///c:/kali/product/netran%20ai/backend/api/main.py) | Built master FastAPI entry point with CORS middleware, latency header middleware, DB table auto-creation on startup, OpenAPI /docs, /health ping, and router mounting. | ✅ Completed |
-| [requirements.txt](file:///c:/kali/product/netran%20ai/backend/requirements.txt) | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator. | ✅ Completed |
+| [requirements.txt](file:///c:/kali/product/netran%20ai/backend/requirements.txt) | Added astapi, uvicorn, python-jose, passlib, sqlalchemy, python-multipart, email-validator, and updated pypdf>=4.0.0. | ✅ Completed |
 | [.env](file:///c:/kali/product/netran%20ai/backend/.env) | Added JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, DATABASE_URL, and API_CORS_ORIGINS. | ✅ Completed |
 | [run.bat](file:///c:/kali/product/netran%20ai/run.bat) | Relocated launcher to root workspace directory (
 un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). | ✅ Completed |
-| [doc/current.md](file:///c:/kali/product/netran%20ai/backend/doc/current.md) | Updated subsystem architecture status matrix to include pi (Web API Gateway). | ✅ Completed |
-| [doc/folder_strucuture.md](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md) | Updated directory tree and file inventory with pi/ and data/ packages. | ✅ Completed |
+| [doc/current.md](file:///c:/kali/product/netran%20ai/backend/doc/current.md) | Updated subsystem architecture status matrix to include pi (Web API Gateway) and ingestion services. | ✅ Completed |
+| [doc/folder_strucuture.md](file:///c:/kali/product/netran%20ai/backend/doc/folder_strucuture.md) | Updated directory tree and file inventory with pi/ and pi/services/ packages. | ✅ Completed |
 
 ### ⏳ Incomplete & Pending Phase 2 Roadmap Tasks
 
 | Feature / Module | Pending Details | Status |
 |---|---|---|
-| Ingest API (pi/routers/ingest.py) | Wire POST /api/v1/ingest/resume (.pdf, .docx, .txt) and POST /api/v1/ingest/jd to pypdf/python-docx and Gemini JSON parsing to populate parsed_resume and parsed_jd in SQLite. | ⏳ Pending |
 | Setup API (pi/routers/setup.py) | Wire POST /api/v1/setup/analyze to trigger Stage 1 (Tavily research) & Stage 2 (resume fit matrix & 15-question tree) via astapi.BackgroundTasks and save artifacts to DB. | ⏳ Pending |
 | Preview API (pi/routers/questions.py) | Wire GET /api/v1/questions/preview/{session_id} to retrieve generated 15-question tree & interviewer behavior payload from DB. | ⏳ Pending |
 | Voice WebSocket API (pi/routers/voice.py) | Implement WS /api/v1/voice/stream/{session_id} full-duplex binary PCM audio handler, connecting Silero VAD v3, SpeechBrain verification, Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, and barge-in event protocol. | ⏳ Pending |
@@ -414,12 +416,12 @@ un.bat) and configured Option 1 to start FastAPI Uvicorn server (pi.main:app). 
 | Next.js Web Frontend | Build React/Next.js frontend with AudioWorklet client, WebSockets connection, setup screens, live interview UI, and evaluation dashboard. | ⏳ Pending |
 
 ### ✅ Verification
-- ✅ Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, and email-validator dependencies.
+- ✅ Executed pip install to install all FastAPI, Uvicorn, SQLAlchemy, Passlib, PyJWT, email-validator, and pypdf dependencies.
 - ✅ Relocated 
 un.bat to outer workspace root (
 un.bat) with auto-cd backend context.
 - ✅ Configured FastAPI Web API Gateway server Option 1 in root 
 un.bat.
 - ✅ Verified database initialization and table creation (users, sessions, session_artifacts).
-- ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me) via test suite.
-- ✅ Resolved Swagger UI Authorize 422 Unprocessable Entity error by updating tokenUrl to /api/v1/auth/token for OAuth2PasswordRequestForm compatibility.
+- ✅ Verified Swagger UI and API endpoints (/health, /api/v1/auth/signup, /login, /me).
+- ✅ Verified Document Ingestion pipeline end-to-end via 26 automated unit and integration tests (scratch/test_ingest.py): PDF/DOCX/TXT text extraction, SHA-256 cache deduplication, CandidateProfile & ParsedJD Gemini parsing, and SQLite artifact persistence.
