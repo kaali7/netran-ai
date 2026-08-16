@@ -196,6 +196,30 @@ class QuestionPreviewResponse(BaseModel):
     cached: bool = False
 
 
+# --- Stage 3 Voice WS Schemas ---
+
+class VoiceTurnEvent(BaseModel):
+    """WebSocket JSON frame sent to client during live voice interview."""
+    event: str  # CONNECTED, SPEAKING_QUESTION, LISTENING_CANDIDATE, PROCESSING_RESPONSE, EVA_RESPONDING_BRANCH, TURN_COMPLETE, INTERVIEW_COMPLETE, ERROR
+    session_id: str
+    turn_id: int = 0
+    topic: Optional[str] = None
+    question_text: Optional[str] = None
+    candidate_transcript: Optional[str] = None
+    eva_response: Optional[str] = None
+    branch_taken: Optional[str] = None
+    progress_pct: Optional[int] = None
+    stt_latency_ms: Optional[float] = None
+    ttft_ms: Optional[float] = None
+    detail: Optional[str] = None  # for error messages
+
+
+class VoiceSessionStatusResponse(BaseModel):
+    """Initial check response before WebSocket connect."""
+    session_id: str
+    status: SessionStatus
+    total_turns_completed: int = 0
+    interview_started_at: Optional[datetime] = None
 
 
 # --- Common Schemas ---
