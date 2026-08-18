@@ -68,10 +68,10 @@ frontend/
 │   │   └── useReports.js       # Fetches Stage 4 multimodal reports
 │   ├── pages/
 │   │   ├── Dashboard.jsx       # 🚀 Phase 1 Core Candidate Home Surface
-│   │   ├── Interview.jsx       # (Phase 2 Stub) Live voice conversation room
-│   │   ├── Login.jsx           # (Phase 2 Stub) Candidate login & registration
-│   │   ├── Report.jsx          # (Phase 2 Stub) Multimodal evaluation dashboard
-│   │   └── Setup.jsx           # (Phase 2 Stub) Resume & JD upload pipeline
+│   │   ├── Setup.jsx           # Phase 2A Practice track setup & upload form
+│   │   ├── Interview.jsx       # Phase 2B Live voice conversation room & AvatarEva
+│   │   ├── Report.jsx          # Phase 2C Multimodal evaluation dashboard
+│   │   └── Login.jsx           # 🚀 Phase 2D Candidate authentication & signup
 │   ├── services/
 │   │   ├── api.js              # Central Axios instance with Bearer interceptors
 │   │   ├── authService.js      # Login, Signup, /me endpoints

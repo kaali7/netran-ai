@@ -20,8 +20,8 @@ This document tracks completed features, system architecture components, verific
 | **Web Frontend (Phase 2A: Setup Page)** | Configure Practice Track — JD/resume upload, topic sliders, persona selector, Build & Launch CTA | rontend/src/pages/Setup.jsx | ✅ Completed (UI Shell) |
 | **Web Frontend (Phase 2B: Interview Room)** | Live call screen with AvatarEva, timer, question tracker, mic/pause/end controls | rontend/src/pages/Interview.jsx<br>rontend/src/components/interview/AvatarEva.jsx | ✅ Completed (UI Shell) |
 | **Web Frontend (Phase 2C: Report Scorecard)** | Multimodal evaluation dashboard — pillar scores, voice performance, donut readiness gauge, AI feedback callout, Q-by-Q breakdown accordions | `frontend/src/pages/Report.jsx` | ✅ Completed (UI Shell) |
-| **Web Frontend (Phase 2D: Auth / Login)** | Candidate login, signup, JWT session management | rontend/src/pages/Login.jsx | ⏳ Pending (Stub Only) |
-| **Frontend to Backend API Integration** | Wire all pages to real FastAPI endpoints via Axios, JWT Zustand store, WebSocket PCM stream, AudioWorklet | rontend/src/services/<br>rontend/src/hooks/<br>rontend/src/store/ | ⏳ Pending |
+| **Web Frontend (Phase 2D: Auth / Login)** | Candidate login, signup, JWT session management, Zustand auth store, route guards | `frontend/src/pages/Login.jsx`<br>`frontend/src/store/authStore.js`<br>`frontend/src/services/authService.js` | ✅ Completed |
+| **Frontend to Backend API Integration** | Wire all pages to real FastAPI endpoints via Axios, JWT Zustand store, WebSocket PCM stream, AudioWorklet | `frontend/src/services/`<br>`frontend/src/hooks/`<br>`frontend/src/store/` | 🟡 In Progress (Auth Done) |
 | **Frontend Web Audio Engine** | AudioWorklet converting browser Opus/WebM to 16kHz 16-bit Mono PCM bytes for WebSocket streaming | rontend/public/pcm-processor.js | ⏳ Pending |
 | **Agent Skill Configurations** | 10 frontend UI/UX skills configured, documentation rules updated | .agents/skills/, skills-lock.json | ✅ Completed |
 
@@ -65,7 +65,12 @@ This document tracks completed features, system architecture components, verific
 | **Interview Room Page** | rontend/src/pages/Interview.jsx | Live interview room with AvatarEva, timer, question tracker, mic/pause/end controls, speaking state. | ✅ Completed (UI Shell) |
 | **API Axios Client** | rontend/src/services/api.js | Central Axios instance with base URL and Bearer interceptors. | ✅ Completed |
 | **Dashboard Hook** | rontend/src/hooks/useDashboard.js | Mock data provider for Phase 1 dashboard telemetry. | ✅ Completed |
-| **Constants Utility** | rontend/src/utils/constants.js | Shared route names and default mock metric values. | ✅ Completed |
+| **Constants Utility** | `frontend/src/utils/constants.js` | Shared route names and default mock metric values. | ✅ Completed |
+| **Auth Store (Zustand)** | `frontend/src/store/authStore.js` | Global Zustand auth store: token, user, setAuth(), logout(), local storage persistence. | ✅ Completed |
+| **Auth Service** | `frontend/src/services/authService.js` | Axios wrappers for signup, login, getMe endpoints. | ✅ Completed |
+| **useAuth Hook** | `frontend/src/hooks/useAuth.js` | Custom hook exposing user, token, isAuthenticated, login(), signup(), logout(). | ✅ Completed |
+| **Auth & Login Page** | `frontend/src/pages/Login.jsx` | Full candidate auth flow: Sign In / Create Account tabs, form validation, error alert callout, one-click demo login. | ✅ Completed |
+| **Protected Route Guards** | `frontend/src/router.jsx` | ProtectedRoute guard redirecting unauthenticated users to /login, PublicRoute guard. | ✅ Completed |
 
 ---
 
@@ -75,10 +80,7 @@ This document tracks completed features, system architecture components, verific
 
 | Feature / Component | Target File | Description & Requirements | Priority |
 |---|---|---|---|
-| **Login / Auth Page (Full)** | rontend/src/pages/Login.jsx | Complete auth flow: email/password form, validation, POST /api/v1/auth/login call, JWT stored in Zustand, redirect to Dashboard, signup tab toggle. Use add-ui skill for premium design. | 🔴 High |
-| **Auth Store (Zustand)** | rontend/src/store/authStore.js | Global Zustand auth store: token, user, login(), logout(), isAuthenticated. Persist JWT to localStorage. | 🔴 High |
-| **Auth Service** | rontend/src/services/authService.js | Axios wrappers: login(email, pwd) → POST /auth/login, signup() → POST /auth/signup, getMe() → GET /auth/me. | 🔴 High |
-| **Session Service** | rontend/src/services/sessionService.js | Axios wrappers: uploadResume(), uploadJD(), startAnalysis(), pollStatus(id), getQuestionPreview(id), generateReport(id), getReport(id). | 🔴 High |
+| **Session Service** | `frontend/src/services/sessionService.js` | Axios wrappers: uploadResume(), uploadJD(), startAnalysis(), pollStatus(id), getQuestionPreview(id), generateReport(id), getReport(id). | 🔴 High |
 | **Setup Page — Backend Wiring** | rontend/src/pages/Setup.jsx | Connect Build & Launch button: POST /ingest/resume, POST /ingest/jd, POST /setup/analyze, then poll GET /questions/status/{id} until ready, navigate to /interview/{id}. Show animated progress overlay during pipeline. | 🔴 High |
 | **Web Audio Worklet PCM Processor** | rontend/public/pcm-processor.js | AudioWorkletProcessor converting raw mic Float32Array to 16kHz 16-bit Mono PCM Int16Array bytes for binary WebSocket streaming to Stage 3 engine. | 🔴 High |
 | **Interview Room — WebSocket Live Wiring** | rontend/src/pages/Interview.jsx | Full WebSocket integration: connect WS /api/v1/voice/stream/{id}?token=..., stream binary PCM from AudioWorklet, receive binary TTS audio chunks + JSON event frames (INTERRUPT, QUESTION_COMPLETE, SESSION_DONE), play TTS via AudioContext. | 🔴 High |
@@ -134,3 +136,10 @@ pm run build verified.
 - ✅ **Git Commit — Phase 2 Frontend Shells**: Committed feat(frontend): add Configure Practice Track page, Live Mock Interview room, and animated Eva vector persona (hash 55787bc).
 - ✅ **Frontend Report Scorecard Page (Phase 2C Shell)**: Implemented complete Session Summary & Evaluation Scorecard page (`Report.jsx`) matching design mockup. Fixed `react-router-dom` import issue and verified clean `npm run build` production build.
 - ✅ **Rule 14 Added**: Updated `.agents/AGENTS.md` and `doc/rule.md` to mandate immediate `doc/task_completion.md` synchronization whenever coding tasks or features are completed.
+- ✅ **Frontend Auth & State Management**: Complete candidate authentication flow implemented with Zustand store (`authStore.js`), Axios auth API client (`authService.js`), `useAuth` hook, Protected/Public route guards (`router.jsx`), candidate profile pill & Sign Out integration in `Navbar.jsx`, and full glassmorphic `Login.jsx` page with tab toggle and one-click demo login. Verified clean `npm run build` production build.
+- ✅ **Navbar Profile Sub-Menu & Responsive Width Refactoring**: Resolved UI layout feedback by expanding layout container width to 100% (`--container-max: 100%` in `index.css`, `36px` side margins in `PageWrapper.jsx` and `Navbar.jsx`), eliminating big side gaps, and locking all 4 stats cards into a single 4-column row (`.stats-grid-row` with `grid-template-columns: repeat(4, 1fr)`) in `StatsRow.jsx`. Moved standalone Settings & Sign Out buttons into an interactive glassmorphic profile sub-menu dropdown in `Navbar.jsx`. Verified clean `npm run build`.
+- ✅ **Custom Serene Glassmorphic Scrollbar**: Styled custom browser scrollbar in `index.css` (`::-webkit-scrollbar` 8px slim width, pill thumb with `#65597b` lavender tint, transparent track, smooth hover glow, Firefox `scrollbar-width: thin` support) replacing ugly OS default dark scrollbar. Verified with `npm run build`.
+
+
+
+

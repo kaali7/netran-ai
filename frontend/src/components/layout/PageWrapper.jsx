@@ -4,9 +4,10 @@ export const PageWrapper = ({ children }) => {
   return (
     <div
       style={{
-        maxWidth: 'var(--container-max)',
+        width: '100%',
+        maxWidth: '100%',
         margin: '0 auto',
-        padding: '0 24px 60px 24px',
+        padding: '0 36px 60px 36px',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',

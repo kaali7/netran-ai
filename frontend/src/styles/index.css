@@ -70,8 +70,8 @@
   --shadow-card-hover: 0 14px 36px rgba(101, 89, 123, 0.08);
   --shadow-pill: 0 4px 14px rgba(101, 89, 123, 0.2);
 
-  /* Spacing */
-  --container-max: 1280px;
+  /* Spacing & Container Width */
+  --container-max: 100%;
 }
 
 /* Global Reset & Base */
@@ -79,6 +79,35 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Custom Serene Learning Glassmorphic Scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(101, 89, 123, 0.3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(101, 89, 123, 0.28);
+  border-radius: 9999px;
+  transition: background 200ms ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(101, 89, 123, 0.55);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #65597b;
 }
 
 html, body {
@@ -155,6 +184,25 @@ button {
   line-height: 38px;
   letter-spacing: -0.02em;
   color: var(--on-surface);
+}
+
+/* 4-Card Single Row Stats Layout */
+.stats-grid-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 992px) {
+  .stats-grid-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .stats-grid-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Responsive grid layout */

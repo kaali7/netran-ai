@@ -5,6 +5,29 @@ import Login from './pages/Login';
 import Setup from './pages/Setup';
 import Interview from './pages/Interview';
 import Report from './pages/Report';
+import { useAuthStore } from './store/authStore';
+
+/**
+ * Route guard component for authenticated candidate pages.
+ */
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
+/**
+ * Route guard component for public-only auth pages.
+ */
+const PublicRoute = ({ children }) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
 
 export const router = createBrowserRouter([
   {
@@ -12,24 +35,44 @@ export const router = createBrowserRouter([
     element: <Navigate to="/dashboard" replace />,
   },
   {
-    path: '/dashboard',
-    element: <Dashboard />,
+    path: '/login',
+    element: (
+      <PublicRoute>
+        <Login />
+      </PublicRoute>
+    ),
   },
   {
-    path: '/login',
-    element: <Login />,
+    path: '/dashboard',
+    element: (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/setup',
-    element: <Setup />,
+    element: (
+      <ProtectedRoute>
+        <Setup />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/interview/:sessionId',
-    element: <Interview />,
+    element: (
+      <ProtectedRoute>
+        <Interview />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/report/:sessionId',
-    element: <Report />,
+    element: (
+      <ProtectedRoute>
+        <Report />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '*',

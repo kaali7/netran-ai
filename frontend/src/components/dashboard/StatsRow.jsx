@@ -10,14 +10,7 @@ export const StatsRow = ({
   needsFocusSubtitle = 'Suggested: Review caching strategies',
 }) => {
   return (
-    <section
-      className="animate-entrance animate-delay-1"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '16px',
-      }}
-    >
+    <section className="stats-grid-row animate-entrance animate-delay-1">
       {/* 1. Overall Readiness */}
       <StatCard
         type="readiness"
