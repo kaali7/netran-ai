@@ -1,0 +1,77 @@
+# ==============================================================================
+# Netran AI — Master Root Git Ignore Rules
+# ==============================================================================
+
+# --- Environment & Secrets ---
+.env
+.env.*
+*.env
+!.env.example
+
+# --- Python & Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyo
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Node.js & Frontend (React / Vite) ---
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+.vite/
+**/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Database & Session Cache Files ---
+*.db
+*.sqlite
+*.sqlite3
+cache.db
+backend/data/*.db
+backend/data/*.sqlite3
+
+# --- Audio, Logs & Intermediate Pipeline Artifacts ---
+*.wav
+*.mp3
+*.ogg
+*.pcm
+*.log
+_interview_log.txt
+benchmark_log.csv
+.kivy/
+sessions/
+backend/sessions/
+backend/model/sessions/
+backend/model/*/test/output/
+backend/model/*/test/process/
+backend/model/*/model/test_output/
+backend/model/workflow/test/process/
+backend/model/workflow/test/output/
+_temp_resume.txt
+turn_cache.json
+
+# --- IDE & Editor Settings ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS Generated Files ---
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,49 @@
+/* Netran AI — Motion & Entrance Animations */
+
+@keyframes fadeInSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-entrance {
+  animation: fadeInSlideUp 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-delay-1 {
+  animation-delay: 60ms;
+}
+
+.animate-delay-2 {
+  animation-delay: 120ms;
+}
+
+.animate-delay-3 {
+  animation-delay: 180ms;
+}
+
+/* Reduced motion preference override */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

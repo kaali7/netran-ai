@@ -1,0 +1,173 @@
+/* Netran AI — Serene Learning Design Tokens & Global Styles */
+:root {
+  /* Surface & Background */
+  --surface: #ffffff;
+  --surface-dim: #d9dadb;
+  --surface-bright: #f8f9fa;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f3f4f5;
+  --surface-container: #edeeef;
+  --surface-container-high: #e7e8e9;
+  --surface-container-highest: #e1e3e4;
+  --background: #f8f9fa;
+
+  /* Text & On-Colors */
+  --on-surface: #191c1d;
+  --on-surface-variant: #49454d;
+  --on-background: #191c1d;
+  --inverse-surface: #2e3132;
+  --inverse-on-surface: #f0f1f2;
+
+  /* Outlines & Borders */
+  --outline: #7a757e;
+  --outline-variant: #e1e3e4;
+  --border-subtle: rgba(101, 89, 123, 0.12);
+  --border-glass: rgba(255, 255, 255, 0.85);
+
+  /* Primary Theme (Lavender) */
+  --primary: #65597b;
+  --on-primary: #ffffff;
+  --primary-container: #e6d6ff;
+  --on-primary-container: #4d4162;
+  --primary-gradient: linear-gradient(135deg, #65597b 0%, #544869 100%);
+  --primary-fixed: #ebddff;
+  --primary-fixed-dim: #cfc0e8;
+
+  /* Secondary Theme (Mint Green) */
+  --secondary: #426651;
+  --on-secondary: #ffffff;
+  --secondary-container: #c3ecd2;
+  --on-secondary-container: #2a4e3a;
+  --secondary-fixed-dim: #a8d0b6;
+
+  /* Tertiary Theme (Peach / Warm Neutral) */
+  --tertiary: #6d5a59;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #f1d7d5;
+  --on-tertiary-container: #6f5c5b;
+
+  /* Error / Focus Needed (Warm Red) */
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --error-card-bg: #fdf5f5;
+  --error-card-border: #f8d7d7;
+
+  /* Typography */
+  --font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 14px 36px rgba(101, 89, 123, 0.08);
+  --shadow-pill: 0 4px 14px rgba(101, 89, 123, 0.2);
+
+  /* Spacing */
+  --container-max: 1280px;
+}
+
+/* Global Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: var(--font-family);
+  background-color: var(--background);
+  color: var(--on-surface);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: radial-gradient(circle at 10% 10%, rgba(230, 214, 255, 0.25) 0%, transparent 40%),
+              radial-gradient(circle at 90% 20%, rgba(195, 236, 210, 0.2) 0%, transparent 45%),
+              radial-gradient(circle at 50% 90%, rgba(241, 215, 213, 0.15) 0%, transparent 50%),
+              #f8f9fa;
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* Typography Utility Classes */
+.text-headline-xl {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+}
+
+.text-headline-lg {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  color: var(--on-surface);
+}
+
+.text-body-md {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+  color: var(--on-surface-variant);
+}
+
+.text-body-sm {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--on-surface-variant);
+}
+
+.text-label-xs {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.text-stats {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 38px;
+  letter-spacing: -0.02em;
+  color: var(--on-surface);
+}
+
+/* Responsive grid layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .dashboard-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}

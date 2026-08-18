@@ -109,8 +109,8 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 ## 🎨 3. Presentation Layer & Browser Audio Transport
 
-* **Web Application Client**: **Next.js (React 18/19) + Tailwind CSS**
-* Modern web UI for file upload/pasting, setup, question previews, live voice calls, and post-interview analytics dashboards.
+* **Web Application Client**: **React 18 + Vite 5 (SPA)**
+* Modern web UI built with the Serene Learning Modern Glassmorphism design system (Manrope typography, lavender-mint palette, CSS custom properties) for dashboard telemetry, session history, setup wizards, live voice calls, and post-interview analytics.
 
 
 * **Browser Audio Engine**: **Web Audio API & AudioWorklet**

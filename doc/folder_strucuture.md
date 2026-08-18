@@ -9,12 +9,44 @@ This document details the complete, clean directory structure and file inventory
 ```text
 .agents/                       # AI Agent custom instructions and tool skills (Root Level)
 ├── AGENTS.md                  # AI Agent Workspace Rules
-└── skills/                    # AI capability extensions (gemini-interactions-api)
+└── skills/                    # AI capability extensions (gemini-interactions-api, ui-ux-pro-max, animate, etc.)
 skills-lock.json               # Locked agent skill registry (Root Level)
+DESIGN.md                      # Design System Tokens & Serene Learning Guidelines
+run.bat                        # Master Interactive Batch Launcher (Backend & Frontend)
+.gitignore                     # Master Git Ignore Rules (Root Level)
+
+doc/                           # Master System Documentation (Root Level)
+├── backend_plan.md            # Backend milestone implementation plan
+├── current.md                 # Current system status & architecture overview
+├── folder_strucuture.md       # Complete folder structure & file inventory
+├── frontend_structure.md      # Frontend architecture, components & design tokens
+├── rule.md                    # Mandatory system rules & developer directives
+├── task_completion.md         # Task completion tracker & deliverables matrix
+└── tech_stack.md              # Technical stack specifications
+
+frontend/                      # React 18 + Vite 5 Web Client
+├── public/                    # Static brand assets (favicon.svg)
+├── src/
+│   ├── assets/                # Icons & UI artwork
+│   ├── components/
+│   │   ├── layout/            # Navbar.jsx, PageWrapper.jsx
+│   │   ├── ui/                # Card.jsx, Button.jsx, Badge.jsx, StatCard.jsx, ProgressBar.jsx
+│   │   └── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx
+│   ├── hooks/                 # useDashboard.js, useAuth.js
+│   ├── pages/                 # Dashboard.jsx (Phase 1), Setup.jsx, Interview.jsx, Report.jsx, Login.jsx
+│   ├── services/              # api.js (Axios with Bearer Interceptor)
+│   ├── styles/                # index.css (tokens & typography), glass.css (glassmorphism), animations.css
+│   ├── utils/                 # constants.js
+│   ├── App.jsx                # App shell
+│   ├── main.jsx               # Bootstrap root
+│   └── router.jsx             # React Router v6
+├── index.html                 # Manrope font import & HTML shell
+├── package.json               # React 18, Vite 5, Lucide-React, Axios, Zustand
+└── vite.config.js             # Vite config with backend reverse proxy (/api -> :8000)
 
 backend/
 ├── .env                       # Root environment secrets (GEMINI_API_KEY, TAVILY_API_KEY, OLLAMA_MODEL)
-├── .gitignore                 # Git ignore rules (virtual environment, cache DB, WAV audio, test_output)
+├── .gitignore                 # Backend git ignore rules
 ├── check_dependencies.py      # Environment, Ollama, HuggingFace model & API key checker
 ├── README.md                  # System overview & developer instructions
 ├── requirements.txt           # Master unified Python dependencies list
@@ -170,8 +202,8 @@ backend/
 ### 3. `backend/data/` (Storage Volume)
 - Local SQLite database (`cache.db`) and binary audio session directories.
 
-### 4. `backend/doc/`
-- Contains system-level documentation covering the complete backend architecture (`current.md`), directory structure (`folder_strucuture.md`), mandatory directives (`rule.md`), and the framework stack (`tech_stack.md`).
+### 4. `doc/` (Master Documentation Volume)
+- Contains system-level documentation covering the complete system architecture (`current.md`), folder structure (`folder_strucuture.md`), frontend architecture (`frontend_structure.md`), mandatory directives (`rule.md`), task tracking (`task_completion.md`), and technical stack (`tech_stack.md`).
 
 
 ### 5. `backend/model/`

@@ -18,62 +18,66 @@ echo ===================================================================
 echo             NETRAN AI - MASTER OPERATIONAL SUITE
 echo ===================================================================
 echo.
-echo  --- BACKEND API ^& WORKFLOW RUNNERS ---
+echo  --- BACKEND API, CLIENT & WORKFLOW RUNNERS ---
 echo   1. Launch FastAPI Web API Server (uvicorn api.main:app --reload)
-echo   2. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
+echo   2. Launch React + Vite Web Frontend Client (npm run dev)
+echo   3. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
 echo.
 echo  --- INDIVIDUAL STAGE MODELS ---
-echo   3. Run Stage 1: JD Research ^& Market Intelligence Engine
-echo   4. Run Stage 2: Contextual Question Tree ^& Prompt Engine
-echo   5. Run Stage 3: Voice-to-Voice Interview Loop
-echo   6. Run Stage 4: Post-Session Multimodal Report Generator Engine
+echo   4. Run Stage 1: JD Research ^& Market Intelligence Engine
+echo   5. Run Stage 2: Contextual Question Tree ^& Prompt Engine
+echo   6. Run Stage 3: Voice-to-Voice Interview Loop
+echo   7. Run Stage 4: Post-Session Multimodal Report Generator Engine
 echo.
 echo  --- COMPONENT HARDWARE DIAGNOSTICS ---
-echo   7. Test Speech-to-Text ^& Silero VAD (listener.py)
-echo   8. Test Text-to-Speech Kokoro-82M (speaker.py)
-echo   9. Test Ollama Qwen2.5 Streaming Brain (brain.py)
-echo  10. Test Hybrid Turn Classifier (turn_classifier.py)
-echo  11. Test Conversation State Manager (question_manager.py)
-echo  12. Test Speaker Verifier (speaker_verifier.py)
+echo   8. Test Speech-to-Text ^& Silero VAD (listener.py)
+echo   9. Test Text-to-Speech Kokoro-82M (speaker.py)
+echo  10. Test Ollama Qwen2.5 Streaming Brain (brain.py)
+echo  11. Test Hybrid Turn Classifier (turn_classifier.py)
+echo  12. Test Conversation State Manager (question_manager.py)
+echo  13. Test Speaker Verifier (speaker_verifier.py)
 echo.
 echo  --- SETUP TOOLS ---
-echo  13. Install / Update Backend Dependencies (requirements.txt)
-echo  14. Download / Verify Silero VAD Model Weights (download_vad.py)
-echo  15. Check System Requirements ^& Dependencies (check_dependencies.py)
+echo  14. Install / Update Backend Dependencies (requirements.txt)
+echo  15. Install / Update Frontend Dependencies (npm install in frontend)
+echo  16. Download / Verify Silero VAD Model Weights (download_vad.py)
+echo  17. Check System Requirements ^& Dependencies (check_dependencies.py)
 echo.
 echo  --- MAINTENANCE ^& DATA CLEANING ---
-echo  16. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
-echo  17. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  18. Clean SQLite Research Cache Database (cache.db)
-echo  19. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
-echo  20. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
-echo  21. Run Code Quality Audit (scan_code_quality.py)
+echo  18. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
+echo  19. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
+echo  20. Clean SQLite Research Cache Database (cache.db)
+echo  21. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
+echo  22. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
+echo  23. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-21): "
+set /p choice="Enter your choice (0-23): "
 
 if "%choice%"=="1" goto run_fastapi_server
-if "%choice%"=="2" goto run_unified_workflow
-if "%choice%"=="3" goto run_research_model
-if "%choice%"=="4" goto run_question_model_cli
-if "%choice%"=="5" goto run_voice_model
-if "%choice%"=="6" goto run_report_model
-if "%choice%"=="7" goto test_listener
-if "%choice%"=="8" goto test_speaker
-if "%choice%"=="9" goto test_brain
-if "%choice%"=="10" goto test_classifier
-if "%choice%"=="11" goto test_manager
-if "%choice%"=="12" goto test_verifier
-if "%choice%"=="13" goto install_reqs
-if "%choice%"=="14" goto run_vad
-if "%choice%"=="15" goto check_deps
-if "%choice%"=="16" goto clean_test_outputs
-if "%choice%"=="17" goto clean_sessions
-if "%choice%"=="18" goto clean_cache_db
-if "%choice%"=="19" goto clean_bytecode_trash
-if "%choice%"=="20" goto clean_full_deep
-if "%choice%"=="21" goto run_quality_audit
+if "%choice%"=="2" goto run_frontend_vite
+if "%choice%"=="3" goto run_unified_workflow
+if "%choice%"=="4" goto run_research_model
+if "%choice%"=="5" goto run_question_model_cli
+if "%choice%"=="6" goto run_voice_model
+if "%choice%"=="7" goto run_report_model
+if "%choice%"=="8" goto test_listener
+if "%choice%"=="9" goto test_speaker
+if "%choice%"=="10" goto test_brain
+if "%choice%"=="11" goto test_classifier
+if "%choice%"=="12" goto test_manager
+if "%choice%"=="13" goto test_verifier
+if "%choice%"=="14" goto install_reqs
+if "%choice%"=="15" goto install_frontend_deps
+if "%choice%"=="16" goto run_vad
+if "%choice%"=="17" goto check_deps
+if "%choice%"=="18" goto clean_test_outputs
+if "%choice%"=="19" goto clean_sessions
+if "%choice%"=="20" goto clean_cache_db
+if "%choice%"=="21" goto clean_bytecode_trash
+if "%choice%"=="22" goto clean_full_deep
+if "%choice%"=="23" goto run_quality_audit
 if "%choice%"=="0" goto end
 
 goto menu
@@ -84,6 +88,24 @@ goto menu
 echo.
 echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000)...
 .venv\Scripts\python.exe -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+pause
+goto menu
+
+:run_frontend_vite
+echo.
+echo [FRONTEND] Launching React + Vite Development Server (http://localhost:5173)...
+cd /d "%~dp0frontend"
+call npm run dev
+cd /d "%~dp0backend"
+pause
+goto menu
+
+:install_frontend_deps
+echo.
+echo [FRONTEND SETUP] Installing/Updating Frontend npm dependencies...
+cd /d "%~dp0frontend"
+call npm install
+cd /d "%~dp0backend"
 pause
 goto menu
 

@@ -14,7 +14,8 @@ This document tracks completed features, system architecture components, verific
 | **Stage 2: Question Tree** | 15-question dynamic interview tree generation & Eva interviewer behavior prompt engine | `model/question_model/model/pipeline.py`<br>`POST /api/v1/setup/analyze`<br>`GET /api/v1/questions/status/{id}`<br>`GET /api/v1/questions/preview/{id}` | ✅ Completed |
 | **Stage 3: Live Voice Engine** | Full-duplex WebSocket stream, Silero VAD, Faster-Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in | `model/voice_to_voice_model/model/voice_engine.py`<br>`api/services/voice_adapter.py`<br>`api/routers/voice.py`<br>`WS /api/v1/voice/stream/{session_id}` | ✅ Completed |
 | **Stage 4: Multimodal Evaluation** | 3-branch audio waveform, technical response, and executive hiring summary generation | `model/reports_model/model/pipeline.py`<br>`api/routers/reports.py`<br>`POST /api/v1/reports/generate/{id}`<br>`GET /api/v1/reports/{id}` | ✅ Completed |
-| **Web Frontend** | Next.js 14/15 React client, Web Audio Worklet client, setup screens, live call UI, evaluation dashboard | `frontend/` | ⏳ Pending |
+| **Web Frontend (Phase 1: Dashboard)** | React 18 + Vite 5 client, Serene Learning Modern Glassmorphism design system, Navbar, WelcomeBanner, StatsRow (4-card metric grid), LaunchPractice, LastSessionCard, SessionsTable | `frontend/`<br>`frontend/src/pages/Dashboard.jsx`<br>`doc/frontend_structure.md` | ✅ Completed |
+| **Web Frontend (Phase 2: Live Practice & Audio)** | Web Audio Worklet API, real-time WebSocket PCM player, setup wizard, live call screen, and interactive scorecard dashboard | `frontend/src/pages/Setup.jsx`<br>`frontend/src/pages/Interview.jsx`<br>`frontend/src/pages/Report.jsx` | ⏳ Pending |
 
 ---
 
@@ -57,4 +58,6 @@ This document tracks completed features, system architecture components, verific
 - ✅ **Stage 1 & 2 Setup Pipeline**: 22 integration tests passed (`scratch/test_setup_pipeline.py`), confirming background execution, 7 status checkpoints, and question preview generation.
 - ✅ **Stage 3 Live Voice Engine**: End-to-end full-duplex WebSocket communication verified using Postman (`ws://127.0.0.1:8000/api/v1/voice/stream/{session_id}?token=...`), verifying real-time VAD, Whisper STT, Qwen 2.5 response generation, and exception handling.
 - ✅ **Stage 4 Multimodal Reports API**: Automated test suite passed (`scratch/test_reports_api.py`), verifying `POST 202 Accepted` background generation queue and `GET 200 OK` evaluation report retrieval.
-- ✅ **Agent Frontend Skills Sync**: Configured 10 UI/UX skills in `.agents/skills` and updated `backend/doc/rule.md` and `AGENTS.md` directives to mandate their usage and adherence to `DESIGN.md`.
+- ✅ **Agent Frontend Skills Sync**: Configured 10 UI/UX skills in `.agents/skills` and updated `doc/rule.md` and `AGENTS.md` directives to mandate their usage and adherence to `DESIGN.md`.
+- ✅ **Frontend Dashboard (Phase 1)**: React 18 + Vite 5 client built with Serene Learning design system tokens, Navbar, WelcomeBanner, 4-card StatsRow, LaunchPractice, LastSessionCard, and SessionsTable. Production build `npm run build` verified.
+- ✅ **Repository Reorganization & Git Ignore**: Moved master `doc/` to project root, created root `.gitignore` and `frontend/.gitignore` ignoring `dist/` and `node_modules/`, and synchronized `run.bat` launcher menu options.
