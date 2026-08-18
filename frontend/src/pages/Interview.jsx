@@ -65,7 +65,7 @@ export const Interview = () => {
   };
 
   const handleStopSession = () => {
-    navigate(`/report/${sessionId || 'sess_demo'}`);
+    navigate(`/report/${sessionId || 'sess_demo123'}`);
   };
 
   const handleNextQuestion = () => {

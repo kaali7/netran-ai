@@ -1,4 +1,4 @@
-﻿# Netran AI — Task Completion & Implementation Tracker
+# Netran AI — Task Completion & Implementation Tracker
 
 This document tracks completed features, system architecture components, verification logs, and pending roadmap tasks for **Netran AI**.
 
@@ -19,7 +19,7 @@ This document tracks completed features, system architecture components, verific
 | **Web Frontend (Phase 1: Dashboard)** | React 18 + Vite 5, Serene Learning Glassmorphism, Navbar, WelcomeBanner, StatsRow, LaunchPractice, LastSessionCard, SessionsTable | rontend/src/pages/Dashboard.jsx | ✅ Completed |
 | **Web Frontend (Phase 2A: Setup Page)** | Configure Practice Track — JD/resume upload, topic sliders, persona selector, Build & Launch CTA | rontend/src/pages/Setup.jsx | ✅ Completed (UI Shell) |
 | **Web Frontend (Phase 2B: Interview Room)** | Live call screen with AvatarEva, timer, question tracker, mic/pause/end controls | rontend/src/pages/Interview.jsx<br>rontend/src/components/interview/AvatarEva.jsx | ✅ Completed (UI Shell) |
-| **Web Frontend (Phase 2C: Report Scorecard)** | Multimodal evaluation dashboard — pillar scores, vocal delivery, transcript table, export PDF | rontend/src/pages/Report.jsx | ⏳ Pending (Stub Only) |
+| **Web Frontend (Phase 2C: Report Scorecard)** | Multimodal evaluation dashboard — pillar scores, voice performance, donut readiness gauge, AI feedback callout, Q-by-Q breakdown accordions | `frontend/src/pages/Report.jsx` | ✅ Completed (UI Shell) |
 | **Web Frontend (Phase 2D: Auth / Login)** | Candidate login, signup, JWT session management | rontend/src/pages/Login.jsx | ⏳ Pending (Stub Only) |
 | **Frontend to Backend API Integration** | Wire all pages to real FastAPI endpoints via Axios, JWT Zustand store, WebSocket PCM stream, AudioWorklet | rontend/src/services/<br>rontend/src/hooks/<br>rontend/src/store/ | ⏳ Pending |
 | **Frontend Web Audio Engine** | AudioWorklet converting browser Opus/WebM to 16kHz 16-bit Mono PCM bytes for WebSocket streaming | rontend/public/pcm-processor.js | ⏳ Pending |
@@ -131,4 +131,6 @@ pm run build verified.
 - ✅ **Frontend Interview Room (Phase 2B Shell)**: Live mock interview room with AvatarEva, timer, question tracker, and session controls.
 - ✅ **AvatarEva Animated Persona**: SVG flat-vector character with lip-sync mouth morph, breathing animation, head sway.
 - ✅ **Repository Reorganization & Git Ignore**: Master doc/ at project root, .gitignore files, un.bat synchronized.
-- ✅ **Git Commit — Phase 2 Frontend Shells**: Committed eat(frontend): add Configure Practice Track page, Live Mock Interview room, and animated Eva vector persona (hash 55787bc).
+- ✅ **Git Commit — Phase 2 Frontend Shells**: Committed feat(frontend): add Configure Practice Track page, Live Mock Interview room, and animated Eva vector persona (hash 55787bc).
+- ✅ **Frontend Report Scorecard Page (Phase 2C Shell)**: Implemented complete Session Summary & Evaluation Scorecard page (`Report.jsx`) matching design mockup. Fixed `react-router-dom` import issue and verified clean `npm run build` production build.
+- ✅ **Rule 14 Added**: Updated `.agents/AGENTS.md` and `doc/rule.md` to mandate immediate `doc/task_completion.md` synchronization whenever coding tasks or features are completed.

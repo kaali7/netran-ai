@@ -69,11 +69,12 @@ Before modifying any source code in a model stage:
 
 ---
 
-## 📌 Rule 7: Immediate Documentation Synchronization
+## 📌 Rule 7: Immediate Documentation & Task Completion Synchronization
 * Whenever code paths, function signatures, input/output schemas, or test directories are altered:
   - Immediately update `model/<stage_folder>/doc/current.md`.
   - Immediately update `doc/folder_strucuture.md`.
   - Never leave documentation outdated relative to actual code implementation.
+* **Mandatory Task Completion Update**: Whenever any coding task, bug fix, or feature is completed, you MUST edit and update `doc/task_completion.md` to reflect the latest completed deliverables, verification logs, and active status matrix.
 
 ---
 
