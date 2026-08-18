@@ -121,3 +121,11 @@ Before modifying any source code in a model stage:
   - **`ui-ux-pro-max`**: Use for granular UI/UX design intelligence, spacing, accessibility, interaction patterns, responsive layouts, or tech-stack-specific implementation guidance.
   - **`web-design-guidelines`**: Use to audit UI code against Web Interface Guidelines for best practices and accessibility compliance.
 * You MUST reference and adhere to the specific design system and aesthetic guidelines defined in `DESIGN.md` (e.g., Modern Glassmorphism, Manrope typography, fluid card-based grid) when making frontend UI changes.
+
+---
+
+## 📌 Rule 13: Frontend Code Quality & Verification Scanning
+* Whenever making frontend-related modifications (components, pages, styles, assets, dependencies):
+  - **Build & Quality Scan**: Always run `npm run build` in the `frontend/` directory to scan and verify zero compilation, type, bundle, or missing asset errors.
+  - **Interface Audit**: Utilize frontend design & auditing skills (`web-design-guidelines`, `ui-ux-pro-max`, `critique`) to review UI quality, accessibility compliance, and visual craft prior to completing work.
+

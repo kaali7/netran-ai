@@ -10,3 +10,4 @@ Before performing research or modifying any code in this repository:
 7. Always run code/tests from the backend root using the virtual environment (`.\.venv\Scripts\python.exe -m model.<stage>.model.test_pipeline`) or `run.bat`, and run `.\.venv\Scripts\python.exe scan_code_quality.py` for code quality checks (`ruff`, `pylint`, `mypy`, `bandit`, `radon`).
 8. When designing or writing code for the frontend, use the appropriate UI/UX skills located in `.agents/skills` based on the specific requirements.
 9. Always use the specific design guidelines outlined in `DESIGN.md` for frontend development.
+10. When making frontend-related changes, always run frontend code quality scanning and build verification (`npm run build` inside `frontend/`) to ensure zero syntax, bundling, or interface errors.
