@@ -94,6 +94,8 @@ async def voice_interview_stream(
     # Prepare threading primitives
     ws_queue = asyncio.Queue()
     stop_event = threading.Event()
+    import queue
+    audio_queue = queue.Queue()
     loop = asyncio.get_running_loop()
 
     def thread_safe_callback(event: VoiceTurnEvent):
@@ -115,18 +117,24 @@ async def voice_interview_stream(
         except Exception as e:
             logger.error(f"Error in send_worker: {type(e).__name__} - {str(e)}")
 
-    # Background task for reading from WebSocket -> engine control
+    # Background task for reading from WebSocket -> engine control & audio streaming
     async def recv_worker():
+        import json
         try:
             while True:
-                data = await websocket.receive_json()
-                action = data.get("action")
-                if action == "stop":
-                    logger.info(f"Client requested stop for session {session_id}")
-                    stop_event.set()
-                    break
-                elif action == "ping":
-                    await websocket.send_json({"event": "pong"})
+                message = await websocket.receive()
+                if "bytes" in message:
+                    # Raw PCM audio chunk from frontend Worklet
+                    audio_queue.put(message["bytes"])
+                elif "text" in message:
+                    data = json.loads(message["text"])
+                    action = data.get("action")
+                    if action == "stop":
+                        logger.info(f"Client requested stop for session {session_id}")
+                        stop_event.set()
+                        break
+                    elif action == "ping":
+                        await websocket.send_json({"event": "pong"})
         except (WebSocketDisconnect, RuntimeError):
             logger.info(f"WebSocket disconnected for session {session_id}")
             stop_event.set()
@@ -140,7 +148,7 @@ async def voice_interview_stream(
     recv_task = asyncio.create_task(recv_worker())
 
     try:
-        # Run the actual engine blocking loop in a thread pool
+        # Run synchronous voice engine in thread pool
         manifest = await asyncio.to_thread(
             run_voice_session_with_callback,
             session_id,
@@ -148,7 +156,8 @@ async def voice_interview_stream(
             stop_event,
             questions,
             system_prompt,
-            total_questions
+            total_questions,
+            audio_queue
         )
         
         # Interview finished or stopped

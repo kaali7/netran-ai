@@ -91,8 +91,9 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Portable Snapshot Path Resolution**: `resolve_whisper_model_path()` dynamically detects local HuggingFace cache snapshots (`models--Systran--faster-whisper-small\snapshots\...`) using `%USERPROFILE%`, loading model weights directly from local disk. `resolve_kokoro_model_path()` uses the cached `"hexgrad/Kokoro-82M"` repository ID in offline mode.
 
 ### 4. Speech-to-Text & Audio Capture ([listener.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/listener.py))
-* **Audio Capture Engine**: Built using `sounddevice`. Always opens the stream at the device's native sample rate (e.g. 44100Hz MME, 48000Hz WASAPI) and applies Python-side resampling.
-* **Python-Side Resampling**: Boxcar decimation for 48000Hz WASAPI, and `audioop.ratecv` with persistent inter-chunk state for 44100Hz MME.
+* **Browser-Native Web Audio Streaming (Primary Mode)**: Fully integrated with the frontend React web app. The browser uses `AudioWorkletNode` (`pcm-processor.js`) to capture pure 16kHz microphone audio natively, transcodes it to Int16 PCM, and streams binary chunks over WebSocket. `listen_and_transcribe` pulls perfectly-timed 512-frame chunks from the `ws_audio_queue` thread buffer, completely bypassing native OS host audio hardware lockups and eliminating hardware capture constraints.
+* **Fallback Hardware Audio Capture Engine**: Built using `sounddevice`. Always opens the stream at the device's native sample rate (e.g. 44100Hz MME, 48000Hz WASAPI) and applies Python-side resampling. Automatically active when `ws_audio_queue` is not provided (e.g., Kivy Desktop CLI).
+* **Python-Side Resampling (Fallback Mode)**: Boxcar decimation for 48000Hz WASAPI, and `audioop.ratecv` with persistent inter-chunk state for 44100Hz MME.
 * **Wiener Filter Noise Suppression (`NoiseReducer`)**: Uses `noisereduce` library (Wiener filter + spectral gating). Handles BOTH stationary noise (fan, AC, HVAC) AND transient bursts (keyboard clicks, mouse, door slams). Applied **ONCE on the full contiguous audio buffer** before STT — NOT per-chunk (per-chunk STFT with `n_fft=512` on exactly 512-sample frames caused 31Hz Hann-window amplitude modulation artifacts that degraded SpeakerVerifier embeddings and Whisper transcription accuracy).
 * **Post-TTS Echo Guard Window**: Monotonic timestamp guard (`_echo_guard_until = time.monotonic() + 0.30`) suppresses VAD triggers for 300ms after `state.is_agent_speaking` clears to absorb room acoustic reflections of Eva's last sentence, preventing false barge-in and self-capture.
 * **Offline Speaker Verification (`speaker_verifier.py`)**: Employs SpeechBrain `speechbrain/spkrec-ecapa-voxceleb` (192-dim ECAPA-TDNN) to verify candidate identity before STT transcription.
@@ -107,8 +108,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Continuous Mic Writer (`ContinuousMicWriter`)**: Writes 3x-boosted 16kHz 16-bit Mono WAV frames directly to `recording.wav`.
 * **Faster-Whisper Anti-Hallucination Tuning**: `condition_on_previous_text=False`, `no_speech_threshold=0.6`, `hallucination_silence_threshold=2.0`, `temperature=0.0`, `beam_size=1`.
 * **Input Modes (Auto-VAD vs Push-To-Talk)**: Supports both automatic VAD speech endpointing and PTT mode.
-* **Async Producer/Consumer Queue Architecture**: `listen_and_transcribe()` spawns a background daemon thread (`mic_stream_producer`) to continuously drain mic frames into a thread-safe `queue.Queue()`.
-* **Hardware Lock Retry Loop**: Both `listen_and_transcribe` and `BargeInWatcher` implement a 3-attempt, 0.3s delay retry on `sd.InputStream` initialization.
+* **Async Producer/Consumer Queue Architecture**: `listen_and_transcribe()` spawns a background daemon thread (`mic_stream_producer` or `ws_stream_producer`) to continuously drain mic/websocket frames into a thread-safe `queue.Queue()`.
+* **Hardware Lock Retry Loop**: Both `listen_and_transcribe` and `BargeInWatcher` implement a 3-attempt, 0.3s delay retry on `sd.InputStream` initialization (when using fallback hardware mode).
 * **Hybrid Turn Classifier & Dynamic Pause Extension ([turn_classifier.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/turn_classifier.py))**:
   - Implements Case 3 Hybrid Architecture to determine if candidate speech is a complete thought or an interrupted thinking pause.
   - **Tier 0 (Ollama Liveness Probe)**: Skips Tier 2 if Ollama is unreachable.

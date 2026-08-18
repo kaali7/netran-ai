@@ -99,7 +99,8 @@ class WorkflowVoiceEngine:
     def run_interview(
         self,
         status_callback: Callable[[int, str, str, str], None] | None = None,
-        max_turns: int = 15
+        max_turns: int = 15,
+        ws_audio_queue: Any = None
     ):
         """
         Executes the voice-to-voice interview loop turn-by-turn.
@@ -163,7 +164,7 @@ class WorkflowVoiceEngine:
                     status_callback(turn_idx, "LISTENING_CANDIDATE", "", "")
                     
                 audio_start_perf = session_log.elapsed_sec()
-                transcription_result = listen_and_transcribe(state=self.session_state)
+                transcription_result = listen_and_transcribe(state=self.session_state, ws_audio_queue=ws_audio_queue)
                 
                 if isinstance(transcription_result, dict):
                     candidate_transcript = transcription_result.get("text", "").strip()

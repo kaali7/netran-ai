@@ -1,0 +1,283 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import useAuth from './useAuth';
+
+export const useInterviewSession = (sessionId) => {
+  const { token } = useAuth();
+  
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState('Initializing interview session...');
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [isSessionDone, setIsSessionDone] = useState(false);
+  const [micVolume, setMicVolume] = useState(0);
+
+  const wsRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const workletNodeRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const sourceNodeRef = useRef(null);
+  const analyserRef = useRef(null);
+  const volumeIntervalRef = useRef(null);
+  
+  // TTS Playback state
+  const nextStartTimeRef = useRef(0);
+  const sourceNodesQueueRef = useRef([]);
+
+  const connectWebSocket = useCallback(() => {
+    if (!sessionId || !token) return;
+
+    let baseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+    let wsUrl = '';
+    
+    if (baseUrl.startsWith('http')) {
+      wsUrl = baseUrl.replace(/^http/, 'ws') + `/voice/stream/${sessionId}?token=${token}`;
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const path = baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`;
+      wsUrl = `${protocol}//${window.location.host}${path}/voice/stream/${sessionId}?token=${token}`;
+    }
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('Voice WebSocket connected');
+      setIsConnected(true);
+      startMicrophoneCapture();
+    };
+
+    ws.onmessage = async (event) => {
+      // Handle Binary TTS Audio Chunk (assuming Int16 16kHz PCM from backend)
+      if (event.data instanceof Blob) {
+        setIsSpeaking(true);
+        const arrayBuffer = await event.data.arrayBuffer();
+        const int16Array = new Int16Array(arrayBuffer);
+        playAudioChunk(int16Array);
+        return;
+      }
+
+      if (typeof event.data === 'string') {
+        try {
+          const msg = JSON.parse(event.data);
+          
+          if (msg.event === 'INTERRUPT') {
+            console.log('Barge-in detected: interrupting AI');
+            interruptPlayback();
+            setIsSpeaking(false);
+          } else if (msg.event === 'QUESTION_COMPLETE' || msg.event === 'QUESTION_UPDATE') {
+            if (msg.text) setCurrentQuestion(msg.text);
+            if (msg.question_text) setCurrentQuestion(msg.question_text); // some backend events use question_text
+            if (msg.question_index !== undefined) setQuestionIndex(msg.question_index);
+          } else if (msg.event === 'INTERVIEW_COMPLETE' || msg.event === 'SESSION_DONE') {
+            setIsSessionDone(true);
+            stopSession();
+          } else if (msg.event === 'AI_START_SPEAKING') {
+            setIsSpeaking(true);
+          } else if (msg.event === 'AI_STOP_SPEAKING') {
+            setIsSpeaking(false);
+          } else if (msg.event === 'ERROR') {
+            console.error('Backend Error:', msg.detail);
+            alert(`Interview Error: ${msg.detail}`);
+            stopSession();
+          } else if (msg.event === 'CONNECTED') {
+            console.log('Session initialized. Total questions:', msg.total_questions);
+            if (msg.total_questions) {
+              setCurrentQuestion(`Session Connected! Ready for ${msg.total_questions} questions. AI is initializing...`);
+            }
+          }
+        } catch (err) {
+          console.error('Error parsing WS message:', err);
+        }
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket Error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('Voice WebSocket closed');
+      setIsConnected(false);
+      stopSession();
+    };
+  }, [sessionId, token]);
+
+  const startMicrophoneCapture = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      mediaStreamRef.current = stream;
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000,
+      });
+      audioContextRef.current = audioCtx;
+      nextStartTimeRef.current = audioCtx.currentTime;
+
+      // Load our custom PCM worklet
+      await audioCtx.audioWorklet.addModule('/pcm-processor.js');
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      sourceNodeRef.current = source;
+
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      source.connect(analyser);
+
+      const workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+      workletNodeRef.current = workletNode;
+      source.connect(workletNode);
+      workletNode.connect(audioCtx.destination);
+
+      workletNode.port.onmessage = (event) => {
+        // Send Int16Array to backend over WebSocket
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          // Send audio regardless of isSpeaking state to allow barge-in detection
+          wsRef.current.send(event.data);
+        }
+      };
+
+      // Volume monitoring interval (100ms throttle for UI rendering)
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      volumeIntervalRef.current = setInterval(() => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / dataArray.length;
+        // Normalize 0-255 average to 0-100 percentage
+        const normalized = Math.min(100, Math.round((average / 128) * 100));
+        setMicVolume(normalized);
+      }, 100);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+    }
+  };
+
+  const playAudioChunk = (int16Array) => {
+    const audioCtx = audioContextRef.current;
+    if (!audioCtx) return;
+
+    // Convert Int16 to Float32 for Web Audio API playback
+    const float32Array = new Float32Array(int16Array.length);
+    for (let i = 0; i < int16Array.length; i++) {
+      float32Array[i] = int16Array[i] / (int16Array[i] < 0 ? 0x8000 : 0x7FFF);
+    }
+
+    const audioBuffer = audioCtx.createBuffer(1, float32Array.length, 16000);
+    audioBuffer.getChannelData(0).set(float32Array);
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioCtx.destination);
+
+    // Schedule playback seamlessly
+    const currentTime = audioCtx.currentTime;
+    if (nextStartTimeRef.current < currentTime) {
+      nextStartTimeRef.current = currentTime;
+    }
+
+    source.start(nextStartTimeRef.current);
+    nextStartTimeRef.current += audioBuffer.duration;
+
+    source.onended = () => {
+      // Remove from queue when done
+      sourceNodesQueueRef.current = sourceNodesQueueRef.current.filter((s) => s !== source);
+      if (sourceNodesQueueRef.current.length === 0) {
+        setIsSpeaking(false);
+      }
+    };
+
+    sourceNodesQueueRef.current.push(source);
+  };
+
+  const interruptPlayback = () => {
+    // Stop all queued audio nodes
+    sourceNodesQueueRef.current.forEach((source) => {
+      try {
+        source.stop();
+        source.disconnect();
+      } catch (e) {
+        // Ignore if already stopped
+      }
+    });
+    sourceNodesQueueRef.current = [];
+    if (audioContextRef.current) {
+      nextStartTimeRef.current = audioContextRef.current.currentTime;
+    }
+  };
+
+  const stopSession = () => {
+    if (wsRef.current) {
+      // Avoid closing a connecting socket to prevent React StrictMode warnings
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        // If connecting, wait for it to open before closing (or just set a flag).
+        // Actually, closing while CONNECTING causes the warning. 
+        // We can just forcefully remove the ref so onclose is ignored, but the browser will still log the warning.
+        // It's a harmless warning, but we can suppress it by just letting it connect and closing immediately.
+        if (wsRef.current.readyState === WebSocket.CONNECTING) {
+            const ws = wsRef.current;
+            ws.onopen = () => ws.close();
+            ws.onerror = null;
+            ws.onmessage = null;
+        } else {
+            wsRef.current.close();
+        }
+      }
+      wsRef.current = null;
+    }
+    if (volumeIntervalRef.current) {
+      clearInterval(volumeIntervalRef.current);
+      volumeIntervalRef.current = null;
+    }
+    if (analyserRef.current) {
+      analyserRef.current.disconnect();
+      analyserRef.current = null;
+    }
+    if (workletNodeRef.current) {
+      workletNodeRef.current.disconnect();
+      workletNodeRef.current = null;
+    }
+    if (sourceNodeRef.current) {
+      sourceNodeRef.current.disconnect();
+      sourceNodeRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    setMicVolume(0);
+    interruptPlayback();
+  };
+
+  useEffect(() => {
+    connectWebSocket();
+    return () => {
+      stopSession();
+    };
+  }, [connectWebSocket]);
+
+  return {
+    isConnected,
+    isSpeaking,
+    currentQuestion,
+    questionIndex,
+    isSessionDone,
+    micVolume,
+    stopSession,
+  };
+};
+
+export default useInterviewSession;

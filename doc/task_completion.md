@@ -16,14 +16,15 @@ This document tracks completed features, system architecture components, verific
 | **Stage 2: Question Tree** | 15-question dynamic interview tree generation & Eva interviewer behavior prompt engine | model/question_model/model/pipeline.py<br>POST /api/v1/setup/analyze<br>GET /api/v1/questions/status/{id}<br>GET /api/v1/questions/preview/{id} | ✅ Completed |
 | **Stage 3: Live Voice Engine** | Full-duplex WebSocket stream, Silero VAD, Faster-Whisper STT, Qwen 2.5 3B brain, Kokoro 82M TTS, barge-in | model/voice_to_voice_model/model/voice_engine.py<br>pi/services/voice_adapter.py<br>pi/routers/voice.py<br>WS /api/v1/voice/stream/{session_id} | ✅ Completed |
 | **Stage 4: Multimodal Evaluation** | 3-branch audio waveform, technical response, and executive hiring summary generation | model/reports_model/model/pipeline.py<br>pi/routers/reports.py<br>POST /api/v1/reports/generate/{id}<br>GET /api/v1/reports/{id} | ✅ Completed |
-| **Web Frontend (Phase 1: Dashboard)** | React 18 + Vite 5, Serene Learning Glassmorphism, Navbar, WelcomeBanner, StatsRow, LaunchPractice, LastSessionCard, SessionsTable | rontend/src/pages/Dashboard.jsx | ✅ Completed |
-| **Web Frontend (Phase 2A: Setup Page)** | Configure Practice Track — live resume/JD upload, Gemini extraction, background pipeline status polling, full-screen AnalyzingOverlay, dynamic 3-tab bar (Topic Matrix, 15-Q Question Bank, Resume Analysis) | `frontend/src/pages/Setup.jsx`<br>`frontend/src/hooks/useSetup.js`<br>`frontend/src/services/sessionService.js` | ✅ Completed |
-| **Web Frontend (Phase 2B: Interview Room)** | Live call screen with AvatarEva, timer, question tracker, mic/pause/end controls | rontend/src/pages/Interview.jsx<br>rontend/src/components/interview/AvatarEva.jsx | ✅ Completed (UI Shell) |
+| **Web Frontend (Phase 1: Dashboard)** | React 18 + Vite 5, Serene Learning Glassmorphism, Navbar, WelcomeBanner, StatsRow, LaunchPractice, LastSessionCard, SessionsTable | frontend/src/pages/Dashboard.jsx | ✅ Completed |
+| **Web Frontend (Phase 2A: Setup Page)** | Configure Practice Track — live resume/JD upload, Gemini extraction, background pipeline status polling, full-screen AnalyzingOverlay, dynamic 2-tab bar (15-Q Question Bank, Resume & Profile Analysis), Instant Cache Autofill | `frontend/src/pages/Setup.jsx`<br>`frontend/src/hooks/useSetup.js`<br>`frontend/src/services/sessionService.js` | ✅ Completed |
+| **Web Frontend (Phase 2B: Interview Room)** | Live call screen with AvatarEva, timer, question tracker, mic/pause/end controls | frontend/src/pages/Interview.jsx<br>frontend/src/components/interview/AvatarEva.jsx | ✅ Completed |
 | **Web Frontend (Phase 2C: Report Scorecard)** | Multimodal evaluation dashboard — pillar scores, voice performance, donut readiness gauge, AI feedback callout, Q-by-Q breakdown accordions | `frontend/src/pages/Report.jsx` | ✅ Completed (UI Shell) |
 | **Web Frontend (Phase 2D: Auth / Login)** | Candidate login, signup, JWT session management, Zustand auth store, route guards | `frontend/src/pages/Login.jsx`<br>`frontend/src/store/authStore.js`<br>`frontend/src/services/authService.js` | ✅ Completed |
 | **Template Mock Interview API** | Pre-built mock interview templates (Backend, Frontend, Fullstack) served from `data/sample_interviews/`, creating READY sessions without JD/resume upload | `api/routers/template.py`<br>GET /api/v1/template/list<br>POST /api/v1/template/start | ✅ Completed |
 | **Frontend Template Picker Modal** | Glassmorphic modal on Dashboard — lists 3 interview tracks, creates session via API, navigates directly to voice interview | `components/dashboard/TemplatePicker.jsx`<br>`services/templateService.js` | ✅ Completed |
-| **Frontend Web Audio Engine** | AudioWorklet converting browser Opus/WebM to 16kHz 16-bit Mono PCM bytes for WebSocket streaming | rontend/public/pcm-processor.js | ⏳ Pending |
+| **Frontend Web Audio Engine** | AudioWorklet converting browser Opus/WebM to 16kHz 16-bit Mono PCM bytes for WebSocket streaming | frontend/public/pcm-processor.js | ✅ Completed |
+| **Frontend Mic Level Visualizer** | Browser Web Audio AnalyserNode calculating real-time microphone RMS volume level and rendering animated Mic Input Level bar in Interview Room | `frontend/src/hooks/useInterviewSession.js`<br>`frontend/src/pages/Interview.jsx` | ✅ Completed |
 | **Agent Skill Configurations** | 10 frontend UI/UX skills configured, documentation rules updated | .agents/skills/, skills-lock.json | ✅ Completed |
 
 ---
@@ -56,17 +57,20 @@ This document tracks completed features, system architecture components, verific
 
 | Component / Page | Target File | Description | Status |
 |---|---|---|---|
-| **Design System & CSS Tokens** | rontend/src/styles/index.css, glass.css, nimations.css | Serene Learning Glassmorphism with CSS custom properties, Manrope typography, frosted glass surfaces, animation keyframes. | ✅ Completed |
-| **App Shell & Router** | rontend/src/App.jsx, rontend/src/router.jsx | Root React component and React Router v6 route config. | ✅ Completed |
+| **Design System & CSS Tokens** | frontend/src/styles/index.css, glass.css, nimations.css | Serene Learning Glassmorphism with CSS custom properties, Manrope typography, frosted glass surfaces, animation keyframes. | ✅ Completed |
+| **App Shell & Router** | frontend/src/App.jsx, frontend/src/router.jsx | Root React component and React Router v6 route config. | ✅ Completed |
 | **Layout Components** | Navbar.jsx, PageWrapper.jsx | Top navigation bar and fluid max-width page container. | ✅ Completed |
-| **UI Atomic Components** | rontend/src/components/ui/ | Card, Button, Badge, StatCard, ProgressBar glassmorphic atoms. | ✅ Completed |
-| **Dashboard Components** | rontend/src/components/dashboard/ | WelcomeBanner, StatsRow, LaunchPractice, LastSessionCard, SessionsTable. | ✅ Completed |
-| **Dashboard Page** | rontend/src/pages/Dashboard.jsx | Phase 1 candidate home wiring all dashboard components, navigates to Setup on CTA click. | ✅ Completed |
-| **Setup Page (Configure Track)** | rontend/src/pages/Setup.jsx | Full  Configure New Practice Track form — title, seniority, JD textarea+upload, resume upload, sliders, persona selector, Build & Launch CTA. | ✅ Completed (UI Shell) |
-| **AvatarEva Component** | rontend/src/components/interview/AvatarEva.jsx | Animated SVG flat-vector female AI interviewer with CSS lip-sync mouth animation, breathing, head sway. | ✅ Completed |
-| **Interview Room Page** | rontend/src/pages/Interview.jsx | Live interview room with AvatarEva, timer, question tracker, mic/pause/end controls, speaking state. | ✅ Completed (UI Shell) |
-| **API Axios Client** | rontend/src/services/api.js | Central Axios instance with base URL and Bearer interceptors. | ✅ Completed |
-| **Dashboard Hook** | rontend/src/hooks/useDashboard.js | Mock data provider for Phase 1 dashboard telemetry. | ✅ Completed |
+| **UI Atomic Components** | frontend/src/components/ui/ | Card, Button, Badge, StatCard, ProgressBar glassmorphic atoms. | ✅ Completed |
+| **Dashboard Components** | frontend/src/components/dashboard/ | WelcomeBanner, StatsRow, LaunchPractice, LastSessionCard, SessionsTable. | ✅ Completed |
+| **Dashboard Page** | frontend/src/pages/Dashboard.jsx | Phase 1 candidate home wiring all dashboard components, navigates to Setup on CTA click. | ✅ Completed |
+| **Setup Page (Configure Track)** | frontend/src/pages/Setup.jsx | Full Configure New Practice Track form, live pipeline backend wiring, progress overlay, caching autofill, and dynamic Resume & Question tabs. | ✅ Completed |
+| **Session Service** | frontend/src/services/sessionService.js | Axios API wrappers for the full Stage 1 & 2 Setup pipeline and status polling. | ✅ Completed |
+| **AvatarEva Component** | frontend/src/components/interview/AvatarEva.jsx | Animated SVG flat-vector female AI interviewer with CSS lip-sync mouth animation, breathing, head sway. | ✅ Completed |
+| **Interview Room Page** | frontend/src/pages/Interview.jsx | Live interview room with AvatarEva, dynamic question text, live PCM streaming, and TTS playback. UI elements cleaned per feedback. | ✅ Completed |
+| **PCM Web Audio Processor** | frontend/public/pcm-processor.js | AudioWorkletProcessor converting Float32 mic data to 16kHz 16-bit PCM Int16Array for backend streaming. | ✅ Completed |
+| **useInterviewSession Hook** | frontend/src/hooks/useInterviewSession.js | Web Audio API + WebSocket lifecycle manager for real-time interview bidirectional streaming. | ✅ Completed |
+| **API Axios Client** | frontend/src/services/api.js | Central Axios instance with base URL and Bearer interceptors. | ✅ Completed |
+| **Dashboard Hook** | frontend/src/hooks/useDashboard.js | Mock data provider for Phase 1 dashboard telemetry. | ✅ Completed |
 | **Constants Utility** | `frontend/src/utils/constants.js` | Shared route names and default mock metric values. | ✅ Completed |
 | **Auth Store (Zustand)** | `frontend/src/store/authStore.js` | Global Zustand auth store: token, user, setAuth(), logout(), local storage persistence. | ✅ Completed |
 | **Auth Service** | `frontend/src/services/authService.js` | Axios wrappers for signup, login, getMe endpoints. | ✅ Completed |
@@ -85,12 +89,7 @@ This document tracks completed features, system architecture components, verific
 
 | Feature / Component | Target File | Description & Requirements | Priority |
 |---|---|---|---|
-| **Session Service** | `frontend/src/services/sessionService.js` | Axios wrappers: uploadResume(), uploadJD(), startAnalysis(), pollStatus(id), getQuestionPreview(id), generateReport(id), getReport(id). | 🔴 High |
-| **Setup Page — Backend Wiring** | rontend/src/pages/Setup.jsx | Connect Build & Launch button: POST /ingest/resume, POST /ingest/jd, POST /setup/analyze, then poll GET /questions/status/{id} until ready, navigate to /interview/{id}. Show animated progress overlay during pipeline. | 🔴 High |
-| **Web Audio Worklet PCM Processor** | rontend/public/pcm-processor.js | AudioWorkletProcessor converting raw mic Float32Array to 16kHz 16-bit Mono PCM Int16Array bytes for binary WebSocket streaming to Stage 3 engine. | 🔴 High |
-| **Interview Room — WebSocket Live Wiring** | rontend/src/pages/Interview.jsx | Full WebSocket integration: connect WS /api/v1/voice/stream/{id}?token=..., stream binary PCM from AudioWorklet, receive binary TTS audio chunks + JSON event frames (INTERRUPT, QUESTION_COMPLETE, SESSION_DONE), play TTS via AudioContext. | 🔴 High |
-| **useInterviewSession Hook** | rontend/src/hooks/useInterviewSession.js | Encapsulates WebSocket lifecycle, AudioWorklet mic capture, TTS AudioContext playback queue, barge-in INTERRUPT flushing, speaking/listening state, question index tracking, session end detection. | 🔴 High |
-| **Report / Scorecard Page (Full)** | rontend/src/pages/Report.jsx | Complete Stage 4 dashboard: pillar score cards (Technical, Vocal, Behavioral), turn-by-turn transcript table with per-turn scores, overall hiring recommendation badge, strengths/weaknesses feedback panels, export PDF button. Fetch from GET /api/v1/reports/{sessionId}. | 🔴 High |
+| **Report / Scorecard Page (Full)** | frontend/src/pages/Report.jsx | Complete Stage 4 dashboard: pillar score cards (Technical, Vocal, Behavioral), turn-by-turn transcript table with per-turn scores, overall hiring recommendation badge, strengths/weaknesses feedback panels, export PDF button. Fetch from GET /api/v1/reports/{sessionId}. | 🔴 High |
 
 ---
 
@@ -98,15 +97,14 @@ This document tracks completed features, system architecture components, verific
 
 | Feature / Component | Target File | Description & Requirements | Priority |
 |---|---|---|---|
-| **useAuth Hook** | rontend/src/hooks/useAuth.js | Hook exposing user, token, isAuthenticated, login(), logout() from Zustand auth store. | 🟡 Medium |
-| **useReports Hook** | rontend/src/hooks/useReports.js | Hook fetching and formatting Stage 4 report data from GET /api/v1/reports/{sessionId}. | 🟡 Medium |
-| **Protected Route Guard** | rontend/src/router.jsx | Wrap Dashboard, Setup, Interview, Report routes with JWT auth guard — redirect unauthenticated users to /login. | 🟡 Medium |
-| **AvatarEva Character Refinement** | rontend/src/components/interview/AvatarEva.jsx | Refine SVG path accuracy to match target illustration more closely — proportional face, accurate ear/hair curves, smooth neck-to-shoulder transition. | 🟡 Medium |
-| **Setup Page — Progress Overlay** | rontend/src/pages/Setup.jsx | Full-screen animated loading overlay after form submit, showing live Stage 1 → Stage 2 pipeline progress messages polled from /questions/status/{id}. | 🟡 Medium |
-| **Interview Room — Question Preview Panel** | rontend/src/pages/Interview.jsx | Collapsible sidebar showing the full 15-question tree loaded from GET /api/v1/questions/preview/{id} so candidate can see overall interview structure. | 🟡 Medium |
-| **formatters Utility** | rontend/src/utils/formatters.js | formatDate(), formatScore(), and text sanitizers for use across dashboard, report, and session pages. | 🟡 Medium |
-| **Report Chart Components** | rontend/src/components/report/ | Reusable visualization components: PillarScoreCard.jsx, TurnTable.jsx, AudioMetricsChart.jsx. | 🟡 Medium |
-| **Navbar Auth Integration** | rontend/src/components/layout/Navbar.jsx | Show logged-in user name/avatar from useAuth hook; add Logout button calling authStore.logout() and redirecting to /login. | 🟡 Medium |
+| **useAuth Hook** | frontend/src/hooks/useAuth.js | Hook exposing user, token, isAuthenticated, login(), logout() from Zustand auth store. | 🟡 Medium |
+| **useReports Hook** | frontend/src/hooks/useReports.js | Hook fetching and formatting Stage 4 report data from GET /api/v1/reports/{sessionId}. | 🟡 Medium |
+| **Protected Route Guard** | frontend/src/router.jsx | Wrap Dashboard, Setup, Interview, Report routes with JWT auth guard — redirect unauthenticated users to /login. | 🟡 Medium |
+| **AvatarEva Character Refinement** | frontend/src/components/interview/AvatarEva.jsx | Refine SVG path accuracy to match target illustration more closely — proportional face, accurate ear/hair curves, smooth neck-to-shoulder transition. | 🟡 Medium |
+| **Interview Room — Question Preview Panel** | frontend/src/pages/Interview.jsx | Collapsible sidebar showing the full 15-question tree loaded from GET /api/v1/questions/preview/{id} so candidate can see overall interview structure. | 🟡 Medium |
+| **formatters Utility** | frontend/src/utils/formatters.js | formatDate(), formatScore(), and text sanitizers for use across dashboard, report, and session pages. | 🟡 Medium |
+| **Report Chart Components** | frontend/src/components/report/ | Reusable visualization components: PillarScoreCard.jsx, TurnTable.jsx, AudioMetricsChart.jsx. | 🟡 Medium |
+| **Navbar Auth Integration** | frontend/src/components/layout/Navbar.jsx | Show logged-in user name/avatar from useAuth hook; add Logout button calling authStore.logout() and redirecting to /login. | 🟡 Medium |
 
 ---
 
@@ -114,10 +112,10 @@ This document tracks completed features, system architecture components, verific
 
 | Feature / Component | Target File | Description | Priority |
 |---|---|---|---|
-| **Frontend Build Verification** | rontend/ | Run npm run build after every frontend change to ensure zero compilation errors (Rule 13). | 🟢 Low |
-| **Responsive Layout Audit** | rontend/src/pages/, rontend/src/components/ | Audit all pages for mobile/tablet responsiveness; ensure glass cards and grids stack on smaller viewports. | 🟢 Low |
-| **Reduced Motion Support** | rontend/src/styles/animations.css | Ensure all CSS animations respect @media (prefers-reduced-motion: reduce) per frontend_structure.md spec. | 🟢 Low |
-| **Error Boundary** | rontend/src/App.jsx | Wrap router with React ErrorBoundary to gracefully catch and display unexpected runtime errors. | 🟢 Low |
+| **Frontend Build Verification** | frontend/ | Run npm run build after every frontend change to ensure zero compilation errors (Rule 13). | 🟢 Low |
+| **Responsive Layout Audit** | frontend/src/pages/, frontend/src/components/ | Audit all pages for mobile/tablet responsiveness; ensure glass cards and grids stack on smaller viewports. | 🟢 Low |
+| **Reduced Motion Support** | frontend/src/styles/animations.css | Ensure all CSS animations respect @media (prefers-reduced-motion: reduce) per frontend_structure.md spec. | 🟢 Low |
+| **Error Boundary** | frontend/src/App.jsx | Wrap router with React ErrorBoundary to gracefully catch and display unexpected runtime errors. | 🟢 Low |
 | **PostgreSQL Migration Prep** | ackend/api/config.py, .env | Verify DATABASE_URL swap from SQLite to PostgreSQL/Supabase works cleanly for production deployment. | 🟢 Low |
 | **Admin Evaluation View** | ackend/api/routers/ | Implement RBAC-protected admin endpoints for accessing all candidate sessions and reports. | 🟢 Low |
 
@@ -137,7 +135,8 @@ pm run build verified.
 - ✅ **Frontend Setup Page (Phase 2A Shell)**: Configure Practice Track UI shell with full form controls implemented.
 - ✅ **Frontend Interview Room (Phase 2B Shell)**: Live mock interview room with AvatarEva, timer, question tracker, and session controls.
 - ✅ **AvatarEva Animated Persona**: SVG flat-vector character with lip-sync mouth morph, breathing animation, head sway.
-- ✅ **Repository Reorganization & Git Ignore**: Master doc/ at project root, .gitignore files, un.bat synchronized.
+- ✅ **Repository Reorganization & Git Ignore**: Master doc/ at project root, .gitignore files, 
+un.bat synchronized.
 - ✅ **Git Commit — Phase 2 Frontend Shells**: Committed feat(frontend): add Configure Practice Track page, Live Mock Interview room, and animated Eva vector persona (hash 55787bc).
 - ✅ **Frontend Report Scorecard Page (Phase 2C Shell)**: Implemented complete Session Summary & Evaluation Scorecard page (`Report.jsx`) matching design mockup. Fixed `react-router-dom` import issue and verified clean `npm run build` production build.
 - ✅ **Rule 14 Added**: Updated `.agents/AGENTS.md` and `doc/rule.md` to mandate immediate `doc/task_completion.md` synchronization whenever coding tasks or features are completed.
@@ -151,9 +150,6 @@ pm run build verified.
 - ✅ **Setup Page Full Live Backend Pipeline Wiring**: Completely removed all hardcoded mock data (`Arjun_Fullstack_CV.pdf`, fake topic weights, static keyword arrays) from `Setup.jsx`. Created `sessionService.js` with Axios API wrappers for `/ingest/resume`, `/ingest/jd`, `/setup/analyze`, `/questions/status`, `/questions/preview`. Created custom hook `useSetup.js` with a 6-phase state machine (`IDLE`, `RESUME_UPLOADING`, `JD_EXTRACTING`, `READY_TO_LAUNCH`, `PIPELINE_RUNNING`, `COMPLETED`). Created `AnalyzingOverlay.jsx` (glassmorphic progress modal with live polling status messages), `QuestionBankTab.jsx` (renders the 15 generated questions with difficulty badges and domain chips), and `ResumeAnalysisTab.jsx` (renders CandidateProfile skills and analysis). Connected left panel to real uploads and right panel to a dynamic 3-tab bar system. Verified clean `npm run build` (1,685 modules, 0 errors, 1.85s).
 - ✅ **Rich Resume Analysis Display & Tab Bar Refactoring**: Upgraded `ResumeAnalysisTab.jsx` to display all structured candidate data stored in the backend (`CandidateProfile` & `resume_analysis` artifacts), including contact badges (email, phone, location), overall JD match % pill, technical depth/seniority breakdown cards, Work Experience history cards, Projects showcase with tech stack chips, Education cards, Skill Overlap proof, and Technical Gaps / probing strategies. Removed the redundant `Topic Matrix` tab from the right panel and streamlined the right side to **2 clean, high-value tabs** (`Question Bank` & `Resume & Profile Analysis`). Completely removed the `INTERVIEWER PERSONA MODE` block from `Setup.jsx` per user request. Verified clean `npm run build` (1,685 modules, 0 errors, 1.91s).
 - ✅ **Frontend Instant Cache Autofill & Resume Parsing UI Fix**: Fixed array fallback logic bug in `ResumeAnalysisTab.jsx` where empty initial parsed arrays blocked rendering of rich Stage 2 `resume_analysis` data. Implemented opportunistic caching instantly bypassing the pipeline if the user's uploaded Resume and JD hash match a previously completed backend session (`READY`). Added `isCacheAutofilled` state in `useSetup.js` and a top-floating success toast in `Setup.jsx` with `@keyframes fadeInDown` in `animations.css` to visually notify users of the instant loading experience. Verified with `npm run build` (1,685 modules, 0 errors, 2.02s).
-
-
-
-
-
-
+- ✅ **Frontend Live Voice Engine Integration**: Successfully wired up the Stage 3 live interview session. Created `pcm-processor.js` (Web Audio API Worklet) to transcode Float32 microphone audio to 16kHz 16-bit Int16 PCM. Created `useInterviewSession.js` custom React hook to manage WebSocket connections, binary streaming, JSON event handling (`INTERRUPT`, `QUESTION_UPDATE`, `SESSION_DONE`), and dynamic gapless playback of AI TTS chunks using `AudioContext` buffers.
+- ✅ **Interview Room UI Cleanup**: Refactored `Interview.jsx` by removing static demo data and wiring in the live `useInterviewSession` hook. Polished the UI by removing feedback buttons (Bookmark, ThumbsUp, ThumbsDown) and settings icons from the live view header per design feedback, moving those explicitly to the post-interview flow. Removed the "Replay Question" button to maintain interview realism. Verified zero compilation errors via `npm run build`.
+- ✅ **Web-Based Audio Streaming Architecture Implementation**: Replaced flawed native `sounddevice` backend microphone capture with 100% browser-native Web Audio streaming. Updated `useInterviewSession.js` to send real-time `Int16Array` binary PCM frames over WebSocket. Modified FastAPI `recv_worker` in `api/routers/voice.py` to route binary frames into an thread-safe `audio_queue`. Injected queue through `voice_adapter.py` into `voice_engine.py` and completely rewrote `listener.py` `listen_and_transcribe` logic to pull cleanly from the WebSocket stream buffer, converting safely back to float32 chunks. Verified perfectly functional gapless VAD streaming and STT.

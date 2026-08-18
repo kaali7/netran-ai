@@ -1,48 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AvatarEva from '../components/interview/AvatarEva';
+import useInterviewSession from '../hooks/useInterviewSession';
 import {
   Sparkles,
   Volume2,
   Mic,
+  Square,
+  Clock,
+  ArrowLeft,
   RotateCcw,
   Pause,
   Play,
-  Square,
-  Clock,
-  ThumbsUp,
-  ThumbsDown,
-  Star,
-  Settings,
-  User,
-  ArrowLeft,
-  VolumeX,
+  FileText,
 } from 'lucide-react';
 
 export const Interview = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
 
-  // State management
-  const [isSpeaking, setIsSpeaking] = useState(true); // AI speaking vs candidate turn
+  // Real WebSocket Session Hook
+  const { isConnected, isSpeaking, currentQuestion, isSessionDone, micVolume, stopSession } = useInterviewSession(sessionId);
+
+  // Timer & UI State
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [secondsElapsed, setSecondsElapsed] = useState(252); // Starts at 04:12 for fidelity
-  const [questionIndex, setQuestionIndex] = useState(0);
 
-  const questions = [
-    'How would you handle cache invalidation in a multi-region Redis cluster when consistency is critical for user balances?',
-    'Can you explain how you would design a rate limiter middleware for a high-throughput API gateway?',
-    'What strategies do you employ to prevent race conditions when handling simultaneous DB writes in Node.js?',
-  ];
-
-  // Timer effect
+  // Auto-navigate when session naturally ends
   useEffect(() => {
-    if (isPaused) return;
+    if (isSessionDone) {
+      navigate(`/report/${sessionId}`);
+    }
+  }, [isSessionDone, navigate, sessionId]);
+
+  // Timer effect starts only when connected
+  useEffect(() => {
+    if (!isConnected || isPaused) return;
     const interval = setInterval(() => {
       setSecondsElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isConnected, isPaused]);
 
   // Format seconds to mm:ss
   const formatTime = (totalSeconds) => {
@@ -51,26 +49,17 @@ export const Interview = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleToggleVAD = () => {
-    setIsSpeaking((prev) => !prev);
+  const handleStopSession = () => {
+    stopSession();
+    navigate(`/report/${sessionId}`);
   };
 
   const handleRestart = () => {
     setSecondsElapsed(0);
-    setIsSpeaking(true);
   };
 
   const handleTogglePause = () => {
     setIsPaused((prev) => !prev);
-  };
-
-  const handleStopSession = () => {
-    navigate(`/report/${sessionId || 'sess_demo123'}`);
-  };
-
-  const handleNextQuestion = () => {
-    setQuestionIndex((prev) => (prev + 1) % questions.length);
-    setIsSpeaking(true);
   };
 
   return (
@@ -135,22 +124,6 @@ export const Interview = () => {
             <span>{formatTime(secondsElapsed)}</span>
           </div>
 
-          {/* Feedback & Settings */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#6b7280' }}>
-            <button title="Bookmark" style={{ cursor: 'pointer', color: 'inherit' }}>
-              <Star size={18} />
-            </button>
-            <button title="Good Response" style={{ cursor: 'pointer', color: 'inherit' }}>
-              <ThumbsUp size={18} />
-            </button>
-            <button title="Needs Improvement" style={{ cursor: 'pointer', color: 'inherit' }}>
-              <ThumbsDown size={18} />
-            </button>
-            <button title="Settings" style={{ cursor: 'pointer', color: 'inherit' }}>
-              <Settings size={18} />
-            </button>
-          </div>
-
           {/* User Profile Initials */}
           <div
             style={{
@@ -203,17 +176,12 @@ export const Interview = () => {
           className="animate-entrance"
         >
           {/* Avatar Viewport Frame */}
-          <div
-            onClick={handleToggleVAD}
-            title="Click avatar to toggle AI Speaking / Listening turn"
-            style={{ cursor: 'pointer', marginBottom: '20px' }}
-          >
-            <AvatarEva isSpeaking={isSpeaking && !isPaused} />
+          <div style={{ marginBottom: '20px' }}>
+            <AvatarEva isSpeaking={isSpeaking} />
           </div>
 
           {/* VAD Status Pill */}
           <div
-            onClick={handleToggleVAD}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -226,7 +194,6 @@ export const Interview = () => {
               fontWeight: '700',
               fontSize: '13px',
               marginBottom: '28px',
-              cursor: 'pointer',
               transition: 'all 300ms ease',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
             }}
@@ -244,6 +211,47 @@ export const Interview = () => {
             )}
           </div>
 
+          {/* Mic Volume Level Bar */}
+          {!isSpeaking && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '20px',
+                background: '#f9fafb',
+                padding: '6px 14px',
+                borderRadius: '12px',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <Mic size={14} style={{ color: micVolume > 5 ? '#22c55e' : '#9ca3af' }} />
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#4b5563' }}>Mic Input Level:</span>
+              <div
+                style={{
+                  width: '120px',
+                  height: '8px',
+                  background: '#e5e7eb',
+                  borderRadius: '9999px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${micVolume}%`,
+                    height: '100%',
+                    background: micVolume > 40 ? '#ef4444' : micVolume > 15 ? '#22c55e' : '#3b82f6',
+                    borderRadius: '9999px',
+                    transition: 'width 100ms ease-out, background 200ms ease',
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', minWidth: '28px' }}>
+                {micVolume}%
+              </span>
+            </div>
+          )}
+
           {/* Interview Question Text */}
           <h2
             style={{
@@ -256,25 +264,8 @@ export const Interview = () => {
               letterSpacing: '-0.01em',
             }}
           >
-            {questions[questionIndex]}
+            {currentQuestion}
           </h2>
-
-          {/* Replay / Next Question Action */}
-          <button
-            onClick={handleNextQuestion}
-            className="btn btn-ghost"
-            style={{
-              borderRadius: '9999px',
-              padding: '10px 22px',
-              fontSize: '14px',
-              color: '#4b5563',
-              border: '1.5px solid #e5e7eb',
-              gap: '8px',
-            }}
-          >
-            <RotateCcw size={15} />
-            <span>Replay Question</span>
-          </button>
         </div>
       </main>
 
@@ -359,7 +350,7 @@ export const Interview = () => {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '4px',
-              color: '#dc2626',
+              color: 'var(--primary)',
               cursor: 'pointer',
             }}
           >
@@ -368,16 +359,16 @@ export const Interview = () => {
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                background: '#fee2e2',
+                background: 'var(--primary-container)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#dc2626',
+                color: 'var(--on-primary-container)',
               }}
             >
-              <Square size={16} fill="#dc2626" />
+              <FileText size={16} />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: '700' }}>Stop</span>
+            <span style={{ fontSize: '11px', fontWeight: '700' }}>End & Get Feedback</span>
           </button>
         </div>
       </footer>

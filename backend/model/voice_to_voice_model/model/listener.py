@@ -220,6 +220,7 @@ def listen_and_transcribe(
     state: SessionState = None,
     whisper_prompt="",
     speaker_verifier=None,
+    ws_audio_queue=None,
 ):
     """
     Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
@@ -244,72 +245,101 @@ def listen_and_transcribe(
     native_rate = RATE
     CHUNK_NATIVE = CHUNK
     
-    for attempt in range(3):
-        try:
-            # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
-            stream = sd.InputStream(
-                samplerate=RATE,
-                channels=CHANNELS,
-                dtype='float32',
-                blocksize=CHUNK,
-                device=MIC_DEVICE,
-            )
-            native_rate = RATE
-            CHUNK_NATIVE = CHUNK
-            break
-        except sd.PortAudioError:
+    audio_queue = queue.Queue()
+    stop_producer = threading.Event()
+
+    if ws_audio_queue is not None:
+        print("[Listener] Using WebSocket audio stream...", flush=True)
+        def ws_stream_producer():
+            """Producer Thread: Continuously drains audio from WebSocket queue and buffers CHUNK samples."""
+            import numpy as np
+            buffer_arr = np.array([], dtype=np.float32)
+            while not stop_producer.is_set():
+                try:
+                    # Raw PCM Int16 bytes from frontend Worklet
+                    raw_bytes = ws_audio_queue.get(timeout=0.1)
+                    if not raw_bytes:
+                        continue
+                    # Convert Int16 bytes to float32
+                    int16_arr = np.frombuffer(raw_bytes, dtype=np.int16)
+                    float32_arr = int16_arr.astype(np.float32) / 32768.0
+                    buffer_arr = np.concatenate((buffer_arr, float32_arr))
+                    
+                    while len(buffer_arr) >= CHUNK_NATIVE:
+                        chunk_to_send = buffer_arr[:CHUNK_NATIVE]
+                        buffer_arr = buffer_arr[CHUNK_NATIVE:]
+                        audio_queue.put(chunk_to_send.reshape(-1, 1))
+                except queue.Empty:
+                    continue
+                except Exception as err:
+                    print(f"[WS Producer Error] {err}", flush=True)
+                    
+        producer_thread = threading.Thread(target=ws_stream_producer, daemon=True)
+        producer_thread.start()
+    else:
+        for attempt in range(3):
             try:
-                # Fallback Method A: WASAPI strictly requires native rate
-                device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
-                native_rate = int(device_info.get("default_samplerate", 16000))
-                if native_rate <= 0:
-                    native_rate = 16000
-                CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
-                
+                # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
                 stream = sd.InputStream(
-                    samplerate=native_rate,
+                    samplerate=RATE,
                     channels=CHANNELS,
                     dtype='float32',
-                    blocksize=CHUNK_NATIVE,
+                    blocksize=CHUNK,
                     device=MIC_DEVICE,
                 )
+                native_rate = RATE
+                CHUNK_NATIVE = CHUNK
                 break
+            except sd.PortAudioError:
+                try:
+                    # Fallback Method A: WASAPI strictly requires native rate
+                    device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
+                    native_rate = int(device_info.get("default_samplerate", 16000))
+                    if native_rate <= 0:
+                        native_rate = 16000
+                    CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+                    
+                    stream = sd.InputStream(
+                        samplerate=native_rate,
+                        channels=CHANNELS,
+                        dtype='float32',
+                        blocksize=CHUNK_NATIVE,
+                        device=MIC_DEVICE,
+                    )
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        print(f"[VAD] Mic locked, retrying... ({e})")
+                        time.sleep(0.3)
+                    else:
+                        raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
             except Exception as e:
                 if attempt < 2:
                     print(f"[VAD] Mic locked, retrying... ({e})")
                     time.sleep(0.3)
                 else:
                     raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
-        except Exception as e:
-            if attempt < 2:
-                print(f"[VAD] Mic locked, retrying... ({e})")
-                time.sleep(0.3)
-            else:
-                raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
 
-    stream.start()
-    print(
-        f"[Listener] Mic stream opened: device={MIC_DEVICE}, "
-        f"native_rate={native_rate}Hz, chunk={CHUNK_NATIVE} samples",
-        flush=True
-    )
+        stream.start()
+        print(
+            f"[Listener] Mic stream opened: device={MIC_DEVICE}, "
+            f"native_rate={native_rate}Hz, chunk={CHUNK_NATIVE} samples",
+            flush=True
+        )
 
-    audio_queue = queue.Queue()
-    stop_producer = threading.Event()
+        def mic_stream_producer():
+            """Producer Thread: Continuously drains audio hardware buffer."""
+            while not stop_producer.is_set():
+                try:
+                    raw_data, overflowed = stream.read(CHUNK_NATIVE)
+                    audio_queue.put(raw_data)
+                except Exception as err:
+                    if not stream.active:
+                        break
+                    print(f"[Producer Thread Warning] {err}", flush=True)
 
-    def mic_stream_producer():
-        """Producer Thread: Continuously drains audio hardware buffer."""
-        while not stop_producer.is_set():
-            try:
-                raw_data, overflowed = stream.read(CHUNK_NATIVE)
-                audio_queue.put(raw_data)
-            except Exception as err:
-                if not stream.active:
-                    break
-                print(f"[Producer Thread Warning] {err}", flush=True)
-
-    producer_thread = threading.Thread(target=mic_stream_producer, daemon=True)
-    producer_thread.start()
+        producer_thread = threading.Thread(target=mic_stream_producer, daemon=True)
+        producer_thread.start()
 
     if ui_callback:
         ui_callback({
@@ -749,8 +779,9 @@ def listen_and_transcribe(
                 "state": "Mic: Standby"
             })
         # Clean up audio hardware streams immediately
-        stream.stop()
-        stream.close()
+        if stream:
+            stream.stop()
+            stream.close()
 
     if not audio_buffer:
         return ""

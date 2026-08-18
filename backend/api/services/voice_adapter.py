@@ -31,6 +31,7 @@ def run_voice_session_with_callback(
     question_tree: list[dict[str, Any]],
     system_prompt: str,
     total_questions: int,
+    audio_queue: Any = None,
 ) -> dict[str, Any] | None:
     """
     Runs the WorkflowVoiceEngine in a background thread.
@@ -70,7 +71,7 @@ def run_voice_session_with_callback(
         thread_safe_callback(event)
 
     try:
-        engine.run_interview(status_callback=status_callback, max_turns=total_questions)
+        engine.run_interview(status_callback=status_callback, max_turns=total_questions, ws_audio_queue=audio_queue)
         
         # Load final manifest
         import os
