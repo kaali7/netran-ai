@@ -6,6 +6,8 @@ import Setup from './pages/Setup';
 import Interview from './pages/Interview';
 import Processing from './pages/Processing';
 import Report from './pages/Report';
+import Analytics from './pages/Analytics';
+import History from './pages/History';
 import { useAuthStore } from './store/authStore';
 
 /**
@@ -56,6 +58,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Setup />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/analytics',
+    element: (
+      <ProtectedRoute>
+        <Analytics />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/history',
+    element: (
+      <ProtectedRoute>
+        <History />
       </ProtectedRoute>
     ),
   },

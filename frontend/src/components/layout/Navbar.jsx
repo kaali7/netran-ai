@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles, LayoutDashboard, BarChart2 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 
 export const Navbar = ({ userName }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -89,61 +90,76 @@ export const Navbar = ({ userName }) => {
           }}
           className="desktop-nav"
         >
+          {/* Dashboard */}
           <a
-            href="/dashboard#tracks"
+            href="/dashboard"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/dashboard');
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               fontSize: '14px',
-              fontWeight: 600,
-              color: 'var(--on-surface-variant)',
-              transition: 'color 150ms ease',
+              fontWeight: location.pathname === '/dashboard' ? 700 : 600,
+              color: location.pathname === '/dashboard' ? 'var(--primary)' : 'var(--on-surface-variant)',
+              transition: 'all 150ms ease',
               textDecoration: 'none',
+              paddingBottom: '4px',
+              borderBottom: location.pathname === '/dashboard' ? '2px solid #65597b' : '2px solid transparent',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--primary)')}
-            onMouseOut={(e) => (e.currentTarget.style.color = 'var(--on-surface-variant)')}
           >
-            <Layers size={16} />
-            <span>Practice Tracks</span>
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
           </a>
 
+          {/* Analytics */}
           <a
-            href="/dashboard#mocks"
+            href="/analytics"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/analytics');
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               fontSize: '14px',
-              fontWeight: 600,
-              color: 'var(--on-surface-variant)',
-              transition: 'color 150ms ease',
+              fontWeight: location.pathname === '/analytics' ? 700 : 600,
+              color: location.pathname === '/analytics' ? '#65597b' : 'var(--on-surface-variant)',
+              transition: 'all 150ms ease',
               textDecoration: 'none',
+              paddingBottom: '4px',
+              borderBottom: location.pathname === '/analytics' ? '2px solid #65597b' : '2px solid transparent',
             }}
-            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--primary)')}
-            onMouseOut={(e) => (e.currentTarget.style.color = 'var(--on-surface-variant)')}
+          >
+            <BarChart2 size={16} />
+            <span>Analytics</span>
+          </a>
+
+          {/* History */}
+          <a
+            href="/history"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/history');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '14px',
+              fontWeight: location.pathname === '/history' ? 700 : 600,
+              color: location.pathname === '/history' ? '#65597b' : 'var(--on-surface-variant)',
+              transition: 'all 150ms ease',
+              textDecoration: 'none',
+              paddingBottom: '4px',
+              borderBottom: location.pathname === '/history' ? '2px solid #65597b' : '2px solid transparent',
+            }}
           >
             <History size={16} />
-            <span>Past Mocks</span>
-          </a>
-
-          <a
-            href="/dashboard#weak-areas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: 'var(--on-surface-variant)',
-              transition: 'color 150ms ease',
-              textDecoration: 'none',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.color = 'var(--primary)')}
-            onMouseOut={(e) => (e.currentTarget.style.color = 'var(--on-surface-variant)')}
-          >
-            <Target size={16} />
-            <span>Weak Areas</span>
+            <span>History</span>
           </a>
         </nav>
 
