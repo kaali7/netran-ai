@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import useSetup from '../hooks/useSetup';
+import useAuth from '../hooks/useAuth';
+import AnalyzingOverlay from '../components/setup/AnalyzingOverlay';
+import QuestionBankTab from '../components/setup/QuestionBankTab';
+import ResumeAnalysisTab from '../components/setup/ResumeAnalysisTab';
 import {
   ArrowLeft,
   Settings,
@@ -16,69 +21,147 @@ import {
   Sparkles,
   Upload,
   User,
-  ShieldCheck,
+  Loader2,
+  AlertCircle,
+  HelpCircle,
+  Code,
+  Layers,
+  UserCheck,
 } from 'lucide-react';
 
 export const Setup = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // State management for interactive form controls
-  const [trackTitle, setTrackTitle] = useState('Fullstack Software Engineer');
+  const {
+    sessionId,
+    parsedResume,
+    parsedJD,
+    questionPreview,
+    phase,
+    progressMsg,
+    error,
+    isResumeUploading,
+    isJdExtracting,
+    isPipelineRunning,
+    isCompleted,
+    isCacheAutofilled,
+    handleResumeUpload: uploadResumeFile,
+    handleJdSubmit: submitJdText,
+    handleStartPipeline,
+  } = useSetup();
+
+  // Local state for interactive form controls
+  const [trackTitle, setTrackTitle] = useState('Custom Technical Practice Track');
   const [targetLevel, setTargetLevel] = useState('Mid-Level');
   const [jdText, setJdText] = useState('');
   const [attachedJdFileName, setAttachedJdFileName] = useState('');
-  const [resumeFile, setResumeFile] = useState({
-    name: 'Arjun_Fullstack_CV.pdf',
-    size: '428 KB',
-    uploaded: true,
-  });
+  const [resumeFileName, setResumeFileName] = useState('');
+  const [resumeFileSize, setResumeFileSize] = useState('');
   const [personaMode, setPersonaMode] = useState('supportive'); // 'supportive' | 'fast-paced'
+  const [activeTab, setActiveTab] = useState('resume'); // 'questions' | 'resume'
 
   const targetLevels = ['Junior', 'Mid-Level', 'Senior'];
 
-  const topicWeights = [
-    { title: 'System Design & APIs', pct: 35, color: 'var(--primary)' },
-    { title: 'Frontend (React/Next.js)', pct: 30, color: 'var(--secondary)' },
-    { title: 'Databases & Caching', pct: 20, color: '#4a6fa5' },
-    { title: 'Core CS & Algorithms', pct: 15, color: '#8e5b9f' },
-  ];
+  // Update track title automatically when parsed JD is available
+  useEffect(() => {
+    if (parsedJD?.role_title) {
+      setTrackTitle(parsedJD.role_title);
+    }
+  }, [parsedJD]);
 
-  const extractedKeywords = [
-    { label: 'React.js', bg: '#e8e5ff', color: '#5642a6' },
-    { label: 'Node.js', bg: '#dcfce7', color: '#15803d' },
-    { label: 'Raft Consensus', bg: '#ffedd5', color: '#c2410c' },
-    { label: 'Redis Mutex', bg: '#ffe4e6', color: '#be123c' },
-    { label: 'PostgreSQL', bg: '#e0f2fe', color: '#0369a1' },
-    { label: 'Kafka', bg: '#f1f5f9', color: '#475569' },
-    { label: 'System Architecture', bg: '#f3e8ff', color: '#6b21a8' },
-  ];
+  // Automatically switch tab to 'questions' when question tree pipeline finishes
+  useEffect(() => {
+    if (isCompleted && questionPreview?.question_tree?.length > 0) {
+      setActiveTab('questions');
+    }
+  }, [isCompleted, questionPreview]);
 
-  const handleJdFileUpload = (e) => {
+  // Handle JD File Upload
+  const handleJdFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setAttachedJdFileName(file.name);
+    if (!file) return;
+
+    setAttachedJdFileName(file.name);
+    try {
+      const text = await file.text();
+      setJdText(text);
+      await submitJdText(text);
+    } catch (err) {
+      console.error('Failed to read JD file:', err);
     }
   };
 
-  const handleResumeUpload = (e) => {
+  // Handle Resume Upload
+  const onResumeFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setResumeFile({
-        name: file.name,
-        size: `${Math.round(file.size / 1024)} KB`,
-        uploaded: true,
-      });
+    if (!file) return;
+
+    setResumeFileName(file.name);
+    setResumeFileSize(`${Math.round(file.size / 1024)} KB`);
+    try {
+      await uploadResumeFile(file);
+      setActiveTab('resume');
+    } catch (err) {
+      console.error('Resume upload error:', err);
     }
   };
 
-  const handleLaunchTrack = () => {
-    // Navigate to interview session room (or fallback)
-    navigate('/interview/sess_custom_track');
+  // Handle JD Text Blur / Ingest trigger
+  const handleJdBlur = async () => {
+    if (jdText && jdText.trim().length >= 50) {
+      try {
+        await submitJdText(jdText);
+      } catch (err) {
+        console.error('JD ingest blur error:', err);
+      }
+    }
+  };
+
+  // Handle Launch CTA Click
+  const handleLaunchTrackClick = async () => {
+    if (isCompleted && sessionId) {
+      navigate(`/interview/${sessionId}`);
+      return;
+    }
+
+    // Trigger Stage 1 & 2 pipeline
+    try {
+      await handleStartPipeline(targetLevel);
+    } catch (err) {
+      console.error('Launch pipeline error:', err);
+    }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '60px' }}>
-      {/* Top Bar Header */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '60px', position: 'relative' }}>
+      
+      {/* ── Cache Autofill Toast ───────────────────────────────────────────── */}
+      {isCacheAutofilled && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--primary-container)',
+            color: 'var(--on-primary-container)',
+            padding: '10px 20px',
+            borderRadius: '9999px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(101, 89, 123, 0.2)',
+            zIndex: 100,
+            animation: 'fadeInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }}
+        >
+          <Zap size={16} fill="currentColor" />
+          <span style={{ fontSize: '13px', fontWeight: '700' }}>Instant Resume & JD Match! Restored from Cache.</span>
+        </div>
+      )}
+
+      {/* ── Top Bar Header ────────────────────────────────────────────────── */}
       <header
         style={{
           width: '100%',
@@ -137,14 +220,16 @@ export const Setup = () => {
                 fontSize: '12px',
               }}
             >
-              AS
+              {user?.email?.charAt(0).toUpperCase() || 'C'}
             </div>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--on-surface)' }}>Arjun S.</span>
+            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--on-surface)' }}>
+              {user?.email || 'Candidate'}
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* ── Main Container ────────────────────────────────────────────────── */}
       <PageWrapper>
         {/* Title Section */}
         <div style={{ marginBottom: '28px' }} className="animate-entrance">
@@ -166,13 +251,35 @@ export const Setup = () => {
             <h1 className="text-headline-xl">Configure New Practice Track</h1>
           </div>
           <p className="text-body-md" style={{ marginLeft: '48px' }}>
-            Set up parameters to generate your custom Fullstack interview engine.
+            Upload candidate resume and job description to build a custom technical interview engine.
           </p>
         </div>
 
-        {/* 2-Column Split Grid Layout */}
+        {/* Error Alert Banner */}
+        {error && (
+          <div
+            style={{
+              background: 'var(--error-container)',
+              color: 'var(--on-error-container)',
+              padding: '14px 20px',
+              borderRadius: '14px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontSize: '14px',
+              fontWeight: '600',
+            }}
+          >
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* ── 2-Column Split Layout ──────────────────────────────────────── */}
         <div className="dashboard-split-grid animate-entrance animate-delay-1" style={{ alignItems: 'start' }}>
-          {/* LEFT COLUMN: TRACK DEFINITION & CONTEXT */}
+          
+          {/* ── LEFT COLUMN: TRACK DEFINITION & CONTEXT ──────────────────── */}
           <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Pin size={18} style={{ color: 'var(--outline)' }} />
@@ -240,77 +347,19 @@ export const Setup = () => {
               </div>
             </div>
 
-            {/* Job Description Context */}
+            {/* Candidate Resume Upload Section */}
             <div>
-              <label className="text-label-xs" style={{ display: 'block', marginBottom: '8px' }}>
-                JOB DESCRIPTION CONTEXT
-              </label>
-              <div
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  border: '1.5px solid var(--outline-variant)',
-                  background: 'var(--surface-container-low)',
-                  overflow: 'hidden',
-                }}
-              >
-                <textarea
-                  rows={4}
-                  value={jdText}
-                  onChange={(e) => setJdText(e.target.value)}
-                  placeholder="Paste full JD text..."
-                  style={{
-                    width: '100%',
-                    padding: '16px',
-                    border: 'none',
-                    background: 'transparent',
-                    resize: 'vertical',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    color: 'var(--on-surface)',
-                    outline: 'none',
-                  }}
-                />
-                <div
-                  style={{
-                    padding: '10px 16px',
-                    borderTop: '1px solid rgba(0, 0, 0, 0.05)',
-                    background: 'rgba(255, 255, 255, 0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '13px',
-                    color: 'var(--on-surface-variant)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FileText size={15} />
-                    <span>
-                      {attachedJdFileName ? `Attached: ${attachedJdFileName}` : 'Or attach file: No file selected'}
-                    </span>
-                  </div>
-                  <label
-                    style={{
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      color: 'var(--primary)',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(101, 89, 123, 0.08)',
-                    }}
-                  >
-                    Browse
-                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleJdFileUpload} style={{ display: 'none' }} />
-                  </label>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label className="text-label-xs">CANDIDATE RESUME</label>
+                {isResumeUploading && (
+                  <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                    <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
+                    Parsing via Gemini...
+                  </span>
+                )}
               </div>
-            </div>
 
-            {/* Candidate Resume */}
-            <div>
-              <label className="text-label-xs" style={{ display: 'block', marginBottom: '8px' }}>
-                CANDIDATE RESUME
-              </label>
-              {resumeFile.uploaded ? (
+              {parsedResume ? (
                 <div
                   style={{
                     background: '#eef8f2',
@@ -338,9 +387,11 @@ export const Setup = () => {
                       <FileCheck size={22} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e4831' }}>{resumeFile.name}</div>
+                      <div style={{ fontWeight: '700', fontSize: '14px', color: '#1e4831' }}>
+                        {resumeFileName || parsedResume.name || 'Candidate_Resume.pdf'}
+                      </div>
                       <div style={{ fontSize: '12px', color: '#447358', marginTop: '2px' }}>
-                        {resumeFile.size} • Uploaded
+                        {resumeFileSize || 'Extracted via Gemini'} • Ready
                       </div>
                     </div>
                   </div>
@@ -354,7 +405,7 @@ export const Setup = () => {
                     }}
                   >
                     Change
-                    <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} style={{ display: 'none' }} />
+                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={onResumeFileChange} style={{ display: 'none' }} />
                   </label>
                 </div>
               ) : (
@@ -369,189 +420,186 @@ export const Setup = () => {
                     border: '2px dashed var(--outline-variant)',
                     background: 'var(--surface-container-low)',
                     cursor: 'pointer',
+                    transition: 'border-color 180ms ease',
                   }}
                 >
                   <Upload size={24} style={{ color: 'var(--primary)', marginBottom: '8px' }} />
-                  <span style={{ fontSize: '14px', fontWeight: '600' }}>Click to upload resume (PDF/DOCX)</span>
-                  <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} style={{ display: 'none' }} />
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--on-surface)' }}>
+                    Click to upload candidate resume (PDF/DOCX)
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
+                    Gemini will extract candidate profile & skills automatically
+                  </span>
+                  <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={onResumeFileChange} style={{ display: 'none' }} />
                 </label>
               )}
             </div>
+
+            {/* Job Description Context */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <label className="text-label-xs">JOB DESCRIPTION CONTEXT</label>
+                {isJdExtracting && (
+                  <span style={{ fontSize: '12px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                    <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
+                    Extracting topics...
+                  </span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1.5px solid var(--outline-variant)',
+                  background: 'var(--surface-container-low)',
+                  overflow: 'hidden',
+                }}
+              >
+                <textarea
+                  rows={4}
+                  value={jdText}
+                  onChange={(e) => setJdText(e.target.value)}
+                  onBlur={handleJdBlur}
+                  placeholder="Paste target job description text here (min 50 chars)..."
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    border: 'none',
+                    background: 'transparent',
+                    resize: 'vertical',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    color: 'var(--on-surface)',
+                    outline: 'none',
+                  }}
+                />
+                <div
+                  style={{
+                    padding: '10px 16px',
+                    borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+                    background: 'rgba(255, 255, 255, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '13px',
+                    color: 'var(--on-surface-variant)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={15} />
+                    <span>
+                      {attachedJdFileName ? `Attached: ${attachedJdFileName}` : 'Or attach text file'}
+                    </span>
+                  </div>
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      color: 'var(--primary)',
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'rgba(101, 89, 123, 0.08)',
+                    }}
+                  >
+                    Browse
+                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleJdFileUpload} style={{ display: 'none' }} />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+
           </Card>
 
-          {/* RIGHT COLUMN: TOPIC MATRIX & FOCUS WEIGHTS */}
-          <Card style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={18} style={{ color: 'var(--secondary)' }} />
-              <span className="text-label-xs" style={{ fontSize: '12px', letterSpacing: '0.08em' }}>
-                TOPIC MATRIX & FOCUS WEIGHTS
-              </span>
-            </div>
-
-            {/* Topic Progress Weight Rows */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {topicWeights.map((t) => (
-                <div key={t.title}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px' }}>
-                    <span style={{ fontWeight: '600', color: 'var(--on-surface)' }}>{t.title}</span>
-                    <span style={{ fontWeight: '700', color: 'var(--on-surface-variant)' }}>{t.pct}%</span>
-                  </div>
-                  <div
-                    style={{
-                      height: '8px',
-                      width: '100%',
-                      background: 'var(--surface-container-high)',
-                      borderRadius: 'var(--radius-full)',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
+          {/* ── RIGHT COLUMN: ANALYSIS & QUESTION BANK (2 CLEAN TABS) ──────── */}
+          <Card style={{ display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '560px' }}>
+            
+            {/* Header / Tab Navigation Bar (2 Clean Tabs) */}
+            <div style={{ borderBottom: '1px solid rgba(101, 89, 123, 0.12)', pb: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('questions')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    borderRadius: '9999px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: activeTab === 'questions' ? 'var(--primary)' : 'rgba(101, 89, 123, 0.08)',
+                    color: activeTab === 'questions' ? '#ffffff' : 'var(--on-surface-variant)',
+                    transition: 'all 180ms ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Layers size={15} />
+                  <span>Question Bank</span>
+                  {questionPreview?.question_tree?.length > 0 && (
+                    <span
                       style={{
-                        height: '100%',
-                        width: `${t.pct}%`,
-                        background: t.color,
-                        borderRadius: 'var(--radius-full)',
-                        transition: 'width 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+                        background: activeTab === 'questions' ? 'rgba(255,255,255,0.25)' : 'var(--primary-container)',
+                        color: activeTab === 'questions' ? '#ffffff' : 'var(--on-primary-container)',
+                        padding: '1px 6px',
+                        borderRadius: '9999px',
+                        fontSize: '11px',
                       }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                    >
+                      {questionPreview.question_tree.length}
+                    </span>
+                  )}
+                </button>
 
-            {/* Extracted Keywords */}
-            <div>
-              <label className="text-label-xs" style={{ display: 'block', marginBottom: '12px' }}>
-                EXTRACTED KEYWORDS
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {extractedKeywords.map((kw) => (
-                  <span
-                    key={kw.label}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 14px',
-                      borderRadius: 'var(--radius-full)',
-                      background: kw.bg,
-                      color: kw.color,
-                      fontSize: '13px',
-                      fontWeight: '700',
-                    }}
-                  >
-                    <span>{kw.label}</span>
-                  </span>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('resume')}
+                  style={{
+                    flex: 1,
+                    padding: '10px 16px',
+                    borderRadius: '9999px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: activeTab === 'resume' ? 'var(--primary)' : 'rgba(101, 89, 123, 0.08)',
+                    color: activeTab === 'resume' ? '#ffffff' : 'var(--on-surface-variant)',
+                    transition: 'all 180ms ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <UserCheck size={15} />
+                  <span>Resume & Profile Analysis</span>
+                </button>
               </div>
             </div>
 
-            {/* Interviewer Persona Mode */}
-            <div>
-              <label className="text-label-xs" style={{ display: 'block', marginBottom: '12px' }}>
-                INTERVIEWER PERSONA MODE
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Supportive Mode Card */}
-                <div
-                  onClick={() => setPersonaMode('supportive')}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: 'var(--radius-lg)',
-                    border:
-                      personaMode === 'supportive'
-                        ? '2px solid var(--primary)'
-                        : '1.5px solid var(--outline-variant)',
-                    background: personaMode === 'supportive' ? '#fbf9fe' : '#ffffff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: personaMode === 'supportive' ? '0 4px 16px rgba(101, 89, 123, 0.08)' : 'none',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: 'rgba(101, 89, 123, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--primary)',
-                      }}
-                    >
-                      <Sparkles size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--on-surface)' }}>
-                        Supportive & Structured Conversation
-                      </div>
-                      <div style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
-                        Guides through problems with hints.
-                      </div>
-                    </div>
-                  </div>
-                  {personaMode === 'supportive' && <CheckCircle2 size={20} style={{ color: 'var(--primary)' }} />}
-                </div>
+            {/* TAB CONTENT 1: QUESTION BANK */}
+            {activeTab === 'questions' && (
+              <QuestionBankTab questions={questionPreview?.question_tree || []} />
+            )}
 
-                {/* Fast-Paced Technical Drill Card */}
-                <div
-                  onClick={() => setPersonaMode('fast-paced')}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: 'var(--radius-lg)',
-                    border:
-                      personaMode === 'fast-paced'
-                        ? '2px solid var(--primary)'
-                        : '1.5px solid var(--outline-variant)',
-                    background: personaMode === 'fast-paced' ? '#fbf9fe' : '#ffffff',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    transition: 'all 180ms cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: personaMode === 'fast-paced' ? '0 4px 16px rgba(101, 89, 123, 0.08)' : 'none',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: 'rgba(0, 0, 0, 0.04)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--outline)',
-                      }}
-                    >
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--on-surface)' }}>
-                        Fast-Paced Technical Drill
-                      </div>
-                      <div style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
-                        Rapid fire questions, strict evaluation.
-                      </div>
-                    </div>
-                  </div>
-                  {personaMode === 'fast-paced' && <CheckCircle2 size={20} style={{ color: 'var(--primary)' }} />}
-                </div>
-              </div>
-            </div>
+            {/* TAB CONTENT 2: RESUME & PROFILE ANALYSIS */}
+            {activeTab === 'resume' && (
+              <ResumeAnalysisTab
+                resumeAnalysis={questionPreview?.resume_analysis}
+                parsedResume={parsedResume}
+              />
+            )}
           </Card>
         </div>
 
-        {/* Floating / Bottom Center Action CTA */}
+        {/* ── Bottom Center Action CTA ────────────────────────────────────── */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '36px' }} className="animate-entrance animate-delay-2">
           <button
-            onClick={handleLaunchTrack}
+            onClick={handleLaunchTrackClick}
+            disabled={isPipelineRunning}
             className="btn btn-primary"
             style={{
               padding: '16px 36px',
@@ -561,16 +609,24 @@ export const Setup = () => {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              background: 'linear-gradient(135deg, #514467 0%, #3a2e4f 100%)',
+              background: isCompleted
+                ? 'linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%)'
+                : 'linear-gradient(135deg, #514467 0%, #3a2e4f 100%)',
               boxShadow: '0 8px 24px rgba(60, 45, 80, 0.35)',
-              transition: 'transform 180ms ease, box-shadow 180ms ease',
+              cursor: isPipelineRunning ? 'not-allowed' : 'pointer',
+              opacity: isPipelineRunning ? 0.7 : 1,
             }}
           >
             <Rocket size={18} />
-            <span>BUILD & LAUNCH TRACK</span>
+            <span>
+              {isCompleted ? 'START VOICE INTERVIEW ROOM' : 'BUILD & LAUNCH TRACK'}
+            </span>
           </button>
         </div>
       </PageWrapper>
+
+      {/* ── Pipeline Execution Overlay ───────────────────────────────────── */}
+      <AnalyzingOverlay isOpen={isPipelineRunning} progressMsg={progressMsg} />
     </div>
   );
 };
