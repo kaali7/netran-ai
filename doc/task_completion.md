@@ -79,35 +79,6 @@ This document tracks completed features, system architecture components, verific
 | **Template Service** | `frontend/src/services/templateService.js` | Axios wrappers for fetchTemplates() → GET /template/list and startTemplateSession(id) → POST /template/start. | ✅ Completed |
 | **TemplatePicker Modal** | `frontend/src/components/dashboard/TemplatePicker.jsx` | Glassmorphic full-screen overlay modal; fetches templates on open, renders 3 cards with difficulty badge, tech stack chips, animated Start button with loading spinner; closes on Escape or overlay click. | ✅ Completed |
 | **LaunchPractice Button Wiring** | `frontend/src/components/dashboard/LaunchPractice.jsx` | 'Start Full 15-Q Mock' now calls `onStartFullMock` to open TemplatePicker; 'Practice Custom JD & RESUME' continues to navigate to /setup. Added `id` attributes for testability. | ✅ Completed |
-| **Dashboard Modal Integration** | `frontend/src/pages/Dashboard.jsx` | Added `showTemplatePicker` state, `handleSessionReady` callback navigating to `/interview/{session_id}`, and renders `<TemplatePicker />` conditionally at root level. | ✅ Completed |
-
----
-
-## ⏳ Pending Roadmap Tasks
-
-### 🔴 High Priority — Frontend Phase 2 Backend Integration
-
-| Feature / Component | Target File | Description & Requirements | Priority |
-|---|---|---|---|
-| **Report / Scorecard Page (Full)** | frontend/src/pages/Report.jsx | Complete Stage 4 dashboard: pillar score cards (Technical, Vocal, Behavioral), turn-by-turn transcript table with per-turn scores, overall hiring recommendation badge, strengths/weaknesses feedback panels, export PDF button. Fetch from GET /api/v1/reports/{sessionId}. | 🔴 High |
-
----
-
-### 🟡 Medium Priority — Frontend Enhancements & Missing Components
-
-| Feature / Component | Target File | Description & Requirements | Priority |
-|---|---|---|---|
-| **useAuth Hook** | frontend/src/hooks/useAuth.js | Hook exposing user, token, isAuthenticated, login(), logout() from Zustand auth store. | 🟡 Medium |
-| **useReports Hook** | frontend/src/hooks/useReports.js | Hook fetching and formatting Stage 4 report data from GET /api/v1/reports/{sessionId}. | 🟡 Medium |
-| **Protected Route Guard** | frontend/src/router.jsx | Wrap Dashboard, Setup, Interview, Report routes with JWT auth guard — redirect unauthenticated users to /login. | 🟡 Medium |
-| **AvatarEva Character Refinement** | frontend/src/components/interview/AvatarEva.jsx | Refine SVG path accuracy to match target illustration more closely — proportional face, accurate ear/hair curves, smooth neck-to-shoulder transition. | 🟡 Medium |
-| **Interview Room — Question Preview Panel** | frontend/src/pages/Interview.jsx | Collapsible sidebar showing the full 15-question tree loaded from GET /api/v1/questions/preview/{id} so candidate can see overall interview structure. | 🟡 Medium |
-| **formatters Utility** | frontend/src/utils/formatters.js | formatDate(), formatScore(), and text sanitizers for use across dashboard, report, and session pages. | 🟡 Medium |
-| **Report Chart Components** | frontend/src/components/report/ | Reusable visualization components: PillarScoreCard.jsx, TurnTable.jsx, AudioMetricsChart.jsx. | 🟡 Medium |
-| **Navbar Auth Integration** | frontend/src/components/layout/Navbar.jsx | Show logged-in user name/avatar from useAuth hook; add Logout button calling authStore.logout() and redirecting to /login. | 🟡 Medium |
-
----
-
 ### 🟢 Lower Priority — Quality & Optimization
 
 | Feature / Component | Target File | Description | Priority |
@@ -153,3 +124,5 @@ un.bat synchronized.
 - ✅ **Frontend Live Voice Engine Integration**: Successfully wired up the Stage 3 live interview session. Created `pcm-processor.js` (Web Audio API Worklet) to transcode Float32 microphone audio to 16kHz 16-bit Int16 PCM. Created `useInterviewSession.js` custom React hook to manage WebSocket connections, binary streaming, JSON event handling (`INTERRUPT`, `QUESTION_UPDATE`, `SESSION_DONE`), and dynamic gapless playback of AI TTS chunks using `AudioContext` buffers.
 - ✅ **Interview Room UI Cleanup**: Refactored `Interview.jsx` by removing static demo data and wiring in the live `useInterviewSession` hook. Polished the UI by removing feedback buttons (Bookmark, ThumbsUp, ThumbsDown) and settings icons from the live view header per design feedback, moving those explicitly to the post-interview flow. Removed the "Replay Question" button to maintain interview realism. Verified zero compilation errors via `npm run build`.
 - ✅ **Web-Based Audio Streaming Architecture Implementation**: Replaced flawed native `sounddevice` backend microphone capture with 100% browser-native Web Audio streaming. Updated `useInterviewSession.js` to send real-time `Int16Array` binary PCM frames over WebSocket. Modified FastAPI `recv_worker` in `api/routers/voice.py` to route binary frames into an thread-safe `audio_queue`. Injected queue through `voice_adapter.py` into `voice_engine.py` and completely rewrote `listener.py` `listen_and_transcribe` logic to pull cleanly from the WebSocket stream buffer, converting safely back to float32 chunks. Verified perfectly functional gapless VAD streaming and STT.
+- ✅ **Post-Interview Stage 4 Report Flow & Processing Screen**: Implemented complete post-session evaluation workflow. Created `reportService.js` (Axios API calls for Stage 4 `/reports/generate/{id}` and `/reports/{id}`), `useReports.js` custom React hook (3-second background status polling), `Processing.jsx` (animated glassmorphic loading screen showing rotating AI stage messages and live backend `progress_message` status updates), and updated `router.jsx` (`/processing/:sessionId` route). Updated `Interview.jsx` to trigger background report generation and navigate to `/processing/:id`. Rewrote `Report.jsx` to render real `CandidateReportPayload` JSON payload data including overall hiring signal badge, donut score gauge, domain pillars progress matrix, vocal/speech telemetry, executive summary, behavioral flags panel, key strengths, growth areas, study topic chips, and turn-by-turn accordions with dual candidate STT / Gemini audio-verified transcripts. Verified clean `npm run build` (1,689 modules, 0 errors, 1.88s).
+

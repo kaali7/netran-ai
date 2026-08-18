@@ -33,9 +33,9 @@ frontend/                      # React 18 + Vite 5 Web Client
 │   │   ├── ui/                # Card.jsx, Button.jsx, Badge.jsx, StatCard.jsx, ProgressBar.jsx
 │   │   ├── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx, TemplatePicker.jsx
 │   │   └── interview/         # AvatarEva.jsx
-│   ├── hooks/                 # useDashboard.js, useAuth.js
-│   ├── pages/                 # Dashboard.jsx (Phase 1), Setup.jsx, Interview.jsx, Report.jsx, Login.jsx
-│   ├── services/              # api.js, authService.js, templateService.js
+│   ├── hooks/                 # useDashboard.js, useAuth.js, useInterviewSession.js, useSetup.js, useReports.js
+│   ├── pages/                 # Dashboard.jsx, Setup.jsx, Interview.jsx, Processing.jsx, Report.jsx, Login.jsx
+│   ├── services/              # api.js, authService.js, sessionService.js, templateService.js, reportService.js
 │   ├── store/                 # authStore.js (Zustand JWT auth store)
 │   ├── styles/                # index.css (tokens & custom scrollbar), glass.css (glassmorphism), animations.css
 │   ├── utils/                 # constants.js

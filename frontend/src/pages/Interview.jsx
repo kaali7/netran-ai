@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AvatarEva from '../components/interview/AvatarEva';
 import useInterviewSession from '../hooks/useInterviewSession';
+import { triggerReportGeneration } from '../services/reportService';
 import {
   Sparkles,
   Volume2,
@@ -28,8 +29,9 @@ export const Interview = () => {
 
   // Auto-navigate when session naturally ends
   useEffect(() => {
-    if (isSessionDone) {
-      navigate(`/report/${sessionId}`);
+    if (isSessionDone && sessionId) {
+      triggerReportGeneration(sessionId).catch((err) => console.error('Report gen trigger error:', err));
+      navigate(`/processing/${sessionId}`);
     }
   }, [isSessionDone, navigate, sessionId]);
 
@@ -51,7 +53,12 @@ export const Interview = () => {
 
   const handleStopSession = () => {
     stopSession();
-    navigate(`/report/${sessionId}`);
+    if (sessionId) {
+      triggerReportGeneration(sessionId).catch((err) => console.error('Report gen trigger error:', err));
+      navigate(`/processing/${sessionId}`);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleRestart = () => {

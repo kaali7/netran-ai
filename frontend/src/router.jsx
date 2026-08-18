@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Setup from './pages/Setup';
 import Interview from './pages/Interview';
+import Processing from './pages/Processing';
 import Report from './pages/Report';
 import { useAuthStore } from './store/authStore';
 
@@ -63,6 +64,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <Interview />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/processing/:sessionId',
+    element: (
+      <ProtectedRoute>
+        <Processing />
       </ProtectedRoute>
     ),
   },
