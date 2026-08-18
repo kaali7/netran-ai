@@ -60,6 +60,8 @@ frontend/
 │   │       ├── SessionsTable.jsx    # Historical practice sessions & feedback list
 │   │       ├── StatsRow.jsx         # 4-card metric row (Readiness, Streak, Skills)
 │   │       └── WelcomeBanner.jsx    # Candidate greeting + Readiness pill score
+│   │   └── interview/
+│   │       └── AvatarEva.jsx        # Animated female vector AI interviewer persona (Eva)
 │   ├── hooks/
 │   │   ├── useAuth.js          # Authentication state & JWT bearer token context
 │   │   ├── useDashboard.js     # Orchestrates mock & live API telemetry

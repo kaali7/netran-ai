@@ -31,7 +31,8 @@ frontend/                      # React 18 + Vite 5 Web Client
 │   ├── components/
 │   │   ├── layout/            # Navbar.jsx, PageWrapper.jsx
 │   │   ├── ui/                # Card.jsx, Button.jsx, Badge.jsx, StatCard.jsx, ProgressBar.jsx
-│   │   └── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx
+│   │   ├── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx
+│   │   └── interview/         # AvatarEva.jsx
 │   ├── hooks/                 # useDashboard.js, useAuth.js
 │   ├── pages/                 # Dashboard.jsx (Phase 1), Setup.jsx, Interview.jsx, Report.jsx, Login.jsx
 │   ├── services/              # api.js (Axios with Bearer Interceptor)

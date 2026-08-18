@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import PageWrapper from '../components/layout/PageWrapper';
 import WelcomeBanner from '../components/dashboard/WelcomeBanner';
@@ -10,13 +11,14 @@ import useDashboard from '../hooks/useDashboard';
 
 export const Dashboard = () => {
   const { data } = useDashboard();
+  const navigate = useNavigate();
 
   const handleStartFullMock = () => {
     alert('Starting Full 15-Question Technical Mock Interview Setup...');
   };
 
   const handlePracticeCustomJD = () => {
-    alert('Opening Custom Job Description Practice Setup...');
+    navigate('/setup');
   };
 
   const handleRetakeSession = () => {

@@ -50,7 +50,7 @@ export const LaunchPractice = ({ onStartFullMock, onPracticeCustomJD }) => {
           }}
         >
           <FileText size={16} strokeWidth={2.2} />
-          <span>Practice Custom JD</span>
+          <span>Practice Custom JD & RESUME</span>
         </button>
       </div>
     </Card>
