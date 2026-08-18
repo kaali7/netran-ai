@@ -130,3 +130,15 @@ Before modifying any source code in a model stage:
   - **Build & Quality Scan**: Always run `npm run build` in the `frontend/` directory to scan and verify zero compilation, type, bundle, or missing asset errors.
   - **Interface Audit**: Utilize frontend design & auditing skills (`web-design-guidelines`, `ui-ux-pro-max`, `critique`) to review UI quality, accessibility compliance, and visual craft prior to completing work.
 
+---
+
+## 📌 Rule 14: Immediate Task Completion Matrix Synchronization
+* Whenever any code task, bug fix, feature, or rule update is completed, you MUST immediately edit and update `doc/task_completion.md` to keep the task completion matrix, verification logs, and pending roadmap items synchronized.
+
+---
+
+## 📌 Rule 15: Frontend Iconography Standard
+* **Approved Icon Libraries**: `Lucide Icons` (default for React components), `Font Awesome`, `Heroicons`, `Iconify`, `Flaticon`, `Tabler Icons`.
+* **No Raw Text Emojis in UI Design**: Do NOT use raw text emojis (e.g. 🚀, 🎙️, 👋, ⚙️, 🎨, 🤖) as UI icons, section headers, card symbols, or button adornments.
+* **Usage Policy**: Always render icons using proper SVG vector components from the approved icon libraries with structured sizing (`size={16..24}`), stroke widths (`strokeWidth={2}`), and harmonious color tokens (`var(--primary)`, `var(--on-surface-variant)`). Limit emoji usage strictly to rare text-content exceptions.
+

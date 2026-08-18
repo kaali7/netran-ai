@@ -29,18 +29,19 @@ frontend/                      # React 18 + Vite 5 Web Client
 ├── src/
 │   ├── assets/                # Icons & UI artwork
 │   ├── components/
-│   │   ├── layout/            # Navbar.jsx, PageWrapper.jsx
+│   │   ├── layout/            # Navbar.jsx (Profile Sub-Menu), PageWrapper.jsx
 │   │   ├── ui/                # Card.jsx, Button.jsx, Badge.jsx, StatCard.jsx, ProgressBar.jsx
-│   │   ├── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx
+│   │   ├── dashboard/         # WelcomeBanner.jsx, StatsRow.jsx, LaunchPractice.jsx, LastSessionCard.jsx, SessionsTable.jsx, TemplatePicker.jsx
 │   │   └── interview/         # AvatarEva.jsx
 │   ├── hooks/                 # useDashboard.js, useAuth.js
 │   ├── pages/                 # Dashboard.jsx (Phase 1), Setup.jsx, Interview.jsx, Report.jsx, Login.jsx
-│   ├── services/              # api.js (Axios with Bearer Interceptor)
-│   ├── styles/                # index.css (tokens & typography), glass.css (glassmorphism), animations.css
+│   ├── services/              # api.js, authService.js, templateService.js
+│   ├── store/                 # authStore.js (Zustand JWT auth store)
+│   ├── styles/                # index.css (tokens & custom scrollbar), glass.css (glassmorphism), animations.css
 │   ├── utils/                 # constants.js
 │   ├── App.jsx                # App shell
 │   ├── main.jsx               # Bootstrap root
-│   └── router.jsx             # React Router v6
+│   └── router.jsx             # React Router v6 with ProtectedRoute / PublicRoute guards & v7 future flags
 ├── index.html                 # Manrope font import & HTML shell
 ├── package.json               # React 18, Vite 5, Lucide-React, Axios, Zustand
 └── vite.config.js             # Vite config with backend reverse proxy (/api -> :8000)
@@ -66,11 +67,13 @@ backend/
 │       ├── __init__.py        # Routers package initializer
 │       ├── auth.py            # Authentication (/signup, /login, /me)
 │       ├── ingest.py          # Document parsing stub (/ingest/resume, /ingest/jd)
-│       ├── setup.py           # Stage 1 & 2 analysis trigger stub (/setup/analyze)
+│       ├── setup.py           # Stage 1 & 2 analysis trigger & candidate sessions listing (/setup/analyze, /setup/sessions)
 │       ├── questions.py       # Stage 2 question preview stub (/questions/{session_id})
 │       ├── voice.py           # Stage 3 WebSockets stub (WS /voice/stream/{session_id})
-│       └── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
-├── data/                      # Local SQLite database & session storage (.gitkeep, cache.db)
+│       ├── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
+│       └── template.py        # Template Mock Interview endpoints (/template/list, /template/start)
+├── data/                      # Local SQLite database, session storage & sample templates
+│   └── sample_interviews/    # Pre-built interview templates (backend/, frontend/, fullstack/)
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )
 
 └── model/                     # Multi-stage AI pipeline core modules

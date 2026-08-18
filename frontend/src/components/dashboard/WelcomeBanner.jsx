@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Sparkles } from 'lucide-react';
 
 export const WelcomeBanner = ({
   candidateName = 'Arjun',
@@ -9,9 +9,21 @@ export const WelcomeBanner = ({
   return (
     <section className="welcome-banner animate-entrance">
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <h1 className="text-headline-xl">Welcome back, {candidateName}</h1>
-          <span style={{ fontSize: '26px' }}>👋</span>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'rgba(101, 89, 123, 0.12)',
+            }}
+          >
+            <Sparkles size={18} color="var(--primary)" />
+          </div>
         </div>
         <p className="text-body-md" style={{ marginTop: '4px' }}>
           Ready to ace your next technical interview?
@@ -36,3 +48,4 @@ export const WelcomeBanner = ({
 };
 
 export default WelcomeBanner;
+

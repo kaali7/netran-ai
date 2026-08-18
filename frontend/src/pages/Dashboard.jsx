@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -7,34 +7,52 @@ import StatsRow from '../components/dashboard/StatsRow';
 import LaunchPractice from '../components/dashboard/LaunchPractice';
 import LastSessionCard from '../components/dashboard/LastSessionCard';
 import SessionsTable from '../components/dashboard/SessionsTable';
+import TemplatePicker from '../components/dashboard/TemplatePicker';
 import useDashboard from '../hooks/useDashboard';
 
 export const Dashboard = () => {
   const { data } = useDashboard();
   const navigate = useNavigate();
 
+  // Template Picker modal state
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+
   const handleStartFullMock = () => {
-    alert('Starting Full 15-Question Technical Mock Interview Setup...');
+    setShowTemplatePicker(true);
   };
 
   const handlePracticeCustomJD = () => {
     navigate('/setup');
   };
 
+  /** Called when TemplatePicker successfully creates a session — navigate to voice interview. */
+  const handleSessionReady = (sessionId) => {
+    setShowTemplatePicker(false);
+    navigate(`/interview/${sessionId}`);
+  };
+
   const handleRetakeSession = () => {
-    alert(`Retaking Session #${data.lastSession.number}: ${data.lastSession.title}`);
+    if (data?.lastSession?.id) {
+      navigate(`/interview/${data.lastSession.id}`);
+    } else {
+      navigate('/setup');
+    }
   };
 
   const handleViewReport = () => {
-    alert(`Opening Detailed Multimodal Report for Session #${data.lastSession.number}`);
+    if (data?.lastSession?.id) {
+      navigate(`/report/${data.lastSession.id}`);
+    } else {
+      navigate('/setup');
+    }
   };
 
   const handleNewWorkspace = () => {
-    alert('Creating New Workspace for Targeted Interview Prep...');
+    navigate('/setup');
   };
 
   const handleViewFeedback = (sessionId) => {
-    alert(`Viewing Feedback & Scorecard for Session ${sessionId}`);
+    navigate(`/report/${sessionId}`);
   };
 
   return (
@@ -68,10 +86,7 @@ export const Dashboard = () => {
             onPracticeCustomJD={handlePracticeCustomJD}
           />
           <LastSessionCard
-            sessionNumber={data.lastSession.number}
-            sessionTitle={data.lastSession.title}
-            scorePct={data.lastSession.score}
-            status={data.lastSession.status}
+            lastSession={data.lastSession}
             onRetake={handleRetakeSession}
             onViewReport={handleViewReport}
           />
@@ -84,8 +99,16 @@ export const Dashboard = () => {
           onViewFeedback={handleViewFeedback}
         />
       </PageWrapper>
+
+      {/* Template Picker Modal — mounts at root level for proper overlay positioning */}
+      <TemplatePicker
+        isOpen={showTemplatePicker}
+        onClose={() => setShowTemplatePicker(false)}
+        onSessionReady={handleSessionReady}
+      />
     </div>
   );
 };
 
 export default Dashboard;
+

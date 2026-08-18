@@ -103,3 +103,49 @@ def trigger_analysis(
         progress_message="Starting pipeline...",
         message="Pipeline analysis started in background. Poll /questions/status for progress.",
     )
+
+
+@router.get(
+    "/sessions",
+    summary="Get Authenticated Candidate Practice Sessions List",
+    description="Returns all interview sessions created by the current authenticated user.",
+)
+def get_candidate_sessions(
+    current_user: User = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """Fetch active and completed interview sessions for logged-in user."""
+    sessions = (
+        db.query(SessionModel)
+        .filter(SessionModel.user_id == current_user.id)
+        .order_by(SessionModel.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for idx, s in enumerate(sessions):
+        art = s.artifacts
+        jd_title = "Technical Practice Track"
+        score = 0
+        if art and art.parsed_jd and isinstance(art.parsed_jd, dict):
+            jd_title = art.parsed_jd.get("role_title") or art.parsed_jd.get("domain") or jd_title
+
+        if art and art.evaluation_report and isinstance(art.evaluation_report, dict):
+            score = (
+                art.evaluation_report.get("overall_score")
+                or art.evaluation_report.get("readiness_score")
+                or 0
+            )
+
+        result.append({
+            "id": s.id,
+            "number": len(sessions) - idx,
+            "title": jd_title,
+            "status": s.status.value if hasattr(s.status, "value") else str(s.status),
+            "score": score,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "progress_message": s.progress_message,
+        })
+
+    return result
+

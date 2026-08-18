@@ -1,28 +1,9 @@
 import React from 'react';
 import Card from '../ui/Card';
-import { Plus, FileText, Clock, Calendar } from 'lucide-react';
+import { Plus, FileText, Clock, Calendar, Layers } from 'lucide-react';
 
 export const SessionsTable = ({
-  sessions = [
-    {
-      id: 'sess-14',
-      number: 14,
-      title: 'Backend Caching',
-      dateText: 'Yesterday',
-      dateType: 'clock',
-      score: 88,
-      isPrimaryIcon: true,
-    },
-    {
-      id: 'sess-13',
-      number: 13,
-      title: 'React State Management',
-      dateText: 'Aug 5',
-      dateType: 'calendar',
-      score: 82,
-      isPrimaryIcon: false,
-    },
-  ],
+  sessions = [],
   onNewWorkspace,
   onViewFeedback,
 }) => {
@@ -63,64 +44,109 @@ export const SessionsTable = ({
         </button>
       </div>
 
-      {/* Sessions List */}
-      <div>
-        {sessions.map((session) => (
-          <div key={session.id} className="session-row-card">
-            {/* Left: Icon and Title/Date */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div className={session.isPrimaryIcon ? 'session-icon-box' : 'session-icon-box-muted'}>
-                <FileText size={20} />
-              </div>
-              <div>
-                <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--on-surface)' }}>
-                  Session #{session.number}: {session.title}
+      {/* Sessions List or Empty State */}
+      {sessions.length === 0 ? (
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            padding: '36px 24px',
+            textAlign: 'center',
+            border: '1px solid #f0f1f2',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: '#f3f0f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--primary)',
+              marginBottom: '12px',
+            }}
+          >
+            <Layers size={22} />
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--on-surface)' }}>
+            No Historical Sessions Found
+          </div>
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--on-surface-variant)',
+              marginTop: '4px',
+              maxWidth: '420px',
+            }}
+          >
+            Start your first practice track to build your technical readiness score, track session transcripts, and receive multimodal AI feedback.
+          </p>
+        </div>
+      ) : (
+        <div>
+          {sessions.map((session) => (
+            <div key={session.id} className="session-row-card">
+              {/* Left: Icon and Title/Date */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div className={session.isPrimaryIcon ? 'session-icon-box' : 'session-icon-box-muted'}>
+                  <FileText size={20} />
                 </div>
-                <div
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--on-surface)' }}>
+                    Session #{session.number}: {session.title}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '12px',
+                      color: 'var(--on-surface-variant)',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {session.dateType === 'clock' ? <Clock size={12} /> : <Calendar size={12} />}
+                    <span>{session.dateText}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Score and View Feedback CTA */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="text-label-xs" style={{ fontSize: '10px', color: 'var(--on-surface-variant)' }}>
+                    SCORE
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--on-surface)' }}>
+                    {session.score || 0}%
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onViewFeedback && onViewFeedback(session.id)}
+                  className="btn btn-ghost"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    color: 'var(--on-surface-variant)',
-                    marginTop: '2px',
+                    padding: '8px 18px',
+                    fontSize: '13px',
+                    borderRadius: 'var(--radius-full)',
+                    borderColor: '#d1d3d6',
+                    color: 'var(--on-surface)',
+                    fontWeight: 600,
                   }}
                 >
-                  {session.dateType === 'clock' ? <Clock size={12} /> : <Calendar size={12} />}
-                  <span>{session.dateText}</span>
-                </div>
+                  View Feedback
+                </button>
               </div>
             </div>
-
-            {/* Right: Score and View Feedback CTA */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-              <div style={{ textAlign: 'right' }}>
-                <div className="text-label-xs" style={{ fontSize: '10px', color: 'var(--on-surface-variant)' }}>
-                  SCORE
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--on-surface)' }}>
-                  {session.score}%
-                </div>
-              </div>
-
-              <button
-                onClick={() => onViewFeedback && onViewFeedback(session.id)}
-                className="btn btn-ghost"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  borderRadius: 'var(--radius-full)',
-                  borderColor: '#d1d3d6',
-                  color: 'var(--on-surface)',
-                  fontWeight: 600,
-                }}
-              >
-                View Feedback
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };

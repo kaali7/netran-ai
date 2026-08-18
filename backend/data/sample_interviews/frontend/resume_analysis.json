@@ -1,0 +1,113 @@
+{
+  "candidate_profile": {
+    "candidate_name": "Elena Rostova",
+    "target_role": "Staff Frontend Architect",
+    "years_of_experience": 7.0,
+    "current_company_or_status": "CloudMatrix Inc.",
+    "core_identity_summary": "Staff Frontend Architect with 7 years of experience specializing in React 18/19, Webpack Module Federation micro-frontends, Zustand/React Query state management, and Core Web Vitals optimization.",
+    "soft_skills": [
+      "Frontend Architecture & Design Systems",
+      "Performance Telemetry & Optimization",
+      "Web Security (CSP, XSS, CORS)",
+      "Technical Mentorship"
+    ],
+    "key_achievements": [
+      "Migrated legacy monolithic React app to micro-frontends using Webpack Module Federation at CloudMatrix Inc.",
+      "Reduced LCP from 4.2s to 1.4s at PixelCraft Solutions through route-based code splitting and prefetching.",
+      "Implemented client-side caching with React Query and Zustand, cutting API fetch calls by 55%.",
+      "Built enterprise design system adopted by 45+ developers."
+    ],
+    "personal_traits_and_hobbies": {
+      "traits_detected": [
+        "User-centric",
+        "Performance-obsessed",
+        "Systematic"
+      ],
+      "hobbies_or_interests": [
+        "UI animation physics",
+        "Open-source Webpack plugins"
+      ],
+      "icebreaker_probe_topic": "How optimizing Core Web Vitals and micro-frontend architectures shapes an engineer's design philosophy."
+    }
+  },
+  "role_fit_scoring": {
+    "overall_jd_match_score": 94,
+    "technical_depth_score": 96,
+    "experience_seniority_score": 92,
+    "project_relevance_score": 95,
+    "clarity_and_impact_score": 93
+  },
+  "extracted_skill_overlap": [
+    {
+      "skill": "React 18/19 & TypeScript",
+      "resume_evidence": "7+ years experience; used React 18/19 and TypeScript across PixelCraft Solutions and CloudMatrix Inc.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "State Management (Zustand, React Query)",
+      "resume_evidence": "Implemented client-side caching with React Query and Zustand at CloudMatrix Inc, cutting API fetch calls by 55%.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "Micro-Frontend Architecture",
+      "resume_evidence": "Migrated legacy monolithic React app to micro-frontends using Webpack Module Federation at CloudMatrix Inc.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "Core Web Vitals & Performance",
+      "resume_evidence": "Reduced LCP from 4.2s to 1.4s at PixelCraft Solutions through route-based code splitting and prefetching.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "Web Security (CSP, XSS, CORS)",
+      "resume_evidence": "Configured strict Content Security Policies and automated XSS sanitization layers for financial transaction flows.",
+      "proficiency_tier": "Intermediate",
+      "jd_requirement_level": "Important"
+    }
+  ],
+  "experience_and_work_history": [
+    {
+      "company_name": "CloudMatrix Inc.",
+      "role": "Staff Frontend Architect",
+      "tenure": "2021 - Present",
+      "impact_level": "High",
+      "key_responsibilities": "Led micro-frontend architecture migration and enterprise React state management overhaul.",
+      "verifiable_outcomes": ["Reduced API fetch calls by 55% via React Query caching", "Standardized Webpack Module Federation"]
+    }
+  ],
+  "detailed_project_analysis": [
+    {
+      "project_name": "PixelCraft Analytics Platform Core Web Vitals Optimization",
+      "relevance_score": 9,
+      "tech_stack_used": ["React 18", "TypeScript", "Webpack 5", "Zustand"],
+      "architecture_type": "Micro-Frontend (Module Federation)",
+      "quantifiable_scale": "LCP improved from 4.2s to 1.4s, 50k+ daily active users",
+      "suggested_interview_probes": ["Probe DOM virtualization strategies for rendering 50,000+ tabular records efficiently"]
+    }
+  ],
+  "experience_gaps_and_red_flags": {
+    "technical_gaps": [
+      {
+        "missing_skill": "DOM Virtualization at Scale",
+        "jd_importance": "Critical",
+        "probing_strategy": "Probe how candidate handles rendering 50,000+ tabular records efficiently without degrading frame rate."
+      },
+      {
+        "missing_skill": "React 19 Concurrent Primitives & Server Components",
+        "jd_importance": "Critical",
+        "probing_strategy": "Evaluate depth of knowledge around useTransition, useDeferredValue, and React Server Components vs client hydration."
+      }
+    ],
+    "resume_red_flags": [
+      {
+        "flag_type": "Claim Verification",
+        "description": "Mentions Next.js 14 on resume skills list but work experience details focus primarily on Webpack SPA dynamic imports and Module Federation.",
+        "probe_question": "What production experience do you have with Next.js App Router vs standalone Webpack Module Federation?"
+      }
+    ]
+  }
+}

@@ -19,7 +19,7 @@ if str(BASE_DIR) not in sys.path:
 from api.config import settings
 from api.db import init_db
 from api.schemas import HealthResponse
-from api.routers import auth, ingest, setup, questions, voice, reports
+from api.routers import auth, ingest, setup, questions, voice, reports, template
 
 
 @asynccontextmanager
@@ -78,6 +78,7 @@ app.include_router(setup.router, prefix=settings.API_V1_STR)
 app.include_router(questions.router, prefix=settings.API_V1_STR)
 app.include_router(voice.router, prefix=settings.API_V1_STR)
 app.include_router(reports.router, prefix=settings.API_V1_STR)
+app.include_router(template.router, prefix=settings.API_V1_STR)
 
 
 if __name__ == "__main__":

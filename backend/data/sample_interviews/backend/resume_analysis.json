@@ -1,0 +1,160 @@
+{
+  "candidate_profile": {
+    "candidate_name": "Marcus Vance",
+    "target_role": "Senior Backend Systems Engineer",
+    "years_of_experience": 6.0,
+    "current_company_or_status": "DataScale Systems",
+    "core_identity_summary": "Senior Backend Systems Engineer with 6 years of experience specializing in high-concurrency Python microservices, distributed event streaming, and PostgreSQL/Redis performance optimization.",
+    "soft_skills": [
+      "System Architecture & Design",
+      "Technical Problem Solving",
+      "Performance Tuning & Incident Resolution",
+      "Cross-Functional Collaboration"
+    ],
+    "key_achievements": [
+      "Architected FastAPI microservices processing 35M+ daily requests with sub-35ms median latency.",
+      "Resolved PostgreSQL connection starvation via PgBouncer and query optimization using EXPLAIN ANALYZE.",
+      "Engineered a resilient Redis cache-aside system with TTL jitter to prevent thundering herd spikes.",
+      "Built a Kafka and Celery event ingestion pipeline processing 500k messages/minute with zero message loss."
+    ],
+    "personal_traits_and_hobbies": {
+      "traits_detected": [
+        "Data-driven",
+        "Performance-obsessed",
+        "Methodical"
+      ],
+      "hobbies_or_interests": [
+        "High-concurrency systems design",
+        "Open-source database optimization tools"
+      ],
+      "icebreaker_probe_topic": "Exploring how maintaining sub-35ms response times across tens of millions of requests shapes an engineer's approach to proactive system telemetry."
+    }
+  },
+  "role_fit_scoring": {
+    "overall_jd_match_score": 95,
+    "technical_depth_score": 96,
+    "experience_seniority_score": 92,
+    "project_relevance_score": 96,
+    "clarity_and_impact_score": 94
+  },
+  "extracted_skill_overlap": [
+    {
+      "skill": "FastAPI & AsyncIO",
+      "resume_evidence": "Architected high-throughput FastAPI microservices serving 35M+ daily API requests with median response latency of sub-35ms.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "PostgreSQL & PgBouncer",
+      "resume_evidence": "Diagnosed and resolved PostgreSQL database connection starvation by implementing PgBouncer connection pooling and optimizing high-impact queries using EXPLAIN ANALYZE.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "Redis Caching Strategies",
+      "resume_evidence": "Designed a resilient Redis cache-aside system with TTL jitter to eliminate thundering herd problems during peak traffic surges.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "Apache Kafka & Celery",
+      "resume_evidence": "Built distributed event ingestion pipeline using Apache Kafka and Celery, processing 500k messages/minute with zero message loss.",
+      "proficiency_tier": "Production Master",
+      "jd_requirement_level": "Must-Have"
+    },
+    {
+      "skill": "gRPC over HTTP/2",
+      "resume_evidence": "Developed microservices with Django and FastAPI, integrating gRPC services over HTTP/2 for internal service-to-service communication.",
+      "proficiency_tier": "Advanced",
+      "jd_requirement_level": "Important"
+    },
+    {
+      "skill": "AWS & Kubernetes (EKS)",
+      "resume_evidence": "Maintained CI/CD deployment pipelines on AWS EKS with Kubernetes Horizontal Pod Autoscaling (HPA) and Prometheus monitoring.",
+      "proficiency_tier": "Advanced",
+      "jd_requirement_level": "Must-Have"
+    }
+  ],
+  "experience_and_work_history": [
+    {
+      "company_name": "DataScale Systems",
+      "role": "Senior Backend Systems Engineer",
+      "tenure": "2021 - Present",
+      "impact_level": "High",
+      "key_responsibilities": "Architected microservices, optimized database connection strategies, designed caching systems, and built high-throughput asynchronous event ingestion pipelines.",
+      "verifiable_outcomes": [
+        "Scaled FastAPI services to handle 35M+ daily API requests at sub-35ms latency.",
+        "Eliminated PostgreSQL connection starvation using PgBouncer and EXPLAIN ANALYZE query optimization.",
+        "Ingested 500k messages/minute with zero data loss using Kafka and Celery."
+      ]
+    },
+    {
+      "company_name": "StreamLine Technologies",
+      "role": "Backend Engineer",
+      "tenure": "2018 - 2021",
+      "impact_level": "Medium",
+      "key_responsibilities": "Developed Python microservices using Django and FastAPI, implemented gRPC communication over HTTP/2, and managed Kubernetes deployments on AWS EKS.",
+      "verifiable_outcomes": [
+        "Streamlined service-to-service communication using gRPC over HTTP/2.",
+        "Configured Kubernetes Horizontal Pod Autoscaling (HPA) and Prometheus metrics monitoring on AWS EKS."
+      ]
+    }
+  ],
+  "detailed_project_analysis": [
+    {
+      "project_name": "High-Throughput API Gateway & Database Scaling",
+      "relevance_score": 10,
+      "tech_stack_used": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL",
+        "PgBouncer",
+        "Redis"
+      ],
+      "architecture_type": "Microservices & Cache-Aside Architecture",
+      "quantifiable_scale": "35M+ daily API requests, sub-35ms latency",
+      "suggested_interview_probes": [
+        "How do you prevent non-async blocking calls in FastAPI endpoints from starving the asyncio event loop under high load?",
+        "Walk through your step-by-step approach using EXPLAIN ANALYZE to identify and resolve query bottlenecks in PostgreSQL."
+      ]
+    },
+    {
+      "project_name": "Distributed Event Ingestion Pipeline",
+      "relevance_score": 9,
+      "tech_stack_used": [
+        "Apache Kafka",
+        "Celery",
+        "RabbitMQ",
+        "AWS",
+        "Kubernetes"
+      ],
+      "architecture_type": "Event-Driven Distributed Architecture",
+      "quantifiable_scale": "500k messages/minute, zero message loss",
+      "suggested_interview_probes": [
+        "How did you configure Kafka consumer offset acknowledgments and Celery task retries to guarantee zero message loss?",
+        "How do you ensure task idempotency when processing duplicate events across Celery workers?"
+      ]
+    }
+  ],
+  "experience_gaps_and_red_flags": {
+    "technical_gaps": [
+      {
+        "missing_skill": "Circuit Breaker Pattern & Distributed Consistency (Saga/Outbox)",
+        "jd_importance": "Secondary",
+        "probing_strategy": "Inquire about strategies for handling downstream service outages and maintaining transactional consistency across distributed boundaries."
+      },
+      {
+        "missing_skill": "Explicit Infrastructure as Code (Terraform) Depth",
+        "jd_importance": "Secondary",
+        "probing_strategy": "Ask candidate to describe how they write and structure Terraform modules to provision EKS clusters and supporting AWS resources."
+      }
+    ],
+    "resume_red_flags": [
+      {
+        "flag_type": "Claim Verification",
+        "description": "Claim of zero message loss at 500k messages/min in a Celery and Kafka pipeline requires validation of acknowledgment models and dead-letter queues.",
+        "probe_question": "What specific Kafka producer acks setting and Celery result backend / retry policy did you implement to guarantee zero message loss at scale?"
+      }
+    ]
+  }
+}

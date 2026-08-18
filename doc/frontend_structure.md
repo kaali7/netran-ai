@@ -59,6 +59,7 @@ frontend/
 │   │       ├── LastSessionCard.jsx  # Highlight of recent interview with score & CTA
 │   │       ├── SessionsTable.jsx    # Historical practice sessions & feedback list
 │   │       ├── StatsRow.jsx         # 4-card metric row (Readiness, Streak, Skills)
+│   │       ├── TemplatePicker.jsx   # Glassmorphic pre-built interview template modal
 │   │       └── WelcomeBanner.jsx    # Candidate greeting + Readiness pill score
 │   │   └── interview/
 │   │       └── AvatarEva.jsx        # Animated female vector AI interviewer persona (Eva)
@@ -75,7 +76,8 @@ frontend/
 │   ├── services/
 │   │   ├── api.js              # Central Axios instance with Bearer interceptors
 │   │   ├── authService.js      # Login, Signup, /me endpoints
-│   │   └── sessionService.js   # Session initiation & report fetching
+│   │   ├── sessionService.js   # Session initiation & report fetching
+│   │   └── templateService.js  # Pre-built interview templates (/template/list, /template/start)
 │   ├── store/
 │   │   └── authStore.js        # State management (Zustand)
 │   ├── styles/
@@ -101,9 +103,10 @@ frontend/
 | Frontend Component | HTTP / WS Action | Backend Endpoint | Data Delivered |
 |---|---|---|---|
 | `WelcomeBanner` & `Navbar` | `GET` | `/api/v1/auth/me` | Candidate name, email, profile role |
-| `StatsRow` & `LastSessionCard` | `GET` | `/api/v1/reports/{session_id}` | Overall technical score, vocal delivery metrics |
-| `SessionsTable` | `GET` | `/api/v1/questions/status/{id}` | Session progress, title, timestamp |
-| `LaunchPractice` | `POST` | `/api/v1/setup/analyze` | Initiates Stage 1 & 2 interview prep |
+| `StatsRow` & `LastSessionCard` | `GET` | `/api/v1/setup/sessions` | Real candidate readiness score, total session count |
+| `SessionsTable` | `GET` | `/api/v1/setup/sessions` | Historical candidate practice sessions & scores |
+| `TemplatePicker` | `GET` / `POST` | `/api/v1/template/list`<br>`/api/v1/template/start` | Pre-built templates list & instant READY session creation |
+| `LaunchPractice` | `POST` | `/api/v1/setup/analyze` | Initiates Stage 1 & 2 custom interview prep |
 
 *Note: For instant local testing without a running backend, a dual-mode fallback provider serves rich mock data matching the reference designs.*
 

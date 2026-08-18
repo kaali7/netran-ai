@@ -42,7 +42,8 @@ class Settings:
     CORS_ORIGINS: list[str] = [
         origin.strip()
         for origin in os.getenv(
-            "API_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+            "API_CORS_ORIGINS",
+            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5174,http://127.0.0.1:5174",
         ).split(",")
         if origin.strip()
     ]

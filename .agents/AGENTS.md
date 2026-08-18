@@ -12,3 +12,4 @@ Before performing research or modifying any code in this repository:
 9. Always use the specific design guidelines outlined in `DESIGN.md` for frontend development.
 10. When making frontend-related changes, always run frontend code quality scanning and build verification (`npm run build` inside `frontend/`) to ensure zero syntax, bundling, or interface errors.
 11. Whenever any code task, bug fix, or feature is completed, always edit and update `doc/task_completion.md` to keep the task completion matrix, verification logs, and pending roadmap items synchronized.
+12. **Iconography Standard**: In the frontend project, ONLY use vector icon libraries from the approved list (`Lucide Icons`, `Font Awesome`, `Heroicons`, `Iconify`, `Flaticon`, `Tabler Icons`). Do NOT use raw text emojis for UI icons or structural design elements. Limit emoji usage strictly to rare text-content exceptions.
