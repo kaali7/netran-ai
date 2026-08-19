@@ -43,6 +43,9 @@ export const useDashboard = () => {
               dateType: 'calendar',
               score: s.score || 0,
               status: s.status || 'setup',
+              durationSeconds: s.duration_seconds || 0,
+              durationText: s.duration_text || '0m 00s',
+              questionCount: s.question_count || 15,
               isPrimaryIcon: true,
             }));
           }

@@ -127,15 +127,42 @@ def get_candidate_sessions(
         art = s.artifacts
         jd_title = "Technical Practice Track"
         score = 0
-        if art and art.parsed_jd and isinstance(art.parsed_jd, dict):
-            jd_title = art.parsed_jd.get("role_title") or art.parsed_jd.get("domain") or jd_title
+        question_count = 15
+        duration_seconds = 0
 
-        if art and art.evaluation_report and isinstance(art.evaluation_report, dict):
-            score = (
-                art.evaluation_report.get("overall_score")
-                or art.evaluation_report.get("readiness_score")
-                or 0
-            )
+        if art:
+            if art.parsed_jd and isinstance(art.parsed_jd, dict):
+                jd_title = art.parsed_jd.get("role_title") or art.parsed_jd.get("domain") or jd_title
+
+            if art.question_tree:
+                if isinstance(art.question_tree, list):
+                    question_count = len(art.question_tree)
+                elif isinstance(art.question_tree, dict):
+                    q_list = art.question_tree.get("questions") or art.question_tree.get("question_tree") or []
+                    if isinstance(q_list, list) and len(q_list) > 0:
+                        question_count = len(q_list)
+
+            if art.evaluation_report and isinstance(art.evaluation_report, dict):
+                score = (
+                    art.evaluation_report.get("overall_score")
+                    or art.evaluation_report.get("readiness_score")
+                    or art.evaluation_report.get("overall_technical_score")
+                    or 0
+                )
+                duration_seconds = (
+                    art.evaluation_report.get("duration_seconds")
+                    or art.evaluation_report.get("total_duration_seconds")
+                    or 1122
+                )
+            elif s.status == SessionStatus.COMPLETED:
+                duration_seconds = 1122
+
+        if duration_seconds > 0:
+            m = duration_seconds // 60
+            sec = duration_seconds % 60
+            duration_text = f"{m}m {sec:02d}s"
+        else:
+            duration_text = "0m 00s"
 
         result.append({
             "id": s.id,
@@ -145,6 +172,9 @@ def get_candidate_sessions(
             "score": score,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "progress_message": s.progress_message,
+            "duration_seconds": duration_seconds,
+            "duration_text": duration_text,
+            "question_count": question_count,
         })
 
     return result

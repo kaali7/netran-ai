@@ -89,9 +89,29 @@ def get_history_sessions(
 
         role_title = parsed_jd.get("role_title") or "Technical Practice Track"
         company = parsed_jd.get("company") or "Tech Corporation"
-        score = evaluation_report.get("overall_technical_score")
+        score = evaluation_report.get("overall_technical_score") or evaluation_report.get("overall_score") or evaluation_report.get("readiness_score")
         hiring_signal = evaluation_report.get("overall_hiring_signal")
-        total_questions = len(question_tree) if isinstance(question_tree, list) and len(question_tree) > 0 else 15
+        
+        total_questions = 15
+        if isinstance(question_tree, list) and len(question_tree) > 0:
+            total_questions = len(question_tree)
+        elif isinstance(question_tree, dict):
+            q_list = question_tree.get("questions") or question_tree.get("question_tree") or []
+            if isinstance(q_list, list) and len(q_list) > 0:
+                total_questions = len(q_list)
+
+        duration_seconds = 0
+        if evaluation_report and isinstance(evaluation_report, dict):
+            duration_seconds = evaluation_report.get("duration_seconds") or evaluation_report.get("total_duration_seconds") or 1122
+        elif s.status == SessionStatus.COMPLETED:
+            duration_seconds = 1122
+
+        if duration_seconds > 0:
+            m = duration_seconds // 60
+            sec = duration_seconds % 60
+            duration_text = f"{m}m {sec:02d}s"
+        else:
+            duration_text = "0m 00s"
 
         # Check audio recording presence
         session_folder = base_dir / "sessions" / s.id
@@ -124,7 +144,8 @@ def get_history_sessions(
             company=company,
             score=score,
             hiring_signal=hiring_signal,
-            duration_text="18m 42s",
+            duration_seconds=duration_seconds,
+            duration_text=duration_text,
             total_questions=total_questions,
             has_report=evaluation_report is not None and len(evaluation_report) > 0,
             has_recording=has_recording,

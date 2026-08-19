@@ -289,6 +289,7 @@ class HistorySessionItem(BaseModel):
     company: Optional[str] = "Tech Corporation"
     score: Optional[int] = None
     hiring_signal: Optional[str] = None
+    duration_seconds: int = 1122
     duration_text: str = "18m 42s"
     total_questions: int = 15
     has_report: bool = False
