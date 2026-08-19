@@ -240,6 +240,42 @@ class ReportResponse(BaseModel):
     progress_message: Optional[str] = None
 
 
+# --- Analytics Schemas ---
+
+class InsightItem(BaseModel):
+    """Insight callout entry for Eva's AI Synthesis."""
+    id: int
+    type: str  # "positive" | "warning"
+    text: str
+
+
+class SkillMatrixItem(BaseModel):
+    """Single pillar score entry for Aggregated Skill Matrix."""
+    name: str
+    score: int
+    color: Optional[str] = "#65597b"
+
+
+class SessionComparisonItem(BaseModel):
+    """Session comparison entry for score trend chart."""
+    label: str
+    score: int
+    active: bool = False
+    created_at: Optional[str] = None
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    """Aggregated candidate performance analytics response payload."""
+    time_range: str
+    composite_score: int
+    total_sessions: int
+    trend_percent: float
+    strongest_area: str
+    insights: list[InsightItem]
+    skill_matrix: list[SkillMatrixItem]
+    session_comparison: list[SessionComparisonItem]
+
+
 # --- Common Schemas ---
 
 class HealthResponse(BaseModel):

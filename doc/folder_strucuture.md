@@ -71,7 +71,8 @@ backend/
 │       ├── questions.py       # Stage 2 question preview stub (/questions/{session_id})
 │       ├── voice.py           # Stage 3 WebSockets stub (WS /voice/stream/{session_id})
 │       ├── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
-│       └── template.py        # Template Mock Interview endpoints (/template/list, /template/start)
+│       ├── template.py        # Template Mock Interview endpoints (/template/list, /template/start)
+│       └── analytics.py       # Candidate performance analytics endpoints (/analytics/summary)
 ├── data/                      # Local SQLite database, session storage & sample templates
 │   └── sample_interviews/    # Pre-built interview templates (backend/, frontend/, fullstack/)
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )

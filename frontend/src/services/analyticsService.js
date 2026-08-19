@@ -5,97 +5,71 @@ import api from './api';
  * 
  * @param {string} timeRange - Filter window: '30d' | '90d' | 'all'
  */
-export async function getAggregatedAnalytics(timeRange = '30d') {
+export async function getAggregatedAnalytics(timeRange = '30d', customOptions = {}) {
   try {
-    // Attempt to fetch real sessions from backend
-    const response = await api.get('/setup/sessions');
-    const sessions = response.data || [];
+    const params = new URLSearchParams({ time_range: timeRange });
+    if (timeRange === 'custom') {
+      if (customOptions.customDays) params.append('custom_days', customOptions.customDays);
+      if (customOptions.startDate) params.append('start_date', customOptions.startDate);
+      if (customOptions.endDate) params.append('end_date', customOptions.endDate);
+    }
 
-    // Calculate aggregated metrics from sessions
-    const totalSessions = sessions.length > 0 ? sessions.length : 12;
-    
-    // Calculate average score across completed sessions
-    const completedSessions = sessions.filter((s) => s.status === 'completed');
-    const avgScore = completedSessions.length > 0
-      ? Math.round(completedSessions.reduce((acc, s) => acc + (s.score || 80), 0) / completedSessions.length)
-      : 82;
+    // Fetch real-time candidate analytics summary from backend API
+    const response = await api.get(`/analytics/summary?${params.toString()}`);
+    const data = response.data;
 
     return {
-      timeRange,
-      compositeScore: avgScore,
-      totalSessions,
-      trendPercent: 5.2,
-      strongestArea: 'System Architecture & Empathy',
-      insights: [
-        {
-          id: 1,
-          type: 'positive',
-          text: 'Consistent improvement in structuring clinical & system architecture histories. You reliably cover core design patterns across varying interview scenarios.',
-        },
-        {
-          id: 2,
-          type: 'warning',
-          text: 'Time management during the closure phase remains a challenge. You often rush through shared decision-making when the 15-minute mark approaches.',
-        },
-        {
-          id: 3,
-          type: 'positive',
-          text: 'Excellent use of silence and non-verbal cues noted in the last 4 encounters. Maintain this pacing.',
-        },
-      ],
-      skillMatrix: [
-        { name: 'System Architecture', score: 78, color: '#65597b' },
-        { name: 'Communication & Pacing', score: 85, color: '#65597b' },
-        { name: 'Problem Solving & Tradeoffs', score: 72, color: '#65597b' },
-        { name: 'Code Quality & Professionalism', score: 92, color: '#22c55e' },
-      ],
-      sessionComparison: [
-        { label: 'S1', score: 65, active: false },
-        { label: 'S2', score: 72, active: false },
-        { label: 'S3', score: 78, active: true },
-        { label: 'S4', score: 82, active: false },
-        { label: 'S5', score: 85, active: false },
-      ],
+      timeRange: data.time_range || timeRange,
+      compositeScore: data.composite_score ?? 0,
+      totalSessions: data.total_sessions ?? 0,
+      trendPercent: data.trend_percent ?? 0,
+      strongestArea: data.strongest_area || 'System Architecture & Problem Solving',
+      insights: data.insights || [],
+      skillMatrix: (data.skill_matrix || []).map((s) => ({
+        name: s.name,
+        score: s.score,
+        color: s.color || '#65597b',
+      })),
+      sessionComparison: (data.session_comparison || []).map((sc) => ({
+        label: sc.label,
+        score: sc.score,
+        active: sc.active,
+      })),
     };
   } catch (err) {
-    console.warn('Backend analytics fetch fallback:', err);
-    // Return aggregated analytics fallback matching design specs
+    console.warn('Backend analytics fetch error, returning fallback onboarding analytics:', err);
     return {
       timeRange,
-      compositeScore: 82,
-      totalSessions: 12,
-      trendPercent: 5.2,
-      strongestArea: 'System Architecture & Empathy',
+      compositeScore: 0,
+      totalSessions: 0,
+      trendPercent: 0,
+      strongestArea: 'N/A - Complete practice track',
       insights: [
         {
           id: 1,
           type: 'positive',
-          text: 'Consistent improvement in structuring clinical & system architecture histories. You reliably cover core design patterns across varying interview scenarios.',
+          text: 'Welcome to Netran AI! Complete your first mock interview practice track to unlock real-time performance analytics.',
         },
         {
           id: 2,
           type: 'warning',
-          text: 'Time management during the closure phase remains a challenge. You often rush through shared decision-making when the 15-minute mark approaches.',
-        },
-        {
-          id: 3,
-          type: 'positive',
-          text: 'Excellent use of silence and non-verbal cues noted in the last 4 encounters. Maintain this pacing.',
+          text: 'No completed practice sessions found. Launch an interview session from the Dashboard to build your tech skill matrix.',
         },
       ],
       skillMatrix: [
-        { name: 'System Architecture', score: 78, color: '#65597b' },
-        { name: 'Communication & Pacing', score: 85, color: '#65597b' },
-        { name: 'Problem Solving & Tradeoffs', score: 72, color: '#65597b' },
-        { name: 'Code Quality & Professionalism', score: 92, color: '#22c55e' },
+        { name: 'System Architecture', score: 0, color: '#65597b' },
+        { name: 'Communication & Pacing', score: 0, color: '#65597b' },
+        { name: 'Problem Solving & Tradeoffs', score: 0, color: '#65597b' },
+        { name: 'Code Quality & Professionalism', score: 0, color: '#65597b' },
       ],
       sessionComparison: [
-        { label: 'S1', score: 65, active: false },
-        { label: 'S2', score: 72, active: false },
-        { label: 'S3', score: 78, active: true },
-        { label: 'S4', score: 82, active: false },
-        { label: 'S5', score: 85, active: false },
+        { label: 'S1', score: 0, active: false },
+        { label: 'S2', score: 0, active: false },
+        { label: 'S3', score: 0, active: false },
+        { label: 'S4', score: 0, active: false },
+        { label: 'S5', score: 0, active: true },
       ],
     };
   }
 }
+

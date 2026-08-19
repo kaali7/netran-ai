@@ -46,11 +46,11 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 
 ## 🟠 Priority 2 — Fix Soon (Data Integrity & Real Wiring)
 
-| # | Task | File(s) | Problem | Fix Needed |
+| # | Task | File(s) | Problem | Status |
 |---|---|---|---|---|
 | **P2-1** | **Replace hardcoded fallback mock records in History page** | frontend/src/pages/History.jsx:35-95 | defaultHistoryRecords array with fake sessions (fake dates/scores) shows up when backend is empty | Replace with a clean empty-state component ("No sessions yet" CTA) — no fake records |
-| **P2-2** | **Wire Analytics page to real session data** | frontend/src/services/analyticsService.js | Skill matrix, insights, and session comparison data are all static hardcoded fiction. Backend /setup/sessions is called but only used for totalSessions count — rest is fabricated | Build real analytics aggregation from evaluation reports via GET /api/v1/reports/{id} or add dedicated analytics endpoint |
-| **P2-3** | **Fix wrong domain copy in Analytics insights** | frontend/src/services/analyticsService.js:33,38,43 | Insights mention "clinical histories", "shared decision-making", "non-verbal cues" — medical interview domain copy, wrong for software tech interview platform | Rewrite insights to reflect tech interview pillars: System Design, Coding Clarity, Problem Decomposition, Communication |
+| **P2-2** | **Wire Analytics page to real session data** | frontend/src/services/analyticsService.js | Skill matrix, insights, and session comparison data are all static hardcoded fiction. Backend /setup/sessions is called but only used for totalSessions count — rest is fabricated | ✅ Completed (Wired `analyticsService.js` to real backend `/analytics/summary` endpoint) |
+| **P2-3** | **Fix wrong domain copy in Analytics insights** | frontend/src/services/analyticsService.js:33,38,43 | Insights mention "clinical histories", "shared decision-making", "non-verbal cues" — medical interview domain copy, wrong for software tech interview platform | ✅ Completed (Synthesized real candidate evaluation report insights replacing medical copy) |
 | **P2-4** | **Real skill telemetry in Dashboard StatsRow** | frontend/src/hooks/useDashboard.js:76-87 | strongestSkills and needsFocusSkill return hardcoded text even when completed sessions exist — never reads real report data | Pull from latest session's report.pillar_scores via the Reports API to compute real strongest/weakest domain |
 
 ---
@@ -70,16 +70,16 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 
 ## 🟢 Priority 4 — New Features (Build After Core Is Stable)
 
-| # | Feature | Target Files | Description |
-|---|---|---|---|
-| **F1** | **Backend: Real Analytics Aggregation Endpoint** | backend/api/routers/analytics.py (NEW) | GET /api/v1/analytics/summary — aggregate score trends, pillar averages, and session comparison data from all completed sessions' evaluation_report artifacts. This unblocks P2-2. |
-| **F2** | **Backend: Audio Recording Download Endpoint** | backend/api/routers/voice.py | GET /api/v1/voice/recording/{session_id} — stream the saved sessions/{session_id}/recording.wav file to the browser. Required for History audio player. This unblocks P3-5. |
-| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. |
-| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. |
-| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. |
-| **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. |
-| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. |
-| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. |
+| # | Feature | Target Files | Description | Status |
+|---|---|---|---|---|
+| **F1** | **Backend: Real Analytics Aggregation Endpoint** | backend/api/routers/analytics.py (NEW) | GET /api/v1/analytics/summary — aggregate score trends, pillar averages, and session comparison data from all completed sessions' evaluation_report artifacts. | ✅ Completed |
+| **F2** | **Backend: Audio Recording Download Endpoint** | backend/api/routers/voice.py | GET /api/v1/voice/recording/{session_id} — stream the saved sessions/{session_id}/recording.wav file to the browser. Required for History audio player. This unblocks P3-5. | Pending |
+| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. | Pending |
+| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | Pending |
+| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | Pending |
+| **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | Pending |
+| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | Pending |
+| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | Pending |
 
 ---
 
@@ -95,7 +95,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Reduced Motion Support**: @media (prefers-reduced-motion: reduce) applied in animations.css — confirmed present.
 - ✅ **Iconography Audit**: All emojis replaced with Lucide SVG icons across WelcomeBanner, LaunchPractice, LastSessionCard, TemplatePicker.
 - ✅ **Agent Skills**: 10 frontend UI/UX skills active in .agents/skills/, Rule 12/13/14/15 in both AGENTS.md and doc/rule.md.
-- ✅ **Priority 1 Bug Fixes Verified**: P1-1, P1-2, P1-3, P1-4, P1-5 completed and verified with clean `npm run build` (1,693 modules, 0 errors) and backend `scan_code_quality.py`.
+- ✅ **Date Range Filter Enhancement**: Added 7d, 15d, 30d, 60d, 90d, All Time, and Custom Range picker (days count & date picker) across backend (`analytics.py`) and frontend (`Analytics.jsx`).
 - ✅ **Git Commit — Phase 2 Full Frontend**: Committed feat(frontend): add Configure Practice Track, Live Mock Interview room, Report Scorecard, History, Auth, Error Boundary, animated Eva persona (hash 55787bc).
 
 ---
@@ -104,7 +104,6 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 
 | Item | Notes |
 |---|---|
-| analyticsService.js | Entirely hardcoded fiction — blocked until real analytics backend endpoint (F1) is built |
 | History.jsx defaultHistoryRecords | Fake mock data fallback — must be replaced with proper empty state (P2-1) |
 | PostgreSQL Migration | DATABASE_URL swap from SQLite to PostgreSQL/Supabase not yet production-validated |
 | Admin Evaluation View | RBAC-protected admin endpoints for accessing all candidate sessions not yet built |
