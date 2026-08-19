@@ -51,7 +51,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **P2-1** | **Replace hardcoded fallback mock records in History page** | frontend/src/pages/History.jsx:35-95 | defaultHistoryRecords array with fake sessions (fake dates/scores) shows up when backend is empty | ✅ Completed (Wired to real backend `/history/sessions` with glassmorphic empty state onboarding CTA) |
 | **P2-2** | **Wire Analytics page to real session data** | frontend/src/services/analyticsService.js | Skill matrix, insights, and session comparison data are all static hardcoded fiction. Backend /setup/sessions is called but only used for totalSessions count — rest is fabricated | ✅ Completed (Wired `analyticsService.js` to real backend `/analytics/summary` endpoint) |
 | **P2-3** | **Fix wrong domain copy in Analytics insights** | frontend/src/services/analyticsService.js:33,38,43 | Insights mention "clinical histories", "shared decision-making", "non-verbal cues" — medical interview domain copy, wrong for software tech interview platform | ✅ Completed (Synthesized real candidate evaluation report insights replacing medical copy) |
-| **P2-4** | **Real skill telemetry in Dashboard StatsRow** | frontend/src/hooks/useDashboard.js:76-87 | Pull from latest session's report.pillar_scores via the Reports API to compute real strongest/weakest domain | ❌ Incomplete (Pending) |
+| **P2-4** | **Real skill telemetry in Dashboard StatsRow** | frontend/src/hooks/useDashboard.js:76-87 | Pull from latest session's report.pillar_scores via the Reports API to compute real strongest/weakest domain | ✅ Completed (Wired `useDashboard.js` to `/analytics/summary?time_range=all` to compute real strongest/weakest domain & AI feedback) |
 
 ---
 
@@ -64,7 +64,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **P3-3** | **Interview Room — mic permission denied UI** | frontend/src/hooks/useInterviewSession.js:160-162 | Catches getUserMedia errors and shows red alert card instructing user to enable mic | ✅ Completed |
 | **P3-4** | **Report Page — "New Practice" CTA** | frontend/src/pages/Report.jsx | Added prominent Next Steps card with "Start New Session", "Dashboard", and "View Analytics" buttons | ✅ Completed |
 | **P3-5** | **History Page — wire real audio player** | frontend/src/pages/History.jsx | Audio player modal with interactive seek bar, waveform animation, rewind/forward 10s, volume & speed controls | ✅ Completed |
-| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Add shimmer skeleton placeholders while loading === true in useDashboard.js | ❌ Incomplete (Pending) |
+| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Add shimmer skeleton placeholders while loading === true in useDashboard.js | ✅ Completed (Added `.skeleton-shimmer` animation in `animations.css` and passed `loading` prop across `StatsRow` & `StatCard`) |
 
 ---
 
@@ -74,9 +74,9 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 |---|---|---|---|---|
 | **F1** | **Backend: Real Analytics Aggregation Endpoint** | backend/api/routers/analytics.py (NEW) | GET /api/v1/analytics/summary — aggregate score trends, pillar averages, and session comparison data from all completed sessions' evaluation_report artifacts. | ✅ Completed |
 | **F2** | **Backend: Audio Recording Download Endpoint** | backend/api/routers/voice.py | GET /api/v1/voice/recording/{session_id} — stream the saved sessions/{session_id}/recording.wav file to the browser. | ✅ Completed |
-| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. | ❌ Incomplete (Pending) |
-| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | ❌ Incomplete (Pending) |
-| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | ❌ Incomplete (Pending) |
+| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. | ✅ Completed (Added `questionSecondsElapsed` tracking reset on `questionIndex` changes, header `This Q` timer pill badge, & pacing helper badge above question text) |
+| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | ✅ Completed (Created `Settings.jsx` page with candidate profile identity, track target, strictness level radios, password change form, and audio preferences; mounted `/settings` route) |
+| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | ✅ Completed (Built interactive glassmorphic Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA) |
 | **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | ❌ Incomplete (Pending) |
 | **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | ❌ Incomplete (Pending) |
 | **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | ❌ Incomplete (Pending) |
@@ -103,6 +103,10 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Git Commit — Real-Time History & Interactive Audio Player**: Committed feat(history): add real-time history API, question tree inspection modal, & interactive audio listening player (hash 6df33b4).
 - ✅ **Git Commit — Real-Time Analytics & Glassmorphic UI**: Committed feat(analytics): add real-time backend analytics endpoint and custom glassmorphic dropdown UI (hash e0d19cd).
 - ✅ **Git Commit — Phase 2 Full Frontend**: Committed feat(frontend): add Configure Practice Track, Live Mock Interview room, Report Scorecard, History, Auth, Error Boundary, animated Eva persona (hash 55787bc).
+- ✅ **Real Skill Telemetry & Shimmer Skeleton Loaders (P2-4 & P3-6)**: Wired `useDashboard.js` to `/analytics/summary?time_range=all` endpoint, extracting top skill score & growth area telemetry for Dashboard `StatsRow`. Added `.skeleton-shimmer` animation in `animations.css` and passed `loading` state to `StatsRow` & `StatCard`. Verified `npm run build` with 0 errors.
+- ✅ **Per-Question Timer & Pacing Helper (F3)**: Added per-question timer state (`questionSecondsElapsed`) reset on `questionIndex` advancement, rendered green `This Q: mm:ss` live badge in Interview header, and embedded pacing guide badge (`Question X Timer: mm:ss | Target: ~2-3 mins`) above current question text. Verified `npm run build` with 0 errors.
+- ✅ **Candidate Settings & Notification Dropdown (F4 & F5)**: Built full glassmorphic Candidate Settings page (`Settings.jsx`) with display name, track target, strictness level radio cards, password update form, and audio toggles; wired `/settings` route & Navbar sub-menu. Built interactive Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA. Verified `npm run build` (1,695 modules, 0 errors).
+- ✅ **Git Commit — Candidate Settings, Per-Question Timer & Notifications**: Committed feat(frontend): add candidate settings page, per-question pacing timer, & notification bell dropdown.
 
 ---
 

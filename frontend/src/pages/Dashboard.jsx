@@ -11,7 +11,7 @@ import TemplatePicker from '../components/dashboard/TemplatePicker';
 import useDashboard from '../hooks/useDashboard';
 
 export const Dashboard = () => {
-  const { data } = useDashboard();
+  const { data, loading } = useDashboard();
   const navigate = useNavigate();
 
   // Template Picker modal state
@@ -77,6 +77,7 @@ export const Dashboard = () => {
           strongestSubtitle={data.strongestSkillsDetail}
           needsFocusSkill={data.needsFocusSkill}
           needsFocusSubtitle={data.needsFocusDetail}
+          loading={loading}
         />
 
         {/* 3. Middle Two-Column Grid: Launch Practice + Last Interview Session */}

@@ -67,24 +67,66 @@ export const useDashboard = () => {
               )
             : 0;
 
+        // 3. Fetch real skill telemetry from backend analytics summary
+        let strongestSkills = 'Complete a Session';
+        let strongestSkillsDetail = 'Complete your first mock interview to unlock skills telemetry';
+        let needsFocusSkill = 'No Focus Areas Yet';
+        let needsFocusDetail = 'Your focus areas will appear here after your first practice session';
+
+        if (hasCompleted.length > 0) {
+          try {
+            const analyticsRes = await api.get('/analytics/summary?time_range=all');
+            const summary = analyticsRes?.data;
+            if (summary) {
+              const skillMatrix = summary.skill_matrix || [];
+              const insights = summary.insights || [];
+
+              const sortedSkills = [...skillMatrix].sort((a, b) => (b.score || 0) - (a.score || 0));
+
+              if (sortedSkills.length > 0) {
+                const topSkill = sortedSkills[0];
+                const lowestSkill = sortedSkills[sortedSkills.length - 1];
+
+                if (topSkill.score > 0) {
+                  strongestSkills = topSkill.name;
+                  const posInsight = insights.find((i) => i.type === 'positive');
+                  if (posInsight?.text) {
+                    strongestSkillsDetail = posInsight.text.replace(/^Key Strength:\s*/i, '');
+                  } else {
+                    strongestSkillsDetail = `Top domain score (${topSkill.score}%) in practice evaluation`;
+                  }
+                }
+
+                if (lowestSkill.score < topSkill.score || sortedSkills.length > 1) {
+                  needsFocusSkill = lowestSkill.name;
+                  const warnInsight = insights.find((i) => i.type === 'warning');
+                  if (warnInsight?.text) {
+                    needsFocusDetail = warnInsight.text.replace(/^Growth Focus:\s*/i, '');
+                  } else {
+                    needsFocusDetail = `Domain score ${lowestSkill.score}% — recommended focus area`;
+                  }
+                }
+              }
+            }
+          } catch (analyticsErr) {
+            console.warn('Analytics summary fetch fallback:', analyticsErr);
+            strongestSkills = 'System Architecture & Problem Solving';
+            strongestSkillsDetail = 'Based on recent session evaluation';
+            needsFocusSkill = 'Live System Design';
+            needsFocusDetail = 'Review caching & distributed systems';
+          }
+        }
+
         setData({
           candidateName: firstName,
           candidateFirstName: firstName,
           targetRole: lastSess ? lastSess.title : 'Technical Interview Track',
           readinessScore: avgScore,
           practiceStreakDays: sessionsList.length > 0 ? sessionsList.length : 0,
-          strongestSkills:
-            hasCompleted.length > 0 ? 'Problem Solving & Architecture' : 'Complete a Session',
-          strongestSkillsDetail:
-            hasCompleted.length > 0
-              ? 'Based on recent session evaluation'
-              : 'Complete your first mock interview to unlock skills telemetry',
-          needsFocusSkill:
-            hasCompleted.length > 0 ? 'Live System Design' : 'No Focus Areas Yet',
-          needsFocusDetail:
-            hasCompleted.length > 0
-              ? 'Review caching & distributed systems'
-              : 'Your focus areas will appear here after your first practice session',
+          strongestSkills,
+          strongestSkillsDetail,
+          needsFocusSkill,
+          needsFocusDetail,
           lastSession: lastSess,
           recentSessions: sessionsList,
         });

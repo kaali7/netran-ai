@@ -10,6 +10,7 @@ import {
   Mic,
   Square,
   Clock,
+  Timer,
   ArrowLeft,
   RotateCcw,
   Pause,
@@ -41,6 +42,7 @@ export const Interview = () => {
 
   // Timer & UI State
   const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const [questionSecondsElapsed, setQuestionSecondsElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   // Auto-navigate when session naturally ends
@@ -51,11 +53,17 @@ export const Interview = () => {
     }
   }, [isSessionDone, navigate, sessionId]);
 
+  // Reset per-question timer whenever questionIndex changes
+  useEffect(() => {
+    setQuestionSecondsElapsed(0);
+  }, [questionIndex]);
+
   // Timer effect starts only when connected
   useEffect(() => {
     if (!isConnected || isPaused) return;
     const interval = setInterval(() => {
       setSecondsElapsed((prev) => prev + 1);
+      setQuestionSecondsElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, [isConnected, isPaused]);
@@ -79,6 +87,7 @@ export const Interview = () => {
 
   const handleResetTimer = () => {
     setSecondsElapsed(0);
+    setQuestionSecondsElapsed(0);
   };
 
   const handleTogglePause = () => {
@@ -157,11 +166,34 @@ export const Interview = () => {
         </div>
 
         {/* Right Header Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* Timer Display */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--on-surface)', fontWeight: '700', fontSize: '15px' }}>
-            <Clock size={16} style={{ color: 'var(--primary)' }} />
-            <span>{formatTime(secondsElapsed)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Per-Question Live Timer Badge */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              fontWeight: '700',
+              padding: '5px 12px',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              color: '#166534',
+              borderRadius: '9999px',
+            }}
+            title="Time spent on current question"
+          >
+            <Timer size={14} style={{ color: '#16a34a' }} />
+            <span>This Q: {formatTime(questionSecondsElapsed)}</span>
+          </div>
+
+          {/* Total Session Timer Display */}
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--on-surface)', fontWeight: '700', fontSize: '14px' }}
+            title="Total session duration"
+          >
+            <Clock size={15} style={{ color: 'var(--primary)' }} />
+            <span>Total: {formatTime(secondsElapsed)}</span>
           </div>
 
           {/* User Profile Initials */}
@@ -381,6 +413,28 @@ export const Interview = () => {
               </span>
             </div>
           )}
+
+          {/* Per-Question Pacing Helper Badge */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#4b5563',
+              marginBottom: '16px',
+              background: '#f9fafb',
+              padding: '5px 14px',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <Timer size={13} style={{ color: '#16a34a' }} />
+            <span>Question {questionIndex + 1} Timer: <strong style={{ color: '#111827' }}>{formatTime(questionSecondsElapsed)}</strong></span>
+            <span style={{ color: '#d1d5db' }}>|</span>
+            <span style={{ color: '#6b7280' }}>Target: ~2-3 mins</span>
+          </div>
 
           {/* Interview Question Text */}
           <h2

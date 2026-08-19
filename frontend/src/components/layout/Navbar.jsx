@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles, LayoutDashboard, BarChart2 } from 'lucide-react';
+import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles, LayoutDashboard, BarChart2, CheckCircle2, Clock, Check } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 
 export const Navbar = ({ userName }) => {
@@ -8,7 +8,42 @@ export const Navbar = ({ userName }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const menuRef = useRef(null);
+  const notifRef = useRef(null);
+
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: 'Multimodal Evaluation Report Ready',
+      message: 'Your latest mock interview evaluation and audio telemetry report is ready.',
+      time: '10m ago',
+      read: false,
+      type: 'report',
+    },
+    {
+      id: 2,
+      title: 'Practice Track Initialized',
+      message: 'Eva Stage 2 Question Tree generated for your Senior Fullstack track.',
+      time: '1h ago',
+      read: false,
+      type: 'setup',
+    },
+    {
+      id: 3,
+      title: 'Welcome to Netran AI',
+      message: 'Your candidate profile is active. Launch a practice mock to start.',
+      time: '1d ago',
+      read: true,
+      type: 'welcome',
+    },
+  ]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   // Determine display name from prop, user email, or fallback
   const displayName =
@@ -23,11 +58,14 @@ export const Navbar = ({ userName }) => {
     navigate('/login', { replace: true });
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -165,27 +203,146 @@ export const Navbar = ({ userName }) => {
 
         {/* Right User Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* Notification Bell */}
-          <button
-            aria-label="Notifications"
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--on-surface-variant)',
-              cursor: 'pointer',
-              transition: 'background 150ms ease',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = '#edeef0')}
-            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            <Bell size={18} />
-          </button>
+          {/* Notification Bell Dropdown Container */}
+          <div ref={notifRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsNotifOpen((prev) => !prev)}
+              aria-label="Notifications"
+              aria-expanded={isNotifOpen}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                border: 'none',
+                background: isNotifOpen ? '#edeef0' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--on-surface-variant)',
+                cursor: 'pointer',
+                transition: 'background 150ms ease',
+                position: 'relative',
+              }}
+              onMouseOver={(e) => {
+                if (!isNotifOpen) e.currentTarget.style.background = '#edeef0';
+              }}
+              onMouseOut={(e) => {
+                if (!isNotifOpen) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#ef4444',
+                    border: '2px solid #ffffff',
+                  }}
+                />
+              )}
+            </button>
+
+            {/* Notification Dropdown Panel */}
+            {isNotifOpen && (
+              <div
+                className="animate-entrance"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  right: 0,
+                  width: '320px',
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.9)',
+                  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(101, 89, 123, 0.06)',
+                  padding: '14px',
+                  zIndex: 100,
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--on-surface)' }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          background: '#ede6f8',
+                          color: 'var(--primary)',
+                          padding: '2px 8px',
+                          borderRadius: '9999px',
+                        }}
+                      >
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: 'var(--primary)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Check size={12} />
+                      <span>Mark all read</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Notifications List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => {
+                        setNotifications((prev) =>
+                          prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                        );
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        background: n.read ? '#ffffff' : '#f7f5fb',
+                        border: n.read ? '1px solid #f0f1f2' : '1px solid #ede8f5',
+                        cursor: 'pointer',
+                        transition: 'all 150ms ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {!n.read && (
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#65597b', flexShrink: 0 }} />
+                          )}
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--on-surface)' }}>{n.title}</span>
+                        </div>
+                        <span style={{ fontSize: '10px', color: '#9ca3af', flexShrink: 0 }}>{n.time}</span>
+                      </div>
+                      <p style={{ fontSize: '11px', color: 'var(--on-surface-variant)', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                        {n.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* User Profile Pill & Dropdown Container */}
           <div ref={menuRef} style={{ position: 'relative' }}>
@@ -349,7 +506,7 @@ export const Navbar = ({ userName }) => {
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);
-                    alert('Opening Account & Platform Settings...');
+                    navigate('/settings');
                   }}
                   style={{
                     width: '100%',

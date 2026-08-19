@@ -45,6 +45,14 @@ export const useAuthStore = create((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error, isLoading: false }),
   clearError: () => set({ error: null }),
+
+  updateUser: (updatedFields) => {
+    set((state) => {
+      const newUser = { ...state.user, ...updatedFields };
+      localStorage.setItem('netran_user', JSON.stringify(newUser));
+      return { user: newUser };
+    });
+  },
 }));
 
 export default useAuthStore;
