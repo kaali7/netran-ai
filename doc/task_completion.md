@@ -51,7 +51,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **P2-1** | **Replace hardcoded fallback mock records in History page** | frontend/src/pages/History.jsx:35-95 | defaultHistoryRecords array with fake sessions (fake dates/scores) shows up when backend is empty | ✅ Completed (Wired to real backend `/history/sessions` with glassmorphic empty state onboarding CTA) |
 | **P2-2** | **Wire Analytics page to real session data** | frontend/src/services/analyticsService.js | Skill matrix, insights, and session comparison data are all static hardcoded fiction. Backend /setup/sessions is called but only used for totalSessions count — rest is fabricated | ✅ Completed (Wired `analyticsService.js` to real backend `/analytics/summary` endpoint) |
 | **P2-3** | **Fix wrong domain copy in Analytics insights** | frontend/src/services/analyticsService.js:33,38,43 | Insights mention "clinical histories", "shared decision-making", "non-verbal cues" — medical interview domain copy, wrong for software tech interview platform | ✅ Completed (Synthesized real candidate evaluation report insights replacing medical copy) |
-| **P2-4** | **Real skill telemetry in Dashboard StatsRow** | frontend/src/hooks/useDashboard.js:76-87 | strongestSkills and needsFocusSkill return hardcoded text even when completed sessions exist — never reads real report data | Pull from latest session's report.pillar_scores via the Reports API to compute real strongest/weakest domain |
+| **P2-4** | **Real skill telemetry in Dashboard StatsRow** | frontend/src/hooks/useDashboard.js:76-87 | Pull from latest session's report.pillar_scores via the Reports API to compute real strongest/weakest domain | ❌ Incomplete (Pending) |
 
 ---
 
@@ -64,7 +64,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **P3-3** | **Interview Room — mic permission denied UI** | frontend/src/hooks/useInterviewSession.js:160-162 | Catches getUserMedia errors and shows red alert card instructing user to enable mic | ✅ Completed |
 | **P3-4** | **Report Page — "New Practice" CTA** | frontend/src/pages/Report.jsx | Added prominent Next Steps card with "Start New Session", "Dashboard", and "View Analytics" buttons | ✅ Completed |
 | **P3-5** | **History Page — wire real audio player** | frontend/src/pages/History.jsx | Audio player modal with interactive seek bar, waveform animation, rewind/forward 10s, volume & speed controls | ✅ Completed |
-| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Add shimmer skeleton placeholders while loading === true in useDashboard.js | Pending |
+| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Add shimmer skeleton placeholders while loading === true in useDashboard.js | ❌ Incomplete (Pending) |
 
 ---
 
@@ -74,12 +74,12 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 |---|---|---|---|---|
 | **F1** | **Backend: Real Analytics Aggregation Endpoint** | backend/api/routers/analytics.py (NEW) | GET /api/v1/analytics/summary — aggregate score trends, pillar averages, and session comparison data from all completed sessions' evaluation_report artifacts. | ✅ Completed |
 | **F2** | **Backend: Audio Recording Download Endpoint** | backend/api/routers/voice.py | GET /api/v1/voice/recording/{session_id} — stream the saved sessions/{session_id}/recording.wav file to the browser. | ✅ Completed |
-| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. | Pending |
-| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | Pending |
-| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | Pending |
-| **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | Pending |
-| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | Pending |
-| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | Pending |
+| **F3** | **Interview Room: Question Timer Per-Question** | frontend/src/pages/Interview.jsx | Add a per-question time indicator to the Interview Room header so candidates can self-regulate pacing. | ❌ Incomplete (Pending) |
+| **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | ❌ Incomplete (Pending) |
+| **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | ❌ Incomplete (Pending) |
+| **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | ❌ Incomplete (Pending) |
+| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | ❌ Incomplete (Pending) |
+| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | ❌ Incomplete (Pending) |
 
 ---
 
