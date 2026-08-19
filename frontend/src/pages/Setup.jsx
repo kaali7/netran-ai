@@ -163,14 +163,17 @@ export const Setup = () => {
 
       {/* ── Top Bar Header ────────────────────────────────────────────────── */}
       <header
+        className="navbar-inner-container"
         style={{
           width: '100%',
           maxWidth: 'var(--container-max)',
           margin: '0 auto',
-          padding: '24px 24px 12px 24px',
+          padding: '16px 36px 12px 36px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
         }}
       >
         <button
@@ -189,7 +192,7 @@ export const Setup = () => {
           <span>Back to Dashboard</span>
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: 'var(--primary)' }}>
             <Sparkles size={18} />
             <span>Netran AI</span>
@@ -222,7 +225,7 @@ export const Setup = () => {
             >
               {user?.email?.charAt(0).toUpperCase() || 'C'}
             </div>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--on-surface)' }}>
+            <span className="desktop-nav-user-text" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--on-surface)' }}>
               {user?.email || 'Candidate'}
             </span>
           </div>

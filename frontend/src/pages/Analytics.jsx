@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
+import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { getAggregatedAnalytics } from '../services/analyticsService';
@@ -113,7 +114,7 @@ export const Analytics = () => {
       <Navbar />
 
       {/* Main Container */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <PageWrapper>
         {/* Page Title & Controls Bar */}
         <div
           style={{
@@ -435,7 +436,7 @@ export const Analytics = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '24px',
             marginBottom: '24px',
           }}
@@ -443,7 +444,7 @@ export const Analytics = () => {
           {/* COMPOSITE READINESS SCORE CARD */}
           <Card
             style={{
-              padding: '32px',
+              padding: '20px 16px',
               background: '#ffffff',
               borderRadius: '24px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
@@ -454,42 +455,44 @@ export const Analytics = () => {
             }}
           >
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', margin: '0 0 8px 0', letterSpacing: '-0.01em' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
                 Composite Readiness Score
               </h2>
-              <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 28px 0', lineHeight: '1.5' }}>
+              <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 14px 0', lineHeight: '1.4' }}>
                 Overall interview readiness based on weighted aggregation of communication, technical knowledge, and empathy metrics.
               </p>
 
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
                 {/* Big Score Display */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '48px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                  <span style={{ fontSize: '42px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
                     {data.compositeScore}
                   </span>
-                  <span style={{ fontSize: '18px', fontWeight: '700', color: '#6b7280' }}>
+                  <span style={{ fontSize: '16px', fontWeight: '700', color: '#6b7280' }}>
                     /100
                   </span>
                 </div>
 
-                {/* Right Info Box inside card */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Info Box inside card - side by side on mobile */}
+                <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '8px', flex: 1, minWidth: '220px' }}>
                   {/* Trend Pill */}
                   <div
                     style={{
+                      flex: 1,
+                      minWidth: '110px',
                       background: '#fafafa',
                       border: '1px solid #f0f0f0',
                       borderRadius: '12px',
-                      padding: '8px 14px',
+                      padding: '6px 10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: '16px',
+                      gap: '8px',
                     }}
                   >
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>Trend (30d)</span>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', background: '#dcfce7', padding: '3px 8px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <TrendingUp size={12} />
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280' }}>Trend (30d)</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', background: '#dcfce7', padding: '2px 6px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <TrendingUp size={11} />
                       +{data.trendPercent}%
                     </span>
                   </div>
@@ -497,16 +500,18 @@ export const Analytics = () => {
                   {/* Strongest Area */}
                   <div
                     style={{
+                      flex: 1.2,
+                      minWidth: '130px',
                       background: '#fafafa',
                       border: '1px solid #f0f0f0',
                       borderRadius: '12px',
-                      padding: '8px 14px',
+                      padding: '6px 10px',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280' }}>Strongest Area</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827', marginTop: '2px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '600', color: '#6b7280' }}>Strongest Area</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#111827', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {data.strongestArea}
                     </span>
                   </div>
@@ -515,8 +520,8 @@ export const Analytics = () => {
             </div>
 
             {/* Horizontal Spectrum Slider Bar */}
-            <div>
-              <div style={{ position: 'relative', width: '100%', height: '10px', background: '#f3f4f6', borderRadius: '9999px', overflow: 'hidden', marginBottom: '8px' }}>
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ position: 'relative', width: '100%', height: '8px', background: '#f3f4f6', borderRadius: '9999px', overflow: 'hidden', marginBottom: '6px' }}>
                 <div
                   style={{
                     width: `${data.compositeScore}%`,
@@ -526,7 +531,7 @@ export const Analytics = () => {
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#6b7280' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700', color: '#6b7280' }}>
                 <span>Novice</span>
                 <span>Proficient</span>
                 <span>Expert</span>
@@ -534,10 +539,11 @@ export const Analytics = () => {
             </div>
           </Card>
 
+
           {/* EVA'S INSIGHTS CARD */}
           <Card
             style={{
-              padding: '32px',
+              padding: '24px 20px',
               background: '#ffffff',
               borderRadius: '24px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
@@ -586,14 +592,14 @@ export const Analytics = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '24px',
           }}
         >
           {/* AGGREGATED SKILL MATRIX CARD */}
           <Card
             style={{
-              padding: '32px',
+              padding: '24px 20px',
               background: '#ffffff',
               borderRadius: '24px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
@@ -629,13 +635,14 @@ export const Analytics = () => {
           {/* SESSION COMPARISON BAR CHART CARD */}
           <Card
             style={{
-              padding: '32px',
+              padding: '24px 20px',
               background: '#ffffff',
               borderRadius: '24px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)',
               display: 'flex',
               flexDirection: 'column',
+
               justifyContent: 'space-between',
             }}
           >
@@ -699,9 +706,10 @@ export const Analytics = () => {
             </div>
           </Card>
         </div>
-      </main>
+      </PageWrapper>
     </div>
   );
 };
 
 export default Analytics;
+

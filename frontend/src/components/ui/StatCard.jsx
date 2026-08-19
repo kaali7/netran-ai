@@ -35,7 +35,7 @@ export const StatCard = ({
   return (
     <div className={`${cardTypeClass} ${className}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="text-label-xs" style={{ color: type === 'focus' ? '#ba1a1a' : 'var(--on-surface-variant)' }}>
+        <span className="text-label-xs stat-card-title-text" style={{ color: type === 'focus' ? '#ba1a1a' : 'var(--on-surface-variant)' }}>
           {title}
         </span>
         {Icon && <Icon size={16} color={type === 'focus' ? '#ba1a1a' : 'var(--primary)'} />}
@@ -43,12 +43,11 @@ export const StatCard = ({
 
       <div style={{ margin: '8px 0 4px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {type === 'streak' && <Flame size={22} style={{ color: '#f97316', flexShrink: 0 }} />}
+          {type === 'streak' && <Flame size={20} style={{ color: '#f97316', flexShrink: 0 }} />}
           <div
-            className="text-stats"
+            className="text-stats stat-card-value-text"
             style={{
               color: type === 'focus' ? '#ba1a1a' : type === 'strong' ? '#65597b' : 'var(--on-surface)',
-              fontSize: type === 'strong' ? '20px' : '30px',
               fontWeight: 800,
               lineHeight: 1.2,
             }}
@@ -64,9 +63,8 @@ export const StatCard = ({
       </div>
 
       <div
-        className="text-body-sm"
+        className="text-body-sm stat-card-subtitle-text"
         style={{
-          fontSize: '12px',
           color: type === 'focus' ? '#7f3030' : 'var(--on-surface-variant)',
           marginTop: '6px',
         }}
@@ -75,6 +73,7 @@ export const StatCard = ({
       </div>
     </div>
   );
+
 };
 
 export default StatCard;

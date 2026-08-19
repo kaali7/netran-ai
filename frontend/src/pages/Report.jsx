@@ -29,8 +29,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
+import PageWrapper from '../components/layout/PageWrapper';
 import useReports from '../hooks/useReports';
 import useAuth from '../hooks/useAuth';
+
 
 export const Report = () => {
   const navigate = useNavigate();
@@ -272,7 +274,8 @@ export const Report = () => {
       </header>
 
       {/* Main Page Container */}
-      <div className="report-page-wrapper" style={{ maxWidth: '1200px', margin: '32px auto 0 auto', padding: '0 24px' }}>
+      <PageWrapper className="report-page-wrapper">
+
         
         {/* PRINT-ONLY HEADER BANNER */}
         <div className="print-only-header" style={{ display: 'none', marginBottom: '24px' }}>
@@ -994,9 +997,10 @@ export const Report = () => {
             </button>
           </div>
         </Card>
-      </div>
+      </PageWrapper>
     </div>
   );
 };
 
 export default Report;
+

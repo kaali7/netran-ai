@@ -8,9 +8,10 @@ export const SessionsTable = ({
   onViewFeedback,
 }) => {
   return (
-    <Card className="animate-entrance animate-delay-3" style={{ padding: '28px 32px' }}>
+    <Card className="animate-entrance animate-delay-3 sessions-table-card" style={{ padding: '24px 28px' }}>
       {/* Header with Title and + New Workspace Button */}
       <div
+        className="sessions-table-header"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -19,27 +20,17 @@ export const SessionsTable = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>📜</span>
-          <h2 className="text-headline-lg" style={{ fontSize: '20px' }}>
+          <span style={{ fontSize: '18px' }}>📜</span>
+          <h2 className="text-headline-lg sessions-table-title">
             Recent Practice Sessions & Feedback
           </h2>
         </div>
 
         <button
           onClick={onNewWorkspace}
-          className="btn"
-          style={{
-            background: 'var(--primary)',
-            color: '#ffffff',
-            padding: '10px 18px',
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            borderRadius: 'var(--radius-full)',
-          }}
+          className="btn new-workspace-btn"
         >
-          <Plus size={16} strokeWidth={2.4} />
+          <Plus size={15} strokeWidth={2.4} />
           <span>New Workspace</span>
         </button>
       </div>
@@ -98,7 +89,7 @@ export const SessionsTable = ({
                   <FileText size={20} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--on-surface)' }}>
+                  <div className="session-title-text">
                     Session #{session.number}: {session.title}
                   </div>
                   <div
@@ -138,6 +129,7 @@ export const SessionsTable = ({
                     borderColor: '#d1d3d6',
                     color: 'var(--on-surface)',
                     fontWeight: 600,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   View Feedback
@@ -147,6 +139,7 @@ export const SessionsTable = ({
           ))}
         </div>
       )}
+
     </Card>
   );
 };

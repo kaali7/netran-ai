@@ -114,15 +114,17 @@ export const Interview = () => {
           background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-          padding: '14px 28px',
+          padding: '12px 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
           boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
         }}
       >
         {/* Left Branding */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button
             onClick={() => navigate('/setup')}
             style={{
@@ -166,7 +168,7 @@ export const Interview = () => {
         </div>
 
         {/* Right Header Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {/* Per-Question Live Timer Badge */}
           <div
             style={{
@@ -195,6 +197,7 @@ export const Interview = () => {
             <Clock size={15} style={{ color: 'var(--primary)' }} />
             <span>Total: {formatTime(secondsElapsed)}</span>
           </div>
+
 
           {/* User Profile Initials */}
           <div

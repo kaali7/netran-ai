@@ -78,7 +78,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **F4** | **Settings / Profile Page** | frontend/src/pages/Settings.jsx (NEW) | Candidate account settings — update display name, change password, notification preferences. Navbar "Settings" icon currently navigates nowhere. | ✅ Completed (Created `Settings.jsx` page with candidate profile identity, track target, strictness level radios, password change form, and audio preferences; mounted `/settings` route) |
 | **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | ✅ Completed (Built interactive glassmorphic Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA) |
 | **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | ✅ Completed (Added `duration_seconds`, `duration_text`, & `question_count` calculations across `/setup/sessions` & `/history/sessions` endpoints; mapped fields in `useDashboard.js`) |
-| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | ❌ Incomplete (Pending) |
+| **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | ✅ Completed (Implemented responsive mobile layout breakpoints, hamburger navigation drawer in `Navbar.jsx`, touch-target scaling, table overflow scrolling, and card grid stacking across mobile and tablet viewports following `ui-ux-pro-max` guidelines) |
 | **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | ✅ Completed (Wired "Export PDF / Print" button to `window.print()`, added `@media print` CSS rules in `index.css`, created dedicated `.print-only-header` banner, forced all turn accordion bodies to display during print, and wired "Share" button to copy report URL to clipboard) |
 
 ---
@@ -110,7 +110,22 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Session Duration Metadata & Question Count (F6)**: Calculated `duration_seconds`, `duration_text`, and `question_count` across `/setup/sessions` and `/history/sessions` backend endpoints (`setup.py`, `history.py`, `schemas.py`) and mapped fields in `useDashboard.js`. Verified backend syntax OK & `npm run build` 0 errors.
 - ✅ **Git Commit — Session Duration & Question Count Metadata**: Committed feat(api): add session duration_seconds, duration_text, and question_count fields to setup and history endpoints (hash ed309f0).
 - ✅ **Export Report as PDF & Print Styling (F8)**: Wired "Export PDF / Print" button to `window.print()`, added `@media print` CSS rules in `index.css`, created dedicated `.print-only-header` banner, forced all turn accordion bodies to display during print, and wired "Share" button to copy report URL to clipboard. Verified `npm run build` (1,695 modules, 0 errors).
-- ✅ **Git Commit — Export Report as PDF & Print Styling (F8)**: Committed feat(report): add export report PDF print engine, print header banner, & share URL action.
+- ✅ **Git Commit — Export Report as PDF & Print Styling (F8)**: Committed feat(report): add export report PDF print engine, print header banner, & share URL action (hash 37395cf).
+- ✅ **Mobile Responsive Layout Pass, History Data Table Text Scaling & Mobile Dropdowns (F7)**: Applied `ui-ux-pro-max` guidelines across all pages and CSS tokens (`index.css`, `glass.css`, `Navbar.jsx`, `Setup.jsx`, `Analytics.jsx`, `StatCard.jsx`, `SessionsTable.jsx`, `WelcomeBanner.jsx`, `History.jsx`), added `max-width: 100vw; overflow-x: hidden` to root, mobile fixed bottom navigation bar displaying strictly 3 primary tabs (`Dashboard`, `Analytics`, `History`), updated `.stats-grid-row` to 2x2 grid (2 rows) on mobile screens with responsive font scaling (`9.5px` titles, `13px-18px` stat values, `9.5px` subtitles), scaled History Data Table cells on mobile (`12px` role title fitting in 2 lines, `10.5px` status badges with no squishing/truncation, `11px` dates, `10.5px` action buttons), scaled History Filter Bar for mobile screens (100% search box, concise placeholder, 11.5px side-by-side buttons), scaled Welcome Banner & History Hero text sizes on mobile (`18px` titles, `12px` descriptions), scaled Sessions Table text sizes (`15px` title, `11.5px` button), defined 20px vertical grid gap on `.dashboard-split-grid`, fixed mobile dropdown panels with `position: fixed; top: 64px; left: 16px; right: 16px`, eliminated extra vertical gaps in Analytics Composite Readiness card, set header `zIndex: 1000` & profile dropdown `zIndex: 9999`, responsive card grids, touch target scaling (min 44px), and table horizontal scroll containers. Verified `npm run build` (1,695 modules, 0 errors).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---

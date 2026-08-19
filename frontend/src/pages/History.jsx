@@ -31,8 +31,10 @@ import {
   Radio,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
+import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
 import { getHistorySessions, getHistorySessionDetail, exportHistoryCSV } from '../services/historyService';
+
 
 export const History = () => {
   const navigate = useNavigate();
@@ -241,7 +243,8 @@ export const History = () => {
       <Navbar />
 
       {/* Main Content Area */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+      <PageWrapper>
+
         
         {/* HERO BANNER CARD */}
         <Card
@@ -253,10 +256,11 @@ export const History = () => {
             border: '1px solid rgba(229, 231, 235, 0.8)',
             boxShadow: '0 4px 24px rgba(101, 89, 123, 0.04)',
           }}
-          className="animate-entrance"
+          className="animate-entrance history-hero-card"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h1
+              className="history-hero-title"
               style={{
                 fontSize: '28px',
                 fontWeight: '800',
@@ -269,10 +273,11 @@ export const History = () => {
             </h1>
             <span style={{ fontSize: '26px' }}>📜</span>
           </div>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: '8px 0 0 0', lineHeight: '1.5' }}>
+          <p className="history-hero-subtitle" style={{ fontSize: '14px', color: '#6b7280', margin: '8px 0 0 0', lineHeight: '1.5' }}>
             Review past practice sessions, inspect generated 15-question trees, analyze resume skill match, and listen to continuous audio recordings.
           </p>
         </Card>
+
 
         {/* FILTER & CONTROLS BAR CONTAINER */}
         <Card
@@ -291,11 +296,13 @@ export const History = () => {
             zIndex: 50,
             boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
           }}
+          className="history-filter-card"
         >
           {/* Left Inputs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flex: 1, position: 'relative', zIndex: 60 }}>
+          <div className="history-filter-inputs" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flex: 1, position: 'relative', zIndex: 60 }}>
             {/* Search Input */}
             <div
+              className="history-search-box"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -303,13 +310,13 @@ export const History = () => {
                 background: '#f3f4f6',
                 borderRadius: '9999px',
                 padding: '8px 16px',
-                width: '240px',
+                minWidth: '220px',
               }}
             >
-              <Search size={16} style={{ color: '#9ca3af' }} />
+              <Search size={15} style={{ color: '#9ca3af', flexShrink: 0 }} />
               <input
                 type="text"
-                placeholder="Search by Topic / Role / Company..."
+                placeholder="Search sessions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -322,6 +329,7 @@ export const History = () => {
                 }}
               />
             </div>
+
 
             {/* Custom Glassmorphic Status Filter Dropdown */}
             <div ref={statusDropdownRef} style={{ position: 'relative', zIndex: 70 }}>
@@ -715,17 +723,18 @@ export const History = () => {
             border: '1px solid rgba(229, 231, 235, 0.8)',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)',
           }}
+          className="history-table-card"
         >
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '12px 16px' }}>DATE</th>
-                  <th style={{ padding: '12px 16px' }}>TRACK / ROLE</th>
-                  <th style={{ padding: '12px 16px' }}>STATUS</th>
-                  <th style={{ padding: '12px 16px' }}>SCORE</th>
-                  <th style={{ padding: '12px 16px' }}>RECORDING</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px' }}>DATE</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px' }}>TRACK / ROLE</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px' }}>STATUS</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px' }}>SCORE</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px' }}>RECORDING</th>
+                  <th className="history-table-header-cell" style={{ padding: '12px 16px', textAlign: 'right' }}>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
@@ -745,34 +754,34 @@ export const History = () => {
                       }}
                     >
                       {/* DATE */}
-                      <td style={{ padding: '18px 16px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                      <td className="history-date-cell" style={{ padding: '18px 16px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
                         {session.date_text || 'Recent'}
                       </td>
 
                       {/* TRACK / ROLE */}
-                      <td style={{ padding: '18px 16px' }}>
+                      <td className="history-role-cell" style={{ padding: '18px 16px' }}>
                         <div>
-                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827', display: 'block' }}>
+                          <span className="history-role-title" style={{ fontSize: '14px', fontWeight: '700', color: '#111827', display: 'block' }}>
                             {session.role_title}
                           </span>
-                          <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                          <span className="history-role-company" style={{ fontSize: '12px', color: '#6b7280' }}>
                             {session.company}
                           </span>
                         </div>
                       </td>
 
                       {/* STATUS */}
-                      <td style={{ padding: '18px 16px' }}>
+                      <td className="history-status-cell" style={{ padding: '18px 16px' }}>
                         {renderStatusBadge(session.status)}
                       </td>
 
                       {/* SCORE */}
-                      <td style={{ padding: '18px 16px', fontSize: '14px', fontWeight: '800', color: '#111827' }}>
+                      <td className="history-score-cell" style={{ padding: '18px 16px', fontSize: '14px', fontWeight: '800', color: '#111827' }}>
                         {session.score !== null && session.score !== undefined ? `${session.score}/100` : '—'}
                       </td>
 
                       {/* RECORDING LISTEN */}
-                      <td style={{ padding: '18px 16px' }}>
+                      <td className="history-recording-cell" style={{ padding: '18px 16px' }}>
                         <button
                           onClick={() => handleTogglePlay(session)}
                           style={{
@@ -793,7 +802,8 @@ export const History = () => {
                       </td>
 
                       {/* ACTIONS */}
-                      <td style={{ padding: '18px 16px', textAlign: 'right' }}>
+                      <td className="history-actions-cell" style={{ padding: '18px 16px', textAlign: 'right' }}>
+
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                           {/* Inspect Questions & Resume Analysis Button */}
                           <button
@@ -1387,10 +1397,11 @@ export const History = () => {
             </div>
           </div>
         )}
-      </main>
+      </PageWrapper>
     </div>
   );
 };
 
 export default History;
+
 

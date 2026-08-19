@@ -1,8 +1,9 @@
 import React from 'react';
 
-export const PageWrapper = ({ children }) => {
+export const PageWrapper = ({ children, className = '', style = {} }) => {
   return (
     <div
+      className={`page-wrapper-container ${className}`}
       style={{
         width: '100%',
         maxWidth: '100%',
@@ -11,6 +12,7 @@ export const PageWrapper = ({ children }) => {
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
+        ...style,
       }}
     >
       {children}
@@ -19,3 +21,4 @@ export const PageWrapper = ({ children }) => {
 };
 
 export default PageWrapper;
+

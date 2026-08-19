@@ -38,12 +38,13 @@ export const WelcomeBanner = ({
           <div className="text-label-xs" style={{ color: 'var(--primary)', marginBottom: '2px' }}>
             READINESS SCORE
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--on-surface)' }}>
+          <div className="readiness-capsule-text" style={{ fontSize: '14px', fontWeight: 600, color: 'var(--on-surface)' }}>
             You're {readinessPct}% ready for {targetRole} interviews.
           </div>
         </div>
       </div>
     </section>
+
   );
 };
 
