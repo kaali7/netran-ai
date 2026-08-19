@@ -106,7 +106,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Real Skill Telemetry & Shimmer Skeleton Loaders (P2-4 & P3-6)**: Wired `useDashboard.js` to `/analytics/summary?time_range=all` endpoint, extracting top skill score & growth area telemetry for Dashboard `StatsRow`. Added `.skeleton-shimmer` animation in `animations.css` and passed `loading` state to `StatsRow` & `StatCard`. Verified `npm run build` with 0 errors.
 - ✅ **Per-Question Timer & Pacing Helper (F3)**: Added per-question timer state (`questionSecondsElapsed`) reset on `questionIndex` advancement, rendered green `This Q: mm:ss` live badge in Interview header, and embedded pacing guide badge (`Question X Timer: mm:ss | Target: ~2-3 mins`) above current question text. Verified `npm run build` with 0 errors.
 - ✅ **Candidate Settings & Notification Dropdown (F4 & F5)**: Built full glassmorphic Candidate Settings page (`Settings.jsx`) with display name, track target, strictness level radio cards, password update form, and audio toggles; wired `/settings` route & Navbar sub-menu. Built interactive Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA. Verified `npm run build` (1,695 modules, 0 errors).
-- ✅ **Git Commit — Candidate Settings, Per-Question Timer & Notifications**: Committed feat(frontend): add candidate settings page, per-question pacing timer, & notification bell dropdown.
+- ✅ **Git Commit — Candidate Settings, Per-Question Timer & Notifications**: Committed feat(frontend): add candidate settings page, per-question pacing timer, & notification bell dropdown (hash 8bb86c6).
 
 ---
 
