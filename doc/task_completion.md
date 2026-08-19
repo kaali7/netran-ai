@@ -79,7 +79,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 | **F5** | **Notifications Bell** | frontend/src/components/layout/Navbar.jsx | Navbar Bell icon is purely decorative. Wire to a dropdown of system notifications (session ready, evaluation complete) or remove the icon entirely. | ✅ Completed (Built interactive glassmorphic Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA) |
 | **F6** | **Dashboard: Session Duration Metadata** | backend/api/routers/setup.py | Add duration_seconds and question_count fields to the session listing response so dashboard and history table can show interview duration without loading individual reports. | ✅ Completed (Added `duration_seconds`, `duration_text`, & `question_count` calculations across `/setup/sessions` & `/history/sessions` endpoints; mapped fields in `useDashboard.js`) |
 | **F7** | **Mobile Responsive Layout Pass** | All frontend pages & CSS | Pages currently render for desktop 1280px+. Add responsive breakpoints at 768px for Setup, Dashboard, and Report pages. | ❌ Incomplete (Pending) |
-| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | ❌ Incomplete (Pending) |
+| **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | "Download" / "Share" buttons on Report page are decorative. Wire to browser window.print() with print-specific CSS, or generate PDF via backend endpoint. | ✅ Completed (Wired "Export PDF / Print" button to `window.print()`, added `@media print` CSS rules in `index.css`, created dedicated `.print-only-header` banner, forced all turn accordion bodies to display during print, and wired "Share" button to copy report URL to clipboard) |
 
 ---
 
@@ -109,10 +109,14 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Git Commit — Candidate Settings, Per-Question Timer & Notifications**: Committed feat(frontend): add candidate settings page, per-question pacing timer, & notification bell dropdown (hash 8bb86c6).
 - ✅ **Session Duration Metadata & Question Count (F6)**: Calculated `duration_seconds`, `duration_text`, and `question_count` across `/setup/sessions` and `/history/sessions` backend endpoints (`setup.py`, `history.py`, `schemas.py`) and mapped fields in `useDashboard.js`. Verified backend syntax OK & `npm run build` 0 errors.
 - ✅ **Git Commit — Session Duration & Question Count Metadata**: Committed feat(api): add session duration_seconds, duration_text, and question_count fields to setup and history endpoints (hash ed309f0).
+- ✅ **Export Report as PDF & Print Styling (F8)**: Wired "Export PDF / Print" button to `window.print()`, added `@media print` CSS rules in `index.css`, created dedicated `.print-only-header` banner, forced all turn accordion bodies to display during print, and wired "Share" button to copy report URL to clipboard. Verified `npm run build` (1,695 modules, 0 errors).
+- ✅ **Git Commit — Export Report as PDF & Print Styling (F8)**: Committed feat(report): add export report PDF print engine, print header banner, & share URL action.
+
 
 ---
 
 ## 📋 Known Technical Debt
+
 
 | Item | Notes |
 |---|---|

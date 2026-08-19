@@ -219,3 +219,58 @@ button {
     gap: 24px;
   }
 }
+
+/* Print & PDF Export Styles */
+@media print {
+  /* Hide non-printable navigation, header bar, action buttons, and next steps card */
+  header,
+  nav,
+  .no-print,
+  .next-steps-card,
+  button {
+    display: none !important;
+  }
+
+  /* Reset body and background for white paper export */
+  html, body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .report-page-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Show dedicated print header */
+  .print-only-header {
+    display: block !important;
+  }
+
+  /* Force expandable turn accordion bodies to display when printing */
+  .turn-accordion-body {
+    display: block !important;
+  }
+
+  /* Avoid splitting cards across page breaks */
+  .card, .print-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* Ensure text colors print crisp */
+  h1, h2, h3, h4, p, span, div {
+    color: #111827 !important;
+  }
+}
+

@@ -23,17 +23,50 @@ import {
   FileText,
   Cpu,
   TrendingUp,
+  Printer,
+  Download,
+  Check,
+  ArrowRight,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import useReports from '../hooks/useReports';
+import useAuth from '../hooks/useAuth';
 
 export const Report = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { report, status, progressMessage, isLoading, error } = useReports(sessionId);
+  const { user } = useAuth();
+  const userInitial = user?.display_name ? user.display_name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'C');
+
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleShare = async () => {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   // Accordion state for turn breakdown
   const [expandedQuestions, setExpandedQuestions] = useState({});
+
 
   // Initialize first turn open when report loads
   useEffect(() => {
@@ -160,6 +193,7 @@ export const Report = () => {
     <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'var(--font-family, system-ui)' }}>
       {/* Top Header Bar */}
       <header
+        className="no-print"
         style={{
           background: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(12px)',
@@ -231,15 +265,35 @@ export const Report = () => {
                 fontSize: '13px',
               }}
             >
-              AS
+              {userInitial}
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Page Container */}
-      <div style={{ maxWidth: '1200px', margin: '32px auto 0 auto', padding: '0 24px' }}>
+      <div className="report-page-wrapper" style={{ maxWidth: '1200px', margin: '32px auto 0 auto', padding: '0 24px' }}>
         
+        {/* PRINT-ONLY HEADER BANNER */}
+        <div className="print-only-header" style={{ display: 'none', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #65597b', paddingBottom: '16px' }}>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: '800', color: '#65597b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={22} />
+                <span>Netran AI Candidate Evaluation Scorecard</span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#4b5563', margin: '4px 0 0 0' }}>
+                Autonomous Technical Interview Evaluation & Multimodal Audio Telemetry
+              </p>
+            </div>
+            <div style={{ textAlign: 'right', fontSize: '12px', color: '#4b5563', lineHeight: '1.5' }}>
+              <div>Session ID: <strong style={{ color: '#111827' }}>{sessionId}</strong></div>
+              <div>Date: {formatDate(generated_at)}</div>
+              <div>Hiring Signal: <strong style={{ color: signalStyle.text }}>{overall_hiring_signal}</strong></div>
+            </div>
+          </div>
+        </div>
+
         {/* SESSION SUMMARY BANNER CARD */}
         <Card
           style={{
@@ -250,7 +304,7 @@ export const Report = () => {
             border: '1px solid rgba(229, 231, 235, 0.8)',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
           }}
-          className="animate-entrance"
+          className="animate-entrance print-break-inside-avoid"
         >
           <div
             style={{
@@ -308,7 +362,49 @@ export const Report = () => {
             </div>
 
             {/* Banner Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handlePrint}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '9999px',
+                  background: '#65597b',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(101, 89, 123, 0.25)',
+                }}
+              >
+                <Printer size={15} />
+                <span>Export PDF / Print</span>
+              </button>
+
+              <button
+                onClick={handleShare}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '9999px',
+                  background: isCopied ? '#dcfce7' : '#ffffff',
+                  color: isCopied ? '#15803d' : '#374151',
+                  border: `1px solid ${isCopied ? '#bbf7d0' : '#e5e7eb'}`,
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {isCopied ? <Check size={15} /> : <Share2 size={15} />}
+                <span>{isCopied ? 'Link Copied!' : 'Share'}</span>
+              </button>
+
               <button
                 onClick={() => navigate('/setup')}
                 style={{
@@ -326,27 +422,7 @@ export const Report = () => {
                 }}
               >
                 <RotateCcw size={15} />
-                <span>Retake Practice Track</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '9999px',
-                  background: '#ffffff',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Share2 size={15} />
-                <span>Dashboard</span>
+                <span>Retake</span>
               </button>
             </div>
           </div>
@@ -738,91 +814,91 @@ export const Report = () => {
                       </div>
                     </div>
 
-                    {/* Expanded Body */}
-                    {isExpanded && (
+                    {/* Accordion Body */}
+                    <div
+                      className="turn-accordion-body"
+                      style={{
+                        display: isExpanded ? 'block' : 'none',
+                        padding: '20px 24px 24px 24px',
+                        borderTop: '1px solid #f3f4f6',
+                        background: '#ffffff',
+                      }}
+                    >
                       <div
                         style={{
-                          padding: '20px 24px 24px 24px',
-                          borderTop: '1px solid #f3f4f6',
-                          background: '#ffffff',
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                          gap: '20px',
                         }}
                       >
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                            gap: '20px',
-                          }}
-                        >
-                          {/* Left Column: Dual Transcripts */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {/* Candidate Live STT Transcript */}
-                            <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#6b7280' }}>
-                                <Mic size={14} />
-                                <span>Candidate Live Answer (STT)</span>
+                        {/* Left Column: Dual Transcripts */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                          {/* Candidate Live STT Transcript */}
+                          <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#6b7280' }}>
+                              <Mic size={14} />
+                              <span>Candidate Live Answer (STT)</span>
+                            </div>
+                            <p style={{ fontSize: '13px', fontStyle: 'italic', color: '#374151', margin: 0, lineHeight: '1.6' }}>
+                              "{t.candidate_transcript || 'No candidate response recorded for this turn.'}"
+                            </p>
+                          </div>
+
+                          {/* Gemini Verified Clean Transcript */}
+                          {t.gemini_verified_transcript && t.gemini_verified_transcript !== t.candidate_transcript && (
+                            <div style={{ background: '#f0fdf4', borderRadius: '12px', padding: '16px', border: '1px solid #bbf7d0' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#15803d' }}>
+                                <CheckCircle2 size={14} />
+                                <span>Gemini Verified Audio Transcript</span>
                               </div>
-                              <p style={{ fontSize: '13px', fontStyle: 'italic', color: '#374151', margin: 0, lineHeight: '1.6' }}>
-                                "{t.candidate_transcript || 'No candidate response recorded for this turn.'}"
+                              <p style={{ fontSize: '13px', color: '#166534', margin: 0, lineHeight: '1.6' }}>
+                                "{t.gemini_verified_transcript}"
                               </p>
                             </div>
+                          )}
+                        </div>
 
-                            {/* Gemini Verified Clean Transcript */}
-                            {t.gemini_verified_transcript && t.gemini_verified_transcript !== t.candidate_transcript && (
-                              <div style={{ background: '#f0fdf4', borderRadius: '12px', padding: '16px', border: '1px solid #bbf7d0' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#15803d' }}>
-                                  <CheckCircle2 size={14} />
-                                  <span>Gemini Verified Audio Transcript</span>
+                        {/* Right Column: Eva's Assessment */}
+                        <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: '700', color: '#65597b' }}>
+                            <Sparkles size={14} />
+                            <span>Eva's Turn Assessment</span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {/* Audio notes */}
+                            {t.audio_notes && (
+                              <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
+                                <strong>Delivery & Tone:</strong> {t.audio_notes}
+                              </div>
+                            )}
+
+                            {/* Missing concepts */}
+                            {t.missing_concepts && t.missing_concepts.length > 0 && (
+                              <div>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', marginBottom: '6px' }}>
+                                  Missing Key Concepts:
                                 </div>
-                                <p style={{ fontSize: '13px', color: '#166534', margin: 0, lineHeight: '1.6' }}>
-                                  "{t.gemini_verified_transcript}"
-                                </p>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {t.missing_concepts.map((concept, cIdx) => (
+                                    <span key={cIdx} style={{ fontSize: '11px', fontWeight: '600', background: '#fee2e2', color: '#991b1b', padding: '3px 8px', borderRadius: '9999px' }}>
+                                      {concept}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Resume verification note */}
+                            {t.resume_verification_note && (
+                              <div style={{ fontSize: '12px', color: '#4b5563', fontStyle: 'italic', marginTop: '4px', borderTop: '1px dashed #e5e7eb', paddingTop: '8px' }}>
+                                <strong>Resume Alignment:</strong> {t.resume_verification_note}
                               </div>
                             )}
                           </div>
-
-                          {/* Right Column: Eva's Assessment */}
-                          <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: '700', color: '#65597b' }}>
-                              <Sparkles size={14} />
-                              <span>Eva's Turn Assessment</span>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                              {/* Audio notes */}
-                              {t.audio_notes && (
-                                <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
-                                  <strong>Delivery & Tone:</strong> {t.audio_notes}
-                                </div>
-                              )}
-
-                              {/* Missing concepts */}
-                              {t.missing_concepts && t.missing_concepts.length > 0 && (
-                                <div>
-                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', marginBottom: '6px' }}>
-                                    Missing Key Concepts:
-                                  </div>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                    {t.missing_concepts.map((concept, cIdx) => (
-                                      <span key={cIdx} style={{ fontSize: '11px', fontWeight: '600', background: '#fee2e2', color: '#991b1b', padding: '3px 8px', borderRadius: '9999px' }}>
-                                        {concept}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Resume verification note */}
-                              {t.resume_verification_note && (
-                                <div style={{ fontSize: '12px', color: '#4b5563', fontStyle: 'italic', marginTop: '4px', borderTop: '1px dashed #e5e7eb', paddingTop: '8px' }}>
-                                  <strong>Resume Alignment:</strong> {t.resume_verification_note}
-                                </div>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
@@ -836,6 +912,7 @@ export const Report = () => {
 
         {/* NEXT STEPS & NAVIGATION ACTION CARD */}
         <Card
+          className="next-steps-card no-print"
           style={{
             marginTop: '28px',
             padding: '28px 36px',
