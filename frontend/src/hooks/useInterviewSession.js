@@ -10,6 +10,7 @@ export const useInterviewSession = (sessionId) => {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [isSessionDone, setIsSessionDone] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
+  const [error, setError] = useState(null);
 
   const wsRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -43,6 +44,7 @@ export const useInterviewSession = (sessionId) => {
     ws.onopen = () => {
       console.log('Voice WebSocket connected');
       setIsConnected(true);
+      setError(null);
       startMicrophoneCapture();
     };
 
@@ -77,7 +79,7 @@ export const useInterviewSession = (sessionId) => {
             setIsSpeaking(false);
           } else if (msg.event === 'ERROR') {
             console.error('Backend Error:', msg.detail);
-            alert(`Interview Error: ${msg.detail}`);
+            setError(msg.detail || 'An error occurred during the interview session');
             stopSession();
           } else if (msg.event === 'CONNECTED') {
             console.log('Session initialized. Total questions:', msg.total_questions);
@@ -159,6 +161,7 @@ export const useInterviewSession = (sessionId) => {
       }, 100);
     } catch (err) {
       console.error('Error accessing microphone:', err);
+      setError('Microphone access denied or unavailable. Please check microphone permissions in your browser.');
     }
   };
 
@@ -276,6 +279,7 @@ export const useInterviewSession = (sessionId) => {
     questionIndex,
     isSessionDone,
     micVolume,
+    error,
     stopSession,
   };
 };

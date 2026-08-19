@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AvatarEva from '../components/interview/AvatarEva';
 import useInterviewSession from '../hooks/useInterviewSession';
+import useAuth from '../hooks/useAuth';
 import { triggerReportGeneration } from '../services/reportService';
 import {
   Sparkles,
@@ -14,14 +15,17 @@ import {
   Pause,
   Play,
   FileText,
+  AlertCircle,
 } from 'lucide-react';
 
 export const Interview = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
+  const { user } = useAuth();
+  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'C';
 
   // Real WebSocket Session Hook
-  const { isConnected, isSpeaking, currentQuestion, isSessionDone, micVolume, stopSession } = useInterviewSession(sessionId);
+  const { isConnected, isSpeaking, currentQuestion, isSessionDone, micVolume, error, stopSession } = useInterviewSession(sessionId);
 
   // Timer & UI State
   const [secondsElapsed, setSecondsElapsed] = useState(0);
@@ -61,7 +65,7 @@ export const Interview = () => {
     }
   };
 
-  const handleRestart = () => {
+  const handleResetTimer = () => {
     setSecondsElapsed(0);
   };
 
@@ -146,7 +150,7 @@ export const Interview = () => {
               fontSize: '13px',
             }}
           >
-            AS
+            {userInitial}
           </div>
         </div>
       </header>
@@ -165,6 +169,30 @@ export const Interview = () => {
           justifyContent: 'center',
         }}
       >
+        {/* Error Notification Banner if present */}
+        {error && (
+          <div
+            style={{
+              width: '100%',
+              marginBottom: '20px',
+              padding: '14px 20px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#991b1b',
+              fontSize: '14px',
+              fontWeight: '600',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)',
+            }}
+          >
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Central Large White Card */}
         <div
           style={{
@@ -292,9 +320,10 @@ export const Interview = () => {
           }}
           className="animate-entrance animate-delay-1"
         >
-          {/* Restart Button */}
+          {/* Reset Timer Button */}
           <button
-            onClick={handleRestart}
+            onClick={handleResetTimer}
+            title="Reset elapsed timer display"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -317,7 +346,7 @@ export const Interview = () => {
             >
               <RotateCcw size={17} />
             </div>
-            <span style={{ fontSize: '11px', fontWeight: '700' }}>Restart</span>
+            <span style={{ fontSize: '11px', fontWeight: '700' }}>Reset Timer</span>
           </button>
 
           {/* Pause / Resume Button */}

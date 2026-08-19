@@ -24,7 +24,7 @@ export const Processing = () => {
   const [stageIndex, setStageIndex] = useState(0);
   const contextualStages = [
     'Evaluating continuous audio waveforms & vocal pitch stability...',
-    'Cross-verifying candidate responses against OpenAI Whisper logs...',
+    'Cross-verifying transcripts via local Faster-Whisper STT logs...',
     'Scoring technical accuracy across domain architecture pillars...',
     'Analyzing hesitation markers & speech pace (Words Per Minute)...',
     'Synthesizing Eva\'s per-question feedback & executive hiring signal...',

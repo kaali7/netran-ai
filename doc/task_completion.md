@@ -1,4 +1,4 @@
-﻿# Netran AI — Task Completion & Implementation Tracker
+# Netran AI — Task Completion & Implementation Tracker
 
 This document tracks completed features, pending roadmap tasks, and known bugs for **Netran AI**.
 
@@ -34,13 +34,13 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 
 These are confirmed bugs found from codebase scan. Fix these before doing any new feature work.
 
-| # | Task | File(s) | Problem | Fix Needed |
+| # | Task | File(s) | Problem | Status |
 |---|---|---|---|---|
-| **P1-1** | **Remove hardcoded "AS" user initials in Interview Room** | frontend/src/pages/Interview.jsx:149 | User profile initials bubble shows hardcoded "AS" — every user sees wrong initials | Read from useAuth() store: user?.email?.charAt(0).toUpperCase() |
-| **P1-2** | **Fix alert() for WebSocket error events** | frontend/src/hooks/useInterviewSession.js:80 | alert() mid-interview is jarring, blocks the page thread, and breaks the glassmorphic UX | Replace with inline error state + styled error banner in Interview.jsx |
-| **P1-3** | **Fix misleading "Restart" button in Interview Room** | frontend/src/pages/Interview.jsx:64-66 | handleRestart() only resets the timer display — it does NOT restart the session, question, or WebSocket. Deeply misleading for users | Either wire it to actually restart the session or remove/rename to "Reset Timer" |
-| **P1-4** | **Fix wrong copy in Processing screen** | frontend/src/pages/Processing.jsx:28 | Message says "Cross-verifying candidate responses against OpenAI Whisper logs..." — the project uses Faster-Whisper locally, NOT OpenAI | Replace with "Cross-verifying transcripts via local Faster-Whisper STT logs..." |
-| **P1-5** | **Remove hardcoded fallback name 'Soni' in Navbar** | frontend/src/components/layout/Navbar.jsx:16 | Non-user-specific hardcoded name appears as display name if email not loaded | Replace with generic 'Candidate' fallback |
+| **P1-1** | **Remove hardcoded "AS" user initials in Interview Room** | frontend/src/pages/Interview.jsx:149 | User profile initials bubble shows hardcoded "AS" — every user sees wrong initials | ✅ Completed (reads `user?.email` initial via `useAuth()`) |
+| **P1-2** | **Fix alert() for WebSocket error events** | frontend/src/hooks/useInterviewSession.js:80 | alert() mid-interview is jarring, blocks the page thread, and breaks the glassmorphic UX | ✅ Completed (replaced with reactive error state + inline glassmorphic banner in `Interview.jsx`) |
+| **P1-3** | **Fix misleading "Restart" button in Interview Room** | frontend/src/pages/Interview.jsx:64-66 | handleRestart() only resets the timer display — it does NOT restart the session, question, or WebSocket. Deeply misleading for users | ✅ Completed (renamed to "Reset Timer" with tooltip clarification) |
+| **P1-4** | **Fix wrong copy in Processing screen** | frontend/src/pages/Processing.jsx:28 | Message says "Cross-verifying candidate responses against OpenAI Whisper logs..." — the project uses Faster-Whisper locally, NOT OpenAI | ✅ Completed (updated string to "Cross-verifying transcripts via local Faster-Whisper STT logs...") |
+| **P1-5** | **Remove hardcoded fallback name 'Soni' in Navbar** | frontend/src/components/layout/Navbar.jsx:16 | Non-user-specific hardcoded name appears as display name if email not loaded | ✅ Completed (replaced with generic 'Candidate' fallback) |
 
 ---
 
@@ -95,6 +95,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Reduced Motion Support**: @media (prefers-reduced-motion: reduce) applied in animations.css — confirmed present.
 - ✅ **Iconography Audit**: All emojis replaced with Lucide SVG icons across WelcomeBanner, LaunchPractice, LastSessionCard, TemplatePicker.
 - ✅ **Agent Skills**: 10 frontend UI/UX skills active in .agents/skills/, Rule 12/13/14/15 in both AGENTS.md and doc/rule.md.
+- ✅ **Priority 1 Bug Fixes Verified**: P1-1, P1-2, P1-3, P1-4, P1-5 completed and verified with clean `npm run build` (1,693 modules, 0 errors) and backend `scan_code_quality.py`.
 - ✅ **Git Commit — Phase 2 Full Frontend**: Committed feat(frontend): add Configure Practice Track, Live Mock Interview room, Report Scorecard, History, Auth, Error Boundary, animated Eva persona (hash 55787bc).
 
 ---
@@ -105,6 +106,5 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 |---|---|
 | analyticsService.js | Entirely hardcoded fiction — blocked until real analytics backend endpoint (F1) is built |
 | History.jsx defaultHistoryRecords | Fake mock data fallback — must be replaced with proper empty state (P2-1) |
-| Interview.jsx hardcoded initials | "AS" hardcoded — minor but embarrassing in demos (P1-1) |
 | PostgreSQL Migration | DATABASE_URL swap from SQLite to PostgreSQL/Supabase not yet production-validated |
 | Admin Evaluation View | RBAC-protected admin endpoints for accessing all candidate sessions not yet built |

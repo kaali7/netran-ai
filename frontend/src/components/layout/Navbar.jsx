@@ -13,9 +13,9 @@ export const Navbar = ({ userName }) => {
   // Determine display name from prop, user email, or fallback
   const displayName =
     userName ||
-    (user?.email ? user.email.split('@')[0] : 'Soni');
+    (user?.email ? user.email.split('@')[0] : 'Candidate');
 
-  const userEmail = user?.email || 'soni.candidate@netran.ai';
+  const userEmail = user?.email || 'candidate@netran.ai';
 
   const handleLogout = () => {
     setIsMenuOpen(false);
