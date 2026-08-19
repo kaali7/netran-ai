@@ -25,7 +25,19 @@ export const Interview = () => {
   const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'C';
 
   // Real WebSocket Session Hook
-  const { isConnected, isSpeaking, currentQuestion, isSessionDone, micVolume, error, stopSession } = useInterviewSession(sessionId);
+  const {
+    isConnected,
+    connectionState,
+    micPermissionDenied,
+    isSpeaking,
+    currentQuestion,
+    questionIndex,
+    totalQuestions,
+    isSessionDone,
+    micVolume,
+    error,
+    stopSession,
+  } = useInterviewSession(sessionId);
 
   // Timer & UI State
   const [secondsElapsed, setSecondsElapsed] = useState(0);
@@ -112,6 +124,8 @@ export const Interview = () => {
               fontSize: '13px',
               fontWeight: '600',
               cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
             }}
           >
             <ArrowLeft size={16} />
@@ -122,8 +136,23 @@ export const Interview = () => {
             <Sparkles size={20} />
             <span>Netran AI</span>
           </div>
-          <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 10px', background: '#ede6f8', color: 'var(--primary)', borderRadius: '9999px' }}>
-            Live AI Mock Interview Room
+
+          {/* Question Progress Counter Badge */}
+          <span
+            style={{
+              fontSize: '12px',
+              fontWeight: '700',
+              padding: '5px 12px',
+              background: '#ede6f8',
+              color: 'var(--primary)',
+              borderRadius: '9999px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Sparkles size={13} />
+            <span>Question {questionIndex + 1} of {totalQuestions || 15}</span>
           </span>
         </div>
 
@@ -169,8 +198,35 @@ export const Interview = () => {
           justifyContent: 'center',
         }}
       >
+        {/* Mic Permission Denied Alert Banner */}
+        {micPermissionDenied && (
+          <div
+            style={{
+              width: '100%',
+              marginBottom: '20px',
+              padding: '16px 20px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              color: '#991b1b',
+              fontSize: '13px',
+              fontWeight: '600',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)',
+            }}
+          >
+            <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px', color: '#dc2626' }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '14px', marginBottom: '2px' }}>Microphone Permission Required</strong>
+              <span>Browser access to your microphone was denied. Click the lock/tune icon in your browser address bar to allow microphone access, then refresh this page.</span>
+            </div>
+          </div>
+        )}
+
         {/* Error Notification Banner if present */}
-        {error && (
+        {error && !micPermissionDenied && (
           <div
             style={{
               width: '100%',
@@ -210,6 +266,45 @@ export const Interview = () => {
           }}
           className="animate-entrance"
         >
+          {/* Connection Loading Overlay */}
+          {connectionState === 'connecting' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.92)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '24px',
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  border: '3px solid #ede6f8',
+                  borderTopColor: '#65597b',
+                  animation: 'spin 1s linear infinite',
+                  marginBottom: '16px',
+                }}
+              />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: '0 0 6px 0' }}>
+                Connecting to Eva's Voice Engine...
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                Establishing real-time full-duplex WebSocket stream
+              </p>
+            </div>
+          )}
           {/* Avatar Viewport Frame */}
           <div style={{ marginBottom: '20px' }}>
             <AvatarEva isSpeaking={isSpeaking} />

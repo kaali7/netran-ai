@@ -833,6 +833,90 @@ export const Report = () => {
             )}
           </div>
         </Card>
+
+        {/* NEXT STEPS & NAVIGATION ACTION CARD */}
+        <Card
+          style={{
+            marginTop: '28px',
+            padding: '28px 36px',
+            background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
+            borderRadius: '24px',
+            border: '1px solid rgba(101, 89, 123, 0.15)',
+            boxShadow: '0 12px 36px rgba(101, 89, 123, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '20px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
+              <Sparkles size={24} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#111827', margin: '0 0 4px 0' }}>
+                Ready for your next mock session?
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
+                Practice another track or review your historical performance trends.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => navigate('/analytics')}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
+                color: '#374151',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              View Analytics
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '12px',
+                border: '1px solid #d1d5db',
+                background: '#ffffff',
+                color: '#374151',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/setup')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 22px',
+                borderRadius: '12px',
+                border: 'none',
+                background: '#65597b',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(101, 89, 123, 0.25)',
+              }}
+            >
+              <span>Start New Session</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </Card>
       </div>
     </div>
   );

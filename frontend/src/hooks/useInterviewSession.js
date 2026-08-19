@@ -5,9 +5,12 @@ export const useInterviewSession = (sessionId) => {
   const { token } = useAuth();
   
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState('connecting'); // 'connecting' | 'connected' | 'disconnected' | 'error'
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('Initializing interview session...');
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(15);
   const [isSessionDone, setIsSessionDone] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
   const [error, setError] = useState(null);
@@ -44,6 +47,7 @@ export const useInterviewSession = (sessionId) => {
     ws.onopen = () => {
       console.log('Voice WebSocket connected');
       setIsConnected(true);
+      setConnectionState('connected');
       setError(null);
       startMicrophoneCapture();
     };
@@ -80,10 +84,12 @@ export const useInterviewSession = (sessionId) => {
           } else if (msg.event === 'ERROR') {
             console.error('Backend Error:', msg.detail);
             setError(msg.detail || 'An error occurred during the interview session');
+            setConnectionState('error');
             stopSession();
           } else if (msg.event === 'CONNECTED') {
             console.log('Session initialized. Total questions:', msg.total_questions);
             if (msg.total_questions) {
+              setTotalQuestions(msg.total_questions);
               setCurrentQuestion(`Session Connected! Ready for ${msg.total_questions} questions. AI is initializing...`);
             }
           }
@@ -95,17 +101,20 @@ export const useInterviewSession = (sessionId) => {
 
     ws.onerror = (error) => {
       console.error('WebSocket Error:', error);
+      setConnectionState('error');
     };
 
     ws.onclose = () => {
       console.log('Voice WebSocket closed');
       setIsConnected(false);
+      setConnectionState('disconnected');
       stopSession();
     };
   }, [sessionId, token]);
 
   const startMicrophoneCapture = async () => {
     try {
+      setMicPermissionDenied(false);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -161,7 +170,8 @@ export const useInterviewSession = (sessionId) => {
       }, 100);
     } catch (err) {
       console.error('Error accessing microphone:', err);
-      setError('Microphone access denied or unavailable. Please check microphone permissions in your browser.');
+      setMicPermissionDenied(true);
+      setError('Microphone access denied or unavailable. Please check microphone permissions in your browser settings.');
     }
   };
 
@@ -184,62 +194,49 @@ export const useInterviewSession = (sessionId) => {
 
     // Schedule playback seamlessly
     const currentTime = audioCtx.currentTime;
-    if (nextStartTimeRef.current < currentTime) {
-      nextStartTimeRef.current = currentTime;
-    }
+    const startTime = Math.max(currentTime, nextStartTimeRef.current);
+    source.start(startTime);
+    nextStartTimeRef.current = startTime + audioBuffer.duration;
 
-    source.start(nextStartTimeRef.current);
-    nextStartTimeRef.current += audioBuffer.duration;
-
+    sourceNodesQueueRef.current.push(source);
     source.onended = () => {
-      // Remove from queue when done
-      sourceNodesQueueRef.current = sourceNodesQueueRef.current.filter((s) => s !== source);
+      sourceNodesQueueRef.current = sourceNodesQueueRef.current.filter(n => n !== source);
       if (sourceNodesQueueRef.current.length === 0) {
         setIsSpeaking(false);
       }
     };
-
-    sourceNodesQueueRef.current.push(source);
   };
 
   const interruptPlayback = () => {
-    // Stop all queued audio nodes
-    sourceNodesQueueRef.current.forEach((source) => {
+    sourceNodesQueueRef.current.forEach(source => {
       try {
         source.stop();
-        source.disconnect();
       } catch (e) {
-        // Ignore if already stopped
+        // Source might already be stopped
       }
     });
     sourceNodesQueueRef.current = [];
     if (audioContextRef.current) {
       nextStartTimeRef.current = audioContextRef.current.currentTime;
     }
+    setIsSpeaking(false);
   };
 
   const stopSession = () => {
-    if (wsRef.current) {
-      // Avoid closing a connecting socket to prevent React StrictMode warnings
-      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
-        // If connecting, wait for it to open before closing (or just set a flag).
-        // Actually, closing while CONNECTING causes the warning. 
-        // We can just forcefully remove the ref so onclose is ignored, but the browser will still log the warning.
-        // It's a harmless warning, but we can suppress it by just letting it connect and closing immediately.
-        if (wsRef.current.readyState === WebSocket.CONNECTING) {
-            const ws = wsRef.current;
-            ws.onopen = () => ws.close();
-            ws.onerror = null;
-            ws.onmessage = null;
-        } else {
-            wsRef.current.close();
-        }
-      }
-      wsRef.current = null;
-    }
     if (volumeIntervalRef.current) {
       clearInterval(volumeIntervalRef.current);
       volumeIntervalRef.current = null;
+    }
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.CONNECTING) {
+        const ws = wsRef.current;
+        ws.onopen = () => ws.close();
+        ws.onerror = null;
+        ws.onmessage = null;
+      } else {
+        wsRef.current.close();
+      }
+      wsRef.current = null;
     }
     if (analyserRef.current) {
       analyserRef.current.disconnect();
@@ -274,9 +271,12 @@ export const useInterviewSession = (sessionId) => {
 
   return {
     isConnected,
+    connectionState,
+    micPermissionDenied,
     isSpeaking,
     currentQuestion,
     questionIndex,
+    totalQuestions,
     isSessionDone,
     micVolume,
     error,

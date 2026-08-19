@@ -57,14 +57,14 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 
 ## 🟡 Priority 3 — Polish & UX Improvements (Solve After Bugs Are Fixed)
 
-| # | Task | File(s) | Why It Matters |
-|---|---|---|---|
-| **P3-1** | **Interview Room — show question number progress** | frontend/src/pages/Interview.jsx | questionIndex state is tracked in useInterviewSession.js but never rendered in the UI. A "Q 3 / 10" counter in the header would dramatically improve session awareness |
-| **P3-2** | **Interview Room — connection loading state** | frontend/src/pages/Interview.jsx | Between page load and WebSocket onopen, currentQuestion shows "Initializing interview session..." with no spinner or loading skeleton — looks broken | Add a connecting skeleton/spinner overlay for the initial connection phase |
-| **P3-3** | **Interview Room — mic permission denied UI** | frontend/src/hooks/useInterviewSession.js:160-162 | getUserMedia errors are silently console.error'd with no user-facing feedback | Catch NotAllowedError and show a styled alert card instructing the user to grant mic access |
-| **P3-4** | **Report Page — "New Practice" CTA** | frontend/src/pages/Report.jsx | The report page shows an evaluation but has no prominent "Start Another Session" or "Back to Dashboard" action after reviewing feedback — user journey dead-ends | Add a prominent CTA button row at the bottom of the Report page |
-| **P3-5** | **History Page — wire real audio player** | frontend/src/pages/History.jsx | Audio recording modal UI exists but plays nothing — backend recording.wav path is not fetched or streamed to the browser | ✅ Completed (Wired floating audio player to `GET /api/v1/voice/recording/{session_id}`) |
-| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Stats cards render with 0 or empty values during the API fetch with no loading skeleton — causes layout flash | Add shimmer skeleton placeholders while loading === true in useDashboard.js |
+| # | Task | File(s) | Why It Matters | Status |
+|---|---|---|---|---|
+| **P3-1** | **Interview Room — show question number progress** | frontend/src/pages/Interview.jsx | Rendered purple `Question X of Y` pill badge in live header | ✅ Completed |
+| **P3-2** | **Interview Room — connection loading state** | frontend/src/pages/Interview.jsx | Added animated glassmorphic connecting overlay with spinner and status text | ✅ Completed |
+| **P3-3** | **Interview Room — mic permission denied UI** | frontend/src/hooks/useInterviewSession.js:160-162 | Catches getUserMedia errors and shows red alert card instructing user to enable mic | ✅ Completed |
+| **P3-4** | **Report Page — "New Practice" CTA** | frontend/src/pages/Report.jsx | Added prominent Next Steps card with "Start New Session", "Dashboard", and "View Analytics" buttons | ✅ Completed |
+| **P3-5** | **History Page — wire real audio player** | frontend/src/pages/History.jsx | Audio player modal with interactive seek bar, waveform animation, rewind/forward 10s, volume & speed controls | ✅ Completed |
+| **P3-6** | **Dashboard StatsRow — skeleton loaders** | frontend/src/components/dashboard/StatsRow.jsx | Add shimmer skeleton placeholders while loading === true in useDashboard.js | Pending |
 
 ---
 
@@ -98,6 +98,9 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Date Range Filter Enhancement**: Added 7d, 15d, 30d, 60d, 90d, All Time, and Custom Range picker (days count & date picker) across backend (`analytics.py`) and frontend (`Analytics.jsx`).
 - ✅ **Real-Time History & Inspection Modal**: Built `/history/sessions`, `/history/detail/{id}`, and `/voice/recording/{session_id}` endpoints in backend (`history.py`, `voice.py`), created `historyService.js`, and updated `History.jsx` with status filters, question bank inspection, resume analysis, CSV export, & audio streaming.
 - ✅ **Interactive Audio Listening Player Modal**: Added glassmorphic popup modal on `History.jsx` featuring interactive scrubbing seek bar (`formatTime`), waveform visualizer animation, rewind/forward 10s toggles, volume slider, playback speed options (1.0x-2.0x), and stop/close controls.
+- ✅ **Priority 3 UX Polish Bundle**: Added `Question X of Y` progress pill counter and connecting loading overlay in `Interview.jsx`, caught mic permission errors in `useInterviewSession.js` with alert card, and added Next Steps navigation CTAs in `Report.jsx`.
+- ✅ **Git Commit — Priority 3 UX Polish Bundle**: Committed feat(ux): add interview room question counter, connection overlay, mic permission alert, & report CTAs.
+- ✅ **Git Commit — Real-Time History & Interactive Audio Player**: Committed feat(history): add real-time history API, question tree inspection modal, & interactive audio listening player (hash 6df33b4).
 - ✅ **Git Commit — Real-Time Analytics & Glassmorphic UI**: Committed feat(analytics): add real-time backend analytics endpoint and custom glassmorphic dropdown UI (hash e0d19cd).
 - ✅ **Git Commit — Phase 2 Full Frontend**: Committed feat(frontend): add Configure Practice Track, Live Mock Interview room, Report Scorecard, History, Auth, Error Boundary, animated Eva persona (hash 55787bc).
 
