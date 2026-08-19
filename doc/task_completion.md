@@ -108,7 +108,7 @@ These are confirmed bugs found from codebase scan. Fix these before doing any ne
 - ✅ **Candidate Settings & Notification Dropdown (F4 & F5)**: Built full glassmorphic Candidate Settings page (`Settings.jsx`) with display name, track target, strictness level radio cards, password update form, and audio toggles; wired `/settings` route & Navbar sub-menu. Built interactive Notification Bell dropdown with unread badge counter, notification items, and "Mark all read" CTA. Verified `npm run build` (1,695 modules, 0 errors).
 - ✅ **Git Commit — Candidate Settings, Per-Question Timer & Notifications**: Committed feat(frontend): add candidate settings page, per-question pacing timer, & notification bell dropdown (hash 8bb86c6).
 - ✅ **Session Duration Metadata & Question Count (F6)**: Calculated `duration_seconds`, `duration_text`, and `question_count` across `/setup/sessions` and `/history/sessions` backend endpoints (`setup.py`, `history.py`, `schemas.py`) and mapped fields in `useDashboard.js`. Verified backend syntax OK & `npm run build` 0 errors.
-- ✅ **Git Commit — Session Duration & Question Count Metadata**: Committed feat(api): add session duration_seconds, duration_text, and question_count fields to setup and history endpoints.
+- ✅ **Git Commit — Session Duration & Question Count Metadata**: Committed feat(api): add session duration_seconds, duration_text, and question_count fields to setup and history endpoints (hash ed309f0).
 
 ---
 
