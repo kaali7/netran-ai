@@ -13,6 +13,9 @@ from api.models import User, Session, SessionStatus, SessionArtifact
 from api.schemas import VoiceSessionStatusResponse, VoiceTurnEvent
 from api.services.voice_adapter import run_voice_session_with_callback
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["Voice Interview"])
 
@@ -37,6 +40,37 @@ def check_voice_session_status(
         total_turns_completed=0,
         interview_started_at=None
     )
+
+
+@router.get("/recording/{session_id}")
+def stream_audio_recording(
+    session_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Stream continuous audio recording file (.wav) for candidate session playback.
+    """
+    session = db.query(Session).filter(Session.id == session_id, Session.user_id == current_user.id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    possible_paths = [
+        base_dir / "sessions" / session_id / "recording.wav",
+        base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id / "recording.wav",
+        base_dir / "model" / "reports_model" / "test" / "input" / "sample_session" / "continuous_mic_input.wav",
+    ]
+
+    for p in possible_paths:
+        if p.exists():
+            return FileResponse(
+                path=str(p),
+                media_type="audio/wav",
+                filename=f"recording_{session_id}.wav"
+            )
+
+    raise HTTPException(status_code=404, detail="Audio recording file not found for this session")
 
 
 @router.websocket("/stream/{session_id}")

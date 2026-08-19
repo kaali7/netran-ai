@@ -276,6 +276,47 @@ class AnalyticsSummaryResponse(BaseModel):
     session_comparison: list[SessionComparisonItem]
 
 
+# --- History Schemas ---
+
+class HistorySessionItem(BaseModel):
+    """Summarized session row for history archive table."""
+    id: str
+    created_at: datetime
+    date_text: str
+    status: SessionStatus
+    track: str
+    role_title: str
+    company: Optional[str] = "Tech Corporation"
+    score: Optional[int] = None
+    hiring_signal: Optional[str] = None
+    duration_text: str = "18m 42s"
+    total_questions: int = 15
+    has_report: bool = False
+    has_recording: bool = False
+
+
+class HistoryListResponse(BaseModel):
+    """Response containing list of candidate history sessions."""
+    total: int
+    sessions: list[HistorySessionItem]
+
+
+class HistorySessionDetailResponse(BaseModel):
+    """Detailed view payload for question tree & resume analysis inspection modal."""
+    session_id: str
+    status: SessionStatus
+    created_at: datetime
+    role_title: str
+    company: Optional[str] = None
+    seniority_level: Optional[str] = None
+    question_tree: list[dict[str, Any]] = []
+    resume_analysis: Optional[dict[str, Any]] = None
+    evaluation_report: Optional[dict[str, Any]] = None
+    parsed_jd: Optional[dict[str, Any]] = None
+    parsed_resume: Optional[dict[str, Any]] = None
+    has_recording: bool = False
+
+
 # --- Common Schemas ---
 
 class HealthResponse(BaseModel):

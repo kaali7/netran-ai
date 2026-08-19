@@ -35,7 +35,7 @@ frontend/                      # React 18 + Vite 5 Web Client
 │   │   └── interview/         # AvatarEva.jsx
 │   ├── hooks/                 # useDashboard.js, useAuth.js, useInterviewSession.js, useSetup.js, useReports.js
 │   ├── pages/                 # Dashboard.jsx, Setup.jsx, Analytics.jsx, History.jsx, Interview.jsx, Processing.jsx, Report.jsx, Login.jsx
-│   ├── services/              # api.js, authService.js, sessionService.js, templateService.js, reportService.js, analyticsService.js
+│   ├── services/              # api.js, authService.js, sessionService.js, templateService.js, reportService.js, analyticsService.js, historyService.js
 │   ├── store/                 # authStore.js (Zustand JWT auth store)
 │   ├── styles/                # index.css (tokens & custom scrollbar), glass.css (glassmorphism), animations.css
 │   ├── utils/                 # constants.js
@@ -72,7 +72,8 @@ backend/
 │       ├── voice.py           # Stage 3 WebSockets stub (WS /voice/stream/{session_id})
 │       ├── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
 │       ├── template.py        # Template Mock Interview endpoints (/template/list, /template/start)
-│       └── analytics.py       # Candidate performance analytics endpoints (/analytics/summary)
+│       ├── analytics.py       # Candidate performance analytics endpoints (/analytics/summary)
+│       └── history.py         # Candidate history archives, questions & profile analysis (/history/sessions, /history/detail/{id})
 ├── data/                      # Local SQLite database, session storage & sample templates
 │   └── sample_interviews/    # Pre-built interview templates (backend/, frontend/, fullstack/)
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )
