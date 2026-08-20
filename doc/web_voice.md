@@ -58,3 +58,32 @@ During the integration of the web-based voice room, several critical communicati
 ### Issue 5: Excessive TTS First-Turn Latency (Kokoro Loading)
 - **Problem**: The Kokoro TTS model is heavily lazy-loaded. On the very first interview turn, `_get_pipeline()` blocked for 10-15 seconds to load the AI weights into memory. Users perceived this as a broken connection because the WebSocket was open but silent.
 - **Solution**: Hooked `preload_speaker()` into the FastAPI `@asynccontextmanager lifespan` in `api/main.py`. The heavy TTS model is now pre-heated and loaded into RAM the moment the backend server starts, resulting in near-instant audio generation when a user joins the room.
+
+### Issue 6: React 18 Strict Mode `ws.onclose` Race Condition
+- **Problem**: In React 18 development mode, `useEffect` executes double-mount (`mount -> unmount -> mount`). The first WebSocket instance (`ws1`) is told to close via cleanup, while the second WebSocket instance (`ws2`) becomes active (`wsRef.current = ws2`). When `ws1` finished closing asynchronously, its `onclose` callback fired and invoked `stopSession()`, which inspected `wsRef.current` and prematurely closed `ws2`. This killed the connection immediately before the user could interact.
+- **Solution**: Added an instance check guard in `useInterviewSession.js`:
+  ```javascript
+  ws.onclose = () => {
+    if (wsRef.current && wsRef.current !== ws) {
+      return; // Ignore close events from old, discarded WebSocket instances
+    }
+    // ... proceed with teardown ...
+  };
+  ```
+
+### Issue 7: Non-blocking Icebreaker Dispatch in Engine Loop
+- **Problem**: In `voice_engine.py`, the synchronous turn 0 icebreaker greeting (`speak_text(initial_greeting)`) blocked the execution thread. If any client event or delay occurred during generation, the `while not self.stop_event.is_set()` loop was delayed from starting, causing race conditions in state reporting.
+- **Solution**: Spanned the initial icebreaker greeting in a dedicated thread (`threading.Thread(target=speak_text, args=(initial_greeting,)).start()`), allowing the engine to immediately enter the `while` loop, stream microphone capture, and execute Silero VAD detection seamlessly.
+
+---
+
+## 4. Real-time Execution Tracing & Diagnostics
+
+To guarantee end-to-end observability across the full duplex voice pipeline, the `ExecutionLogger` framework records structured JSONL traces (`data/sessions/<session_id>/execution_trace.jsonl`) and echoes them directly to the console during execution:
+
+| Source | Event Types | Details Logged |
+| :--- | :--- | :--- |
+| `FRONTEND` | `WS_CONNECTED`, `AUDIO_CHUNK_RECEIVED`, `MIC_ACCESS_GRANTED`, `MIC_ACCESS_DENIED`, `WS_ERROR`, `BARGE_IN_TRIGGERED` | Sent from client via `{action: "client_log"}` |
+| `BACKEND_API` | `WS_CONNECTED`, `AUDIO_CHUNK_SENT`, `WS_DISCONNECTED` | Audio frame byte sizes, connection lifecycle |
+| `BACKEND_ENGINE` | `ENGINE_START`, `PRE_LOOP_CHECK`, `VAD_*`, `STT_START`, `LLM_START`, `TTS_START`, `ENGINE_STOP` | Turn indices, VAD probabilities, RMS, transcripts |
+| `PIPELINE_RUNNER` | `PIPELINE_START`, `STEP_START`, `STEP_COMPLETE`, `PIPELINE_COMPLETE` | Resume extraction, JD research, Question generation stages |

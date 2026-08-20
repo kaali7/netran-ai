@@ -17,6 +17,7 @@ import {
   Play,
   FileText,
   AlertCircle,
+  XCircle,
 } from 'lucide-react';
 
 export const Interview = () => {
@@ -86,6 +87,11 @@ export const Interview = () => {
     } else {
       navigate('/dashboard');
     }
+  };
+
+  const handleAbortSession = () => {
+    stopSession();
+    navigate('/dashboard');
   };
 
   const handleResetTimer = () => {
@@ -610,6 +616,35 @@ export const Interview = () => {
               <FileText size={16} />
             </div>
             <span style={{ fontSize: '11px', fontWeight: '700' }}>End & Get Feedback</span>
+          </button>
+
+          {/* Abort Session Button */}
+          <button
+            onClick={handleAbortSession}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#ef4444',
+              cursor: 'pointer',
+            }}
+          >
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#b91c1c',
+              }}
+            >
+              <XCircle size={16} />
+            </div>
+            <span style={{ fontSize: '11px', fontWeight: '700' }}>Abort (No Report)</span>
           </button>
         </div>
       </footer>

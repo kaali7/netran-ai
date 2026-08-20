@@ -185,11 +185,18 @@ class WorkflowVoiceEngine:
                 if status_callback:
                     status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
                     
-                speak_text(initial_greeting)
+                import threading
+                threading.Thread(target=speak_text, args=(initial_greeting,)).start()
                 conversation_history.append({"role": "assistant", "content": initial_greeting})
 
             _dead_mic_retries = 0
             turn_idx = 0
+            
+            if exec_logger:
+                exec_logger.log_event("BACKEND_ENGINE", "PRE_LOOP_CHECK", {
+                    "stop_event": self.stop_event.is_set(),
+                    "is_finished": question_manager.is_finished()
+                })
             
             while not self.stop_event.is_set() and not question_manager.is_finished():
                 turn_idx += 1

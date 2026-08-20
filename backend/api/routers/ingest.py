@@ -18,6 +18,13 @@ from api.schemas import (
 )
 from api.dependencies import get_current_user
 from api.services import text_extractor, gemini_extractor, cache
+from api.config import BASE_DIR
+import os
+
+try:
+    from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+except ImportError:
+    ExecutionLogger = None
 
 router = APIRouter(prefix="/ingest", tags=["Document Ingestion"])
 
@@ -91,6 +98,11 @@ async def ingest_resume(
             db.add(artifact)
             db.commit()
             db.refresh(user_session)
+            
+            if ExecutionLogger:
+                session_dir = os.path.join(BASE_DIR, "data", "sessions", user_session.id)
+                exec_log = ExecutionLogger(user_session.id, session_dir)
+                exec_log.log_event("BACKEND_API", "SESSION_CREATED", {"resume_hash": resume_hash, "cached": True})
 
         return IngestResumeResponse(
             session_id=user_session.id,
@@ -120,6 +132,11 @@ async def ingest_resume(
     db.add(artifact)
     db.commit()
     db.refresh(new_session)
+    
+    if ExecutionLogger:
+        session_dir = os.path.join(BASE_DIR, "data", "sessions", new_session.id)
+        exec_log = ExecutionLogger(new_session.id, session_dir)
+        exec_log.log_event("BACKEND_API", "SESSION_CREATED", {"resume_hash": resume_hash, "cached": False})
 
     return IngestResumeResponse(
         session_id=new_session.id,
@@ -221,6 +238,12 @@ def ingest_jd(
         db.commit()
         db.refresh(target_session)
 
+        if ExecutionLogger:
+            session_dir = os.path.join(BASE_DIR, "data", "sessions", target_session.id)
+            exec_log = ExecutionLogger(target_session.id, session_dir)
+            exec_log.log_event("BACKEND_API", "SESSION_UPDATED", {"jd_hash": jd_hash, "cached": True})
+
+
         return IngestJDResponse(
             session_id=target_session.id,
             jd_hash=jd_hash,
@@ -252,6 +275,12 @@ def ingest_jd(
 
         db.commit()
         db.refresh(target_session)
+        
+        if ExecutionLogger:
+            session_dir = os.path.join(BASE_DIR, "data", "sessions", target_session.id)
+            exec_log = ExecutionLogger(target_session.id, session_dir)
+            exec_log.log_event("BACKEND_API", "SESSION_UPDATED", {"jd_hash": jd_hash, "cached": False})
+
 
         return IngestJDResponse(
             session_id=target_session.id,
@@ -277,6 +306,12 @@ def ingest_jd(
         db.add(artifact)
         db.commit()
         db.refresh(new_session)
+        
+        if ExecutionLogger:
+            session_dir = os.path.join(BASE_DIR, "data", "sessions", new_session.id)
+            exec_log = ExecutionLogger(new_session.id, session_dir)
+            exec_log.log_event("BACKEND_API", "SESSION_CREATED", {"jd_hash": jd_hash, "cached": False})
+
 
         return IngestJDResponse(
             session_id=new_session.id,

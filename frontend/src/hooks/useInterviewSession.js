@@ -145,6 +145,9 @@ export const useInterviewSession = (sessionId) => {
     };
 
     ws.onclose = () => {
+      if (wsRef.current && wsRef.current !== ws) {
+        return; // Ignore close events from old WebSocket instances
+      }
       console.log('Voice WebSocket closed');
       setIsConnected(false);
       setConnectionState('disconnected');

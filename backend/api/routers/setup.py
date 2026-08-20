@@ -244,4 +244,17 @@ def duplicate_session(
         db.add(new_artifact)
         db.commit()
         
+        # Write JSON files to disk for voice engine to consume
+        os.makedirs(session_dir, exist_ok=True)
+        import json
+        if new_artifact.question_tree:
+            with open(os.path.join(session_dir, "interview_questions.json"), "w", encoding="utf-8") as f:
+                json.dump(new_artifact.question_tree, f, indent=2)
+        if new_artifact.interview_behavior:
+            with open(os.path.join(session_dir, "interviewer_behavior.json"), "w", encoding="utf-8") as f:
+                json.dump(new_artifact.interview_behavior, f, indent=2)
+        if new_artifact.resume_analysis:
+            with open(os.path.join(session_dir, "resume_analysis.json"), "w", encoding="utf-8") as f:
+                json.dump(new_artifact.resume_analysis, f, indent=2)
+        
     return {"session_id": new_session.id}
