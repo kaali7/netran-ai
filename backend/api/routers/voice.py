@@ -136,7 +136,7 @@ async def voice_interview_stream(
     exec_logger = None
     if ExecutionLogger:
         base_dir = Path(__file__).resolve().parent.parent.parent
-        session_dir = str(base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id)
+        session_dir = str(base_dir / "data" / "sessions" / session_id)
         exec_logger = ExecutionLogger(session_id=session_id, session_dir=session_dir)
         exec_logger.log_event("BACKEND_API", "WS_CONNECTED", {"total_questions": total_questions})
 

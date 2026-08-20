@@ -46,7 +46,7 @@ class ExecutionLogger:
             event_json = json.dumps(event)
             with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(event_json + "\n")
-            # Showcase in terminal during runtime
-            logger.info(f"[EXEC_TRACE] [{source}] {event_type} - {details}")
+            # Showcase in terminal during runtime (using print to bypass FastAPI logger config)
+            print(f"[EXEC_TRACE] [{source}] {event_type} - {details}", flush=True)
         except Exception as e:
-            logger.error(f"Failed to write to execution trace log for session {self.session_id}: {e}")
+            print(f"Failed to write to execution trace log for session {self.session_id}: {e}", flush=True)

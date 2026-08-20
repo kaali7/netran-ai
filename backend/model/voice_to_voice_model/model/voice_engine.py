@@ -129,11 +129,25 @@ class WorkflowVoiceEngine:
         mic_writer = ContinuousMicWriter(filepath=self.wav_path)
         mic_writer.start()
         
+        # Initialize dedicated speaker for this session
         try:
-            from .speaker import init_speaker_compat
-            init_speaker_compat(self.session_state, ws_audio_out_queue=ws_audio_out_queue)
+            from .speaker import PersistentSpeaker
+            self.speaker = PersistentSpeaker(ws_audio_out_queue=ws_audio_out_queue)
         except Exception as e:
-            logger.error(f"Failed to init speaker compat: {e}")
+            logger.error(f"Failed to init speaker: {e}")
+            self.speaker = None
+
+        def speak_text(text: str):
+            if self.speaker:
+                self.speaker.interrupt_event.clear()
+                self.session_state.interrupt_event.clear()
+                self.session_state.is_agent_speaking.set()
+                self.speaker.speak_clause(text, self.session_state, "af_bella")
+                self.speaker.wait_until_done()
+                self.session_state.is_agent_speaking.clear()
+            else:
+                from .speaker import speak_text as fallback_speak
+                fallback_speak(text, "af_bella")
         
         conversation_history: list[dict[str, str]] = []
         
@@ -300,6 +314,8 @@ class WorkflowVoiceEngine:
         except Exception as e:
             logger.error(f"Error during voice interview loop: {e}", exc_info=True)
         finally:
+            if self.speaker:
+                self.speaker.close()
             mic_writer.stop()
             session_log.finalize()
             if exec_logger:

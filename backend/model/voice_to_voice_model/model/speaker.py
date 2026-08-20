@@ -259,7 +259,7 @@ class PersistentSpeaker:
                 import os
                 boost_factor = float(os.getenv("SPEAKER_VOLUME_BOOST", "2.0"))
                 if boost_factor != 1.0:
-                    audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0)
+                    audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0).astype(np.float32)
 
                 # Record true Time-To-First-Audio (TTFA) on first synthesized audio chunk
                 if Benchmark.get_start_time("ttfa"):
@@ -350,7 +350,7 @@ def speak_text(text_to_say, voice_preset="af_bella"):
             boost_factor = float(os.getenv("SPEAKER_VOLUME_BOOST", "2.0"))
             audio_data = audio_array.astype(np.float32)
             if boost_factor != 1.0:
-                audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0)
+                audio_data = np.clip(audio_data * boost_factor, -1.0, 1.0).astype(np.float32)
 
             sd.play(audio_data, samplerate=24000)
             sd.wait()
