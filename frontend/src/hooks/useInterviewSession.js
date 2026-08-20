@@ -13,6 +13,8 @@ export const useInterviewSession = (sessionId) => {
   const [totalQuestions, setTotalQuestions] = useState(15);
   const [isSessionDone, setIsSessionDone] = useState(false);
   const [micVolume, setMicVolume] = useState(0);
+  const [vadState, setVadState] = useState('Mic: Offline');
+  const [audioState, setAudioState] = useState('suspended');
   const [error, setError] = useState(null);
 
   const wsRef = useRef(null);
@@ -69,6 +71,26 @@ export const useInterviewSession = (sessionId) => {
           if (msg.event === 'INTERRUPT') {
             console.log('Barge-in detected: interrupting AI');
             interruptPlayback();
+            setIsSpeaking(false);
+          } else if (msg.event === 'SPEAKING_QUESTION') {
+            setIsSpeaking(true);
+            if (msg.question_text) setCurrentQuestion(msg.question_text);
+            if (msg.turn_id !== undefined) setQuestionIndex(msg.turn_id > 0 ? msg.turn_id - 1 : 0);
+          } else if (msg.event === 'LISTENING_CANDIDATE') {
+            setIsSpeaking(false);
+          } else if (msg.event === 'PROCESSING_RESPONSE') {
+            setCurrentQuestion('Processing your answer...');
+          } else if (msg.event === 'AUDIO_LEVEL') {
+            const vadData = JSON.parse(msg.detail);
+            const vadProb = vadData.vad_prob || 0.0;
+            const rms = vadData.rms || 0.0;
+            const displayVal = Math.max(vadProb, Math.min(rms * 5, 1.0));
+            setMicVolume(Math.min(100, Math.round(displayVal * 100)));
+            if (vadData.state) setVadState(vadData.state);
+          } else if (msg.event === 'EVA_RESPONDING_BRANCH') {
+            setIsSpeaking(true);
+            if (msg.question_text) setCurrentQuestion(msg.question_text);
+          } else if (msg.event === 'TURN_COMPLETE') {
             setIsSpeaking(false);
           } else if (msg.event === 'QUESTION_COMPLETE' || msg.event === 'QUESTION_UPDATE') {
             if (msg.text) setCurrentQuestion(msg.text);
@@ -128,6 +150,12 @@ export const useInterviewSession = (sessionId) => {
         sampleRate: 16000,
       });
       audioContextRef.current = audioCtx;
+      setAudioState(audioCtx.state);
+      
+      audioCtx.onstatechange = () => {
+        setAudioState(audioCtx.state);
+      };
+      
       nextStartTimeRef.current = audioCtx.currentTime;
 
       // Load our custom PCM worklet
@@ -153,21 +181,6 @@ export const useInterviewSession = (sessionId) => {
           wsRef.current.send(event.data);
         }
       };
-
-      // Volume monitoring interval (100ms throttle for UI rendering)
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      volumeIntervalRef.current = setInterval(() => {
-        if (!analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / dataArray.length;
-        // Normalize 0-255 average to 0-100 percentage
-        const normalized = Math.min(100, Math.round((average / 128) * 100));
-        setMicVolume(normalized);
-      }, 100);
     } catch (err) {
       console.error('Error accessing microphone:', err);
       setMicPermissionDenied(true);
@@ -185,7 +198,7 @@ export const useInterviewSession = (sessionId) => {
       float32Array[i] = int16Array[i] / (int16Array[i] < 0 ? 0x8000 : 0x7FFF);
     }
 
-    const audioBuffer = audioCtx.createBuffer(1, float32Array.length, 16000);
+    const audioBuffer = audioCtx.createBuffer(1, float32Array.length, 24000);
     audioBuffer.getChannelData(0).set(float32Array);
 
     const source = audioCtx.createBufferSource();
@@ -220,6 +233,17 @@ export const useInterviewSession = (sessionId) => {
       nextStartTimeRef.current = audioContextRef.current.currentTime;
     }
     setIsSpeaking(false);
+  };
+
+  const resumeAudio = async () => {
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try {
+        await audioContextRef.current.resume();
+        setAudioState(audioContextRef.current.state);
+      } catch (e) {
+        console.error("Failed to resume audio:", e);
+      }
+    }
   };
 
   const stopSession = () => {
@@ -279,6 +303,9 @@ export const useInterviewSession = (sessionId) => {
     totalQuestions,
     isSessionDone,
     micVolume,
+    vadState,
+    audioState,
+    resumeAudio,
     error,
     stopSession,
   };

@@ -36,6 +36,9 @@ export const Interview = () => {
     totalQuestions,
     isSessionDone,
     micVolume,
+    vadState,
+    audioState,
+    resumeAudio,
     error,
     stopSession,
   } = useInterviewSession(sessionId);
@@ -340,6 +343,56 @@ export const Interview = () => {
               </p>
             </div>
           )}
+
+          {/* Autoplay Suspended Overlay */}
+          {audioState === 'suspended' && connectionState === 'connected' && !micPermissionDenied && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '24px',
+                zIndex: 10,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px',
+              }}
+            >
+              <button
+                onClick={resumeAudio}
+                style={{
+                  background: 'var(--primary)',
+                  color: 'var(--on-primary)',
+                  border: 'none',
+                  padding: '16px 32px',
+                  borderRadius: '9999px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 8px 24px rgba(101, 89, 123, 0.25)',
+                  transition: 'transform 0.2s',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Volume2 size={24} />
+                <span>Click to Enable Audio & Join Interview</span>
+              </button>
+              <p style={{ marginTop: '16px', fontSize: '14px', color: '#4b5563', maxWidth: '400px', textAlign: 'center' }}>
+                Your browser requires you to click before Eva can speak or hear you.
+              </p>
+            </div>
+          )}
+
           {/* Avatar Viewport Frame */}
           <div style={{ marginBottom: '20px' }}>
             <AvatarEva isSpeaking={isSpeaking} />
@@ -371,7 +424,7 @@ export const Interview = () => {
             ) : (
               <>
                 <Mic size={16} />
-                <span>VAD Status: Candidate Turn (Listening)</span>
+                <span>VAD Status: {vadState}</span>
               </>
             )}
           </div>

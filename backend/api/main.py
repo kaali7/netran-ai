@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI):
     """Application lifecycle events handler (startup & shutdown)."""
     # Startup: Create database tables
     init_db()
+    
+    # Preload Kokoro TTS Model so the first interview doesn't lag 10s
+    try:
+        from model.voice_to_voice_model.model.speaker import preload_models as preload_speaker
+        preload_speaker()
+    except Exception as e:
+        import logging
+        logging.warning(f"Could not preload Kokoro TTS model: {e}")
+        
     yield
     # Shutdown logic (if any)
 

@@ -9,6 +9,7 @@ import LastSessionCard from '../components/dashboard/LastSessionCard';
 import SessionsTable from '../components/dashboard/SessionsTable';
 import TemplatePicker from '../components/dashboard/TemplatePicker';
 import useDashboard from '../hooks/useDashboard';
+import { duplicateSession } from '../services/sessionService';
 
 export const Dashboard = () => {
   const { data, loading } = useDashboard();
@@ -31,9 +32,24 @@ export const Dashboard = () => {
     navigate(`/interview/${sessionId}`);
   };
 
-  const handleRetakeSession = () => {
-    if (data?.lastSession?.id) {
-      navigate(`/interview/${data.lastSession.id}`);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
+  const handleRetakeSession = async () => {
+    if (data?.lastSession?.id && !isDuplicating) {
+      try {
+        setIsDuplicating(true);
+        const res = await duplicateSession(data.lastSession.id);
+        if (res?.session_id) {
+          navigate(`/interview/${res.session_id}`);
+        } else {
+          navigate('/setup');
+        }
+      } catch (err) {
+        console.error("Failed to duplicate session:", err);
+        navigate('/setup');
+      } finally {
+        setIsDuplicating(false);
+      }
     } else {
       navigate('/setup');
     }

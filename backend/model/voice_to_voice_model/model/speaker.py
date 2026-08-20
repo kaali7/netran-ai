@@ -18,6 +18,7 @@ Full-Duplex Barge-In Architecture (v2):
 import queue
 import re
 import threading
+import time
 import warnings
 
 # Suppress PyTorch RNN and weight_norm deprecation noise
@@ -109,22 +110,26 @@ class PersistentSpeaker:
     - stop_immediately() hard-resets the OS audio driver via stop_stream()/start_stream()
       rather than only draining the Python queue.
     """
-    def __init__(self):
-        import pyaudio
+    def __init__(self, ws_audio_out_queue=None):
         self.audio_queue = queue.Queue(maxsize=32)
         self.interrupt_event = threading.Event()
-        self.p = pyaudio.PyAudio()
+        self.ws_audio_out_queue = ws_audio_out_queue
+        self.p = None
+        self.stream = None
 
-        # frames_per_buffer=512 → ~21ms hardware buffer (was 2048 → ~85ms).
-        # This minimises how much audio is already committed to the OS driver
-        # when a barge-in fires. The tradeoff is slightly higher CPU callback rate.
-        self.stream = self.p.open(
-            format=pyaudio.paFloat32,
-            channels=1,
-            rate=24000,
-            output=True,
-            frames_per_buffer=512
-        )
+        if self.ws_audio_out_queue is None:
+            import pyaudio
+            self.p = pyaudio.PyAudio()
+            # frames_per_buffer=512 → ~21ms hardware buffer (was 2048 → ~85ms).
+            # This minimises how much audio is already committed to the OS driver
+            # before we can interrupt it.
+            self.stream = self.p.open(
+                format=pyaudio.paFloat32,
+                channels=1,
+                rate=24000,
+                output=True,
+                frames_per_buffer=512
+            )
         self.is_running = True
         self.is_playing = False
         self.worker_thread = threading.Thread(target=self._play_loop, daemon=True)
@@ -152,7 +157,15 @@ class PersistentSpeaker:
                             break
                         sub = chunk_bytes[i:i + step]
                         if sub:
-                            self.stream.write(sub)
+                            if self.ws_audio_out_queue is not None:
+                                import numpy as np
+                                import time
+                                float_arr = np.frombuffer(sub, dtype=np.float32)
+                                int16_arr = (float_arr * 32767.0).astype(np.int16)
+                                self.ws_audio_out_queue.put(int16_arr.tobytes())
+                                time.sleep(len(float_arr) / 24000.0)
+                            elif self.stream is not None:
+                                self.stream.write(sub)
                     self.audio_queue.task_done()
                     self.is_playing = False
             except queue.Empty:
@@ -190,9 +203,10 @@ class PersistentSpeaker:
 
         # Hard-flush OS audio driver buffer (WASAPI/ALSA/CoreAudio)
         try:
-            self.stream.stop_stream()
-            self.stream.start_stream()
-            print("[PersistentSpeaker] Hardware audio buffer flushed.", flush=True)
+            if self.stream is not None:
+                self.stream.stop_stream()
+                self.stream.start_stream()
+                print("[PersistentSpeaker] Hardware audio buffer flushed.", flush=True)
         except Exception as exc:
             print(f"[PersistentSpeaker] Buffer reset error (non-fatal): {exc}", flush=True)
 
@@ -290,12 +304,14 @@ class PersistentSpeaker:
         if self.worker_thread.is_alive():
             self.worker_thread.join(timeout=1.0)
         try:
-            self.stream.stop_stream()
-            self.stream.close()
+            if self.stream is not None:
+                self.stream.stop_stream()
+                self.stream.close()
         except Exception:
             pass
         try:
-            self.p.terminate()
+            if self.p is not None:
+                self.p.terminate()
         except Exception:
             pass
 
@@ -305,10 +321,10 @@ _default_player: PersistentSpeaker | None = None
 _default_state: SessionState | None = None
 
 
-def init_speaker_compat(state: SessionState):
+def init_speaker_compat(state: SessionState, ws_audio_out_queue=None):
     """Initialize backward-compatible speaker with shared SessionState."""
     global _default_player, _default_state
-    _default_player = PersistentSpeaker()
+    _default_player = PersistentSpeaker(ws_audio_out_queue=ws_audio_out_queue)
     _default_state = state
 
 

@@ -57,7 +57,7 @@ def stream_audio_recording(
 
     base_dir = Path(__file__).resolve().parent.parent.parent
     possible_paths = [
-        base_dir / "sessions" / session_id / "recording.wav",
+        base_dir / "data" / "sessions" / session_id / "continuous_mic_input.wav",
         base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id / "recording.wav",
         base_dir / "model" / "reports_model" / "test" / "input" / "sample_session" / "continuous_mic_input.wav",
     ]
@@ -130,6 +130,7 @@ async def voice_interview_stream(
     stop_event = threading.Event()
     import queue
     audio_queue = queue.Queue()
+    audio_out_queue = queue.Queue()
     loop = asyncio.get_running_loop()
 
     def thread_safe_callback(event: VoiceTurnEvent):
@@ -178,7 +179,19 @@ async def voice_interview_stream(
             logger.error(f"Error in recv_worker: {type(e).__name__} - {str(e)}")
             stop_event.set()
 
+    async def audio_send_worker():
+        try:
+            while not stop_event.is_set():
+                try:
+                    chunk = audio_out_queue.get_nowait()
+                    await websocket.send_bytes(chunk)
+                except queue.Empty:
+                    await asyncio.sleep(0.02)
+        except (WebSocketDisconnect, RuntimeError, asyncio.CancelledError):
+            pass
+
     send_task = asyncio.create_task(send_worker())
+    audio_send_task = asyncio.create_task(audio_send_worker())
     recv_task = asyncio.create_task(recv_worker())
 
     try:
@@ -191,7 +204,8 @@ async def voice_interview_stream(
             questions,
             system_prompt,
             total_questions,
-            audio_queue
+            audio_queue,
+            audio_out_queue
         )
         
         # Interview finished or stopped
@@ -212,14 +226,23 @@ async def voice_interview_stream(
             session = db.query(Session).filter(Session.id == session_id).first()
             if session and session.artifacts:
                 session.artifacts.transcript = manifest
-                session.status = SessionStatus.EVALUATING
-                session.progress_message = "Interview complete. Generating evaluation report."
+                
+                # Prevent React Strict Mode double-connects from instantly terminating the session
+                total_turns = manifest.get("total_turns", 0)
+                if total_turns > 0:
+                    session.status = SessionStatus.EVALUATING
+                    session.progress_message = "Interview complete. Generating evaluation report."
+                else:
+                    session.status = SessionStatus.READY
+                    session.progress_message = "Ready to start interview"
+                    
                 db.commit()
 
     except Exception as e:
         logger.error(f"Voice session error: {e}", exc_info=True)
     finally:
         send_task.cancel()
+        audio_send_task.cancel()
         recv_task.cancel()
         if not stop_event.is_set():
             stop_event.set()

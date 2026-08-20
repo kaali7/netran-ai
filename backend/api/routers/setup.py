@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
 from sqlalchemy.orm import Session as DBSession
 
 from api.db import get_db
-from api.models import User, Session as SessionModel, SessionStatus
+from api.models import User, Session as SessionModel, SessionStatus, SessionArtifact
 from api.schemas import AnalyzeRequest, AnalyzeStatusResponse
 from api.dependencies import get_current_user
 from api.services.pipeline_runner import run_stage1_and_stage2
@@ -179,3 +179,52 @@ def get_candidate_sessions(
 
     return result
 
+@router.post(
+    "/sessions/{session_id}/duplicate",
+    status_code=status.HTTP_201_CREATED,
+    summary="Duplicate an existing session for retaking",
+)
+def duplicate_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    old_session = (
+        db.query(SessionModel)
+        .filter(
+            SessionModel.id == session_id,
+            SessionModel.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not old_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    old_artifact = db.query(SessionArtifact).filter(SessionArtifact.session_id == session_id).first()
+    
+    new_session = SessionModel(
+        user_id=current_user.id,
+        resume_hash=old_session.resume_hash,
+        jd_hash=old_session.jd_hash,
+        status=SessionStatus.READY,
+        progress_message="Ready to start interview"
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+    
+    if old_artifact:
+        import copy
+        new_artifact = SessionArtifact(
+            session_id=new_session.id,
+            parsed_resume=copy.deepcopy(old_artifact.parsed_resume) if old_artifact.parsed_resume else None,
+            parsed_jd=copy.deepcopy(old_artifact.parsed_jd) if old_artifact.parsed_jd else None,
+            jd_detail=copy.deepcopy(old_artifact.jd_detail) if old_artifact.jd_detail else None,
+            resume_analysis=copy.deepcopy(old_artifact.resume_analysis) if old_artifact.resume_analysis else None,
+            interview_behavior=copy.deepcopy(old_artifact.interview_behavior) if old_artifact.interview_behavior else None,
+            question_tree=copy.deepcopy(old_artifact.question_tree) if old_artifact.question_tree else None
+        )
+        db.add(new_artifact)
+        db.commit()
+        
+    return {"session_id": new_session.id}

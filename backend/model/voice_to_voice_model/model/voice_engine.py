@@ -100,7 +100,8 @@ class WorkflowVoiceEngine:
         self,
         status_callback: Callable[[int, str, str, str], None] | None = None,
         max_turns: int = 15,
-        ws_audio_queue: Any = None
+        ws_audio_queue: Any = None,
+        ws_audio_out_queue: Any = None
     ):
         """
         Executes the voice-to-voice interview loop turn-by-turn.
@@ -122,15 +123,32 @@ class WorkflowVoiceEngine:
         mic_writer = ContinuousMicWriter(filepath=self.wav_path)
         mic_writer.start()
         
+        try:
+            from .speaker import init_speaker_compat
+            init_speaker_compat(self.session_state, ws_audio_out_queue=ws_audio_out_queue)
+        except Exception as e:
+            logger.error(f"Failed to init speaker compat: {e}")
+        
         conversation_history: list[dict[str, str]] = []
         
         # Initialize QuestionManager
         question_objects = []
-        for q in self.question_tree:
+        logger.info(f"[DEBUG] self.question_tree type: {type(self.question_tree)}")
+        if isinstance(self.question_tree, dict) and "questions" in self.question_tree:
+            q_list = self.question_tree["questions"]
+        elif isinstance(self.question_tree, dict) and "question_tree" in self.question_tree:
+            q_list = self.question_tree["question_tree"]
+        else:
+            q_list = self.question_tree
+
+        logger.info(f"[DEBUG] q_list length: {len(q_list) if q_list else 0}")
+        
+        for q in (q_list or []):
             try:
                 question_objects.append(InterviewQuestionInput(**q))
             except Exception as e:
                 logger.error(f"Failed to map question: {e}")
+
         
         qm_qs = question_objects[:max_turns] if max_turns > 0 else question_objects
         question_manager = QuestionManager(qm_qs)
@@ -163,8 +181,17 @@ class WorkflowVoiceEngine:
                 if status_callback:
                     status_callback(turn_idx, "LISTENING_CANDIDATE", "", "")
                     
+                def vad_callback(data: dict[str, Any]):
+                    if status_callback:
+                        import json
+                        status_callback(turn_idx, f"AUDIO_LEVEL|{json.dumps(data)}", "", "")
+                
                 audio_start_perf = session_log.elapsed_sec()
-                transcription_result = listen_and_transcribe(state=self.session_state, ws_audio_queue=ws_audio_queue)
+                transcription_result = listen_and_transcribe(
+                    state=self.session_state,
+                    ws_audio_queue=ws_audio_queue,
+                    ui_callback=vad_callback
+                )
                 
                 if isinstance(transcription_result, dict):
                     candidate_transcript = transcription_result.get("text", "").strip()

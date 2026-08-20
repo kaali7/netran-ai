@@ -167,6 +167,7 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 * **Filler Word Removed**: The random "Okay.", "Right.", "Alright." filler before LLM generation has been removed. The LLM's own conversational anchors ("Ah,", "Got it,") stream as the first clause with sub-250ms TTFA, providing a natural response gap without the artificial pre-generation delay (~400ms saved).
 * **Technical Text Normalization**: Prevents odd pausing on strings like "Python 3.11", "Next.js", and "HTTP/1.1".
 * **Kokoro-82M Engine**: Neural TTS initialized using `KPipeline(lang_code="a")` with `af_bella` voice.
+* **Zero-Latency First Turn (Web Server Preload)**: The heavy Kokoro model is preloaded into memory during the FastAPI app `@asynccontextmanager lifespan` boot sequence, eliminating the 10-15s initial lazy-load blocking delay when the first WebSocket connects.
 
 ### 6. Session Telemetry & Clean Log Storage ([session_logger.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/session_logger.py) & [benchmark.py](file:///c:/kali/product/netran%20ai/backend/model/voice_to_voice_model/model/benchmark.py))
 * **Single Output Contract (`transcript.json`)**: Writes strictly `transcript.json` and `recording.wav` in the session output directory. Redundant duplicate file creation (`session_manifest.json`) and inner array key duplication (`full_chronological_transcript` vs `turns`) are completely eliminated.

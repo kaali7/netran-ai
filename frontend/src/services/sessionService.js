@@ -58,6 +58,15 @@ export async function pollAnalysisStatus(sessionId) {
 }
 
 /**
+ * Duplicate an existing session for retaking.
+ * POST /api/v1/setup/sessions/{session_id}/duplicate
+ */
+export async function duplicateSession(sessionId) {
+  const response = await api.post(`/setup/sessions/${sessionId}/duplicate`);
+  return response.data;
+}
+
+/**
  * Fetch generated 15-question tree, candidate resume analysis, and persona behavior.
  * GET /api/v1/questions/preview/{session_id}
  */
