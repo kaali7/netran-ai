@@ -32,6 +32,7 @@ def run_voice_session_with_callback(
     system_prompt: str,
     total_questions: int,
     audio_queue: Any = None,
+    audio_out_queue: Any = None,
 ) -> dict[str, Any] | None:
     """
     Runs the WorkflowVoiceEngine in a background thread.
@@ -49,7 +50,19 @@ def run_voice_session_with_callback(
         progress_pct = min(100, progress_pct)
         
         event_type = state.split("|")[0]
-        branch_taken = state.split("|")[1] if "|" in state else None
+        
+        if event_type == "AUDIO_LEVEL":
+            import json
+            data = json.loads(state.split("|", 1)[1])
+            thread_safe_callback(VoiceTurnEvent(
+                event="AUDIO_LEVEL",
+                session_id=session_id,
+                turn_id=turn_id,
+                detail=json.dumps(data)
+            ))
+            return
+
+        branch_taken = state.split("|")[1] if "|" in state and len(state.split("|")) > 1 else None
         
         eva_response = None
         if event_type == "EVA_RESPONDING_BRANCH" and transcript:
@@ -71,7 +84,7 @@ def run_voice_session_with_callback(
         thread_safe_callback(event)
 
     try:
-        engine.run_interview(status_callback=status_callback, max_turns=total_questions, ws_audio_queue=audio_queue)
+        engine.run_interview(status_callback=status_callback, max_turns=total_questions, ws_audio_queue=audio_queue, ws_audio_out_queue=audio_out_queue)
         
         # Load final manifest
         import os
