@@ -131,6 +131,7 @@ backend/
     │       ├── brain.py       # Local Ollama Qwen2.5:3b streaming LLM engine with TextSanitizer regex
     │       ├── config.py      # Stage 3 configuration loader (Stage3Config)
     │       ├── download_vad.py # Downloader utility for Silero VAD ONNX model weights
+    │       ├── execution_logger.py # Cross-module execution trace logger (execution_trace.jsonl)
     │       ├── front.py       # Kivy Desktop GUI client for standalone Stage 3 testing
     │       ├── listener.py    # Silero VAD v3, auto-gain peak normalizer, Faster-Whisper STT
     │       ├── pipeline.py    # Stage 3 master pipeline entry point (WorkflowVoiceEngine)

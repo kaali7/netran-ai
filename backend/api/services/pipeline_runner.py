@@ -12,6 +12,11 @@ from api.config import settings, BASE_DIR
 from api.db import SessionLocal
 from api.models import Session, SessionArtifact, SessionStatus
 
+try:
+    from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+except ImportError:
+    ExecutionLogger = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,6 +66,13 @@ def run_stage1_and_stage2(
             )
             return
 
+        session_dir = os.path.join(BASE_DIR, "data", "sessions", session_id)
+        os.makedirs(session_dir, exist_ok=True)
+        exec_log = ExecutionLogger(session_id, session_dir) if ExecutionLogger else None
+
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE1_START", {})
+
         # ── 2. Run Stage 1 (JD Research & Tavily Market Intel Synthesis) ────────
         _update_progress(db, session_id, "Stage 1: Parsing job description with Gemini...")
 
@@ -96,6 +108,9 @@ def run_stage1_and_stage2(
         artifact.jd_detail = rubric_dict
         db.commit()
 
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE1_COMPLETE", {"rubric_size": len(str(rubric_dict))})
+
         _update_progress(
             db,
             session_id,
@@ -103,8 +118,6 @@ def run_stage1_and_stage2(
         )
 
         # ── 3. Prepare resume context file for Stage 2 ────────────────────────
-        session_dir = os.path.join(BASE_DIR, "data", "sessions", session_id)
-        os.makedirs(session_dir, exist_ok=True)
         temp_resume_path = os.path.join(session_dir, "resume_parsed.json")
 
         parsed_resume = artifact.parsed_resume
@@ -120,6 +133,8 @@ def run_stage1_and_stage2(
             session_id,
             "Stage 2: Generating 15-question interview tree and voice system prompt...",
         )
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE2_START", {})
 
         from model.question_model.model.pipeline import Stage2Pipeline
         from model.question_model.model.config import Stage2Config
@@ -149,6 +164,9 @@ def run_stage1_and_stage2(
         session_row.status = SessionStatus.READY
         session_row.progress_message = "Pipeline complete! Interview ready."
         db.commit()
+
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE2_COMPLETE", {"num_questions": len(s2_output.interview_questions)})
 
         logger.info(
             f"Pipeline successfully completed for session '{session_id}'. "
@@ -189,6 +207,10 @@ def run_stage4(session_id: str):
         if not session_dir.exists():
             raise FileNotFoundError(f"Session directory not found at {session_dir}")
 
+        exec_log = ExecutionLogger(session_id, str(session_dir)) if ExecutionLogger else None
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE4_START", {})
+
         from model.reports_model.model.pipeline import Stage4Pipeline
         from model.reports_model.model.config import Stage4Config
 
@@ -217,6 +239,9 @@ def run_stage4(session_id: str):
         session_row.status = SessionStatus.COMPLETED
         session_row.progress_message = "Evaluation complete! Report ready."
         db.commit()
+
+        if exec_log:
+            exec_log.log_event("BACKEND_API", "STAGE4_COMPLETE", {"overall_score": final_report.overall_score})
 
         logger.info(f"[Stage 4] Successfully generated report for session '{session_id}'.")
 

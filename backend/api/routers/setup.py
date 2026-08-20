@@ -11,6 +11,13 @@ from api.models import User, Session as SessionModel, SessionStatus, SessionArti
 from api.schemas import AnalyzeRequest, AnalyzeStatusResponse
 from api.dependencies import get_current_user
 from api.services.pipeline_runner import run_stage1_and_stage2
+from api.config import BASE_DIR
+import os
+
+try:
+    from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+except ImportError:
+    ExecutionLogger = None
 
 router = APIRouter(prefix="/setup", tags=["Setup & Pipeline Analysis"])
 
@@ -85,6 +92,11 @@ def trigger_analysis(
     session_row.status = SessionStatus.ANALYZING
     session_row.progress_message = "Starting pipeline..."
     db.commit()
+
+    if ExecutionLogger:
+        session_dir = os.path.join(BASE_DIR, "data", "sessions", request.session_id)
+        exec_log = ExecutionLogger(request.session_id, session_dir)
+        exec_log.log_event("BACKEND_API", "PIPELINE_TRIGGERED", {"force_refresh": request.force_refresh})
 
     # ── 5. Dispatch background task ─────────────────────────────────────────
     target_seniority = request.target_seniority or "Senior"
@@ -212,6 +224,11 @@ def duplicate_session(
     db.add(new_session)
     db.commit()
     db.refresh(new_session)
+    
+    if ExecutionLogger:
+        session_dir = os.path.join(BASE_DIR, "data", "sessions", new_session.id)
+        exec_log = ExecutionLogger(new_session.id, session_dir)
+        exec_log.log_event("BACKEND_API", "SESSION_DUPLICATED", {"original_session_id": session_id})
     
     if old_artifact:
         import copy

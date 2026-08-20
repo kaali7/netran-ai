@@ -78,6 +78,7 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 | **F6** | **Session Duration Metadata** | backend/api/routers/setup.py | Track interview time usage | ✅ Completed |
 | **F7** | **Mobile Responsive Layout** | All frontend pages | Mobile / Tablet scaling | ✅ Completed |
 | **F8** | **Export Report as PDF** | frontend/src/pages/Report.jsx | Print and share capability | ✅ Completed |
+| **F9** | **Execution Logger Trace** | backend/api/routers/voice.py<br>backend/model/.../execution_logger.py | Trace fine-grained metrics for voice WS pipeline | ✅ Completed |
 
 ---
 
@@ -125,6 +126,7 @@ Items identified from the codebase scan that are not yet built.
 - ✅ **Frontend Build**: Production build successful (0 errors, 1,695 modules).
 - ✅ **Responsive UI**: Full `ui-ux-pro-max` compliance for desktop, tablet, and mobile.
 - ✅ **Audio/Visuals**: Waveform visualization, PCM streaming, and interactive playback confirmed.
+- ✅ **Execution Tracing**: Comprehensive logging of STT, TTFT, TTS and Audio blob sizes tracing implemented.
 - ✅ **Git Integrity**: All major features pushed with clear hash-tagged commit notes.
 - 🔴 **Codebase Audit 2026-08-19**: Full scan complete. 7 new active bugs found (B1–B7), 10 pending improvements identified (NF1–NF10). See sections above.
 

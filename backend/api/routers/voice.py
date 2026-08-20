@@ -15,6 +15,13 @@ from api.services.voice_adapter import run_voice_session_with_callback
 
 from pathlib import Path
 from fastapi.responses import FileResponse
+import sys
+import os
+
+try:
+    from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+except ImportError:
+    ExecutionLogger = None
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["Voice Interview"])
@@ -125,6 +132,14 @@ async def voice_interview_stream(
         "total_questions": total_questions
     })
 
+    # Instantiate execution logger
+    exec_logger = None
+    if ExecutionLogger:
+        base_dir = Path(__file__).resolve().parent.parent.parent
+        session_dir = str(base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id)
+        exec_logger = ExecutionLogger(session_id=session_id, session_dir=session_dir)
+        exec_logger.log_event("BACKEND_API", "WS_CONNECTED", {"total_questions": total_questions})
+
     # Prepare threading primitives
     ws_queue = asyncio.Queue()
     stop_event = threading.Event()
@@ -160,11 +175,16 @@ async def voice_interview_stream(
                 message = await websocket.receive()
                 if "bytes" in message:
                     # Raw PCM audio chunk from frontend Worklet
+                    if exec_logger:
+                        exec_logger.log_event("FRONTEND", "AUDIO_CHUNK_RECEIVED", {"size_bytes": len(message["bytes"])})
                     audio_queue.put(message["bytes"])
                 elif "text" in message:
                     data = json.loads(message["text"])
                     action = data.get("action")
-                    if action == "stop":
+                    if action == "client_log":
+                        if exec_logger:
+                            exec_logger.log_event("FRONTEND", data.get("event_type", "UNKNOWN"), data.get("details", {}))
+                    elif action == "stop":
                         logger.info(f"Client requested stop for session {session_id}")
                         stop_event.set()
                         break
@@ -184,6 +204,8 @@ async def voice_interview_stream(
             while not stop_event.is_set():
                 try:
                     chunk = audio_out_queue.get_nowait()
+                    if exec_logger:
+                        exec_logger.log_event("BACKEND_API", "AUDIO_CHUNK_SENT", {"size_bytes": len(chunk)})
                     await websocket.send_bytes(chunk)
                 except queue.Empty:
                     await asyncio.sleep(0.02)
@@ -248,5 +270,7 @@ async def voice_interview_stream(
             stop_event.set()
         try:
             await websocket.close()
+            if exec_logger:
+                exec_logger.log_event("BACKEND_API", "WS_DISCONNECTED", {})
         except Exception:
             pass

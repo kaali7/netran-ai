@@ -29,6 +29,20 @@ export const useInterviewSession = (sessionId) => {
   const nextStartTimeRef = useRef(0);
   const sourceNodesQueueRef = useRef([]);
 
+  const sendClientLog = useCallback((eventType, details = {}) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({
+          action: 'client_log',
+          event_type: eventType,
+          details: details
+        }));
+      } catch (e) {
+        // Ignore WS errors if closing
+      }
+    }
+  }, []);
+
   const connectWebSocket = useCallback(() => {
     if (!sessionId || !token) return;
 
@@ -51,6 +65,7 @@ export const useInterviewSession = (sessionId) => {
       setIsConnected(true);
       setConnectionState('connected');
       setError(null);
+      sendClientLog('WS_CONNECTED');
       startMicrophoneCapture();
     };
 
@@ -58,6 +73,7 @@ export const useInterviewSession = (sessionId) => {
       // Handle Binary TTS Audio Chunk (assuming Int16 16kHz PCM from backend)
       if (event.data instanceof Blob) {
         setIsSpeaking(true);
+        sendClientLog('AUDIO_BLOB_RECEIVED', { size_bytes: event.data.size });
         const arrayBuffer = await event.data.arrayBuffer();
         const int16Array = new Int16Array(arrayBuffer);
         playAudioChunk(int16Array);
@@ -70,6 +86,7 @@ export const useInterviewSession = (sessionId) => {
           
           if (msg.event === 'INTERRUPT') {
             console.log('Barge-in detected: interrupting AI');
+            sendClientLog('BARGE_IN_TRIGGERED');
             interruptPlayback();
             setIsSpeaking(false);
           } else if (msg.event === 'SPEAKING_QUESTION') {
@@ -124,15 +141,17 @@ export const useInterviewSession = (sessionId) => {
     ws.onerror = (error) => {
       console.error('WebSocket Error:', error);
       setConnectionState('error');
+      sendClientLog('WS_ERROR', { error: 'WebSocket error occurred' });
     };
 
     ws.onclose = () => {
       console.log('Voice WebSocket closed');
       setIsConnected(false);
       setConnectionState('disconnected');
+      // Cannot sendClientLog here since WS is already closed
       stopSession();
     };
-  }, [sessionId, token]);
+  }, [sessionId, token, sendClientLog]);
 
   const startMicrophoneCapture = async () => {
     try {
@@ -145,6 +164,7 @@ export const useInterviewSession = (sessionId) => {
         },
       });
       mediaStreamRef.current = stream;
+      sendClientLog('MIC_ACCESS_GRANTED');
 
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
         sampleRate: 16000,
@@ -154,6 +174,7 @@ export const useInterviewSession = (sessionId) => {
       
       audioCtx.onstatechange = () => {
         setAudioState(audioCtx.state);
+        sendClientLog('AUDIO_CONTEXT_STATE_CHANGE', { state: audioCtx.state });
       };
       
       nextStartTimeRef.current = audioCtx.currentTime;
@@ -183,6 +204,7 @@ export const useInterviewSession = (sessionId) => {
       };
     } catch (err) {
       console.error('Error accessing microphone:', err);
+      sendClientLog('MIC_ACCESS_DENIED', { error: err.message });
       setMicPermissionDenied(true);
       setError('Microphone access denied or unavailable. Please check microphone permissions in your browser settings.');
     }

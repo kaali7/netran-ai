@@ -23,6 +23,7 @@ try:
     from .session_state import SessionState
     from .speaker import preload_models as preload_speaker
     from .speaker import speak_text
+    from .execution_logger import ExecutionLogger
 except ImportError:
     try:
         from model.voice_to_voice_model.model import brain
@@ -38,6 +39,7 @@ except ImportError:
             preload_models as preload_speaker,
         )
         from model.voice_to_voice_model.model.speaker import speak_text
+        from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
     except ImportError:
         import brain
         from listener import ContinuousMicWriter, listen_and_transcribe
@@ -47,6 +49,7 @@ except ImportError:
         from session_state import SessionState
         from speaker import preload_models as preload_speaker
         from speaker import speak_text
+        from execution_logger import ExecutionLogger
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +123,9 @@ class WorkflowVoiceEngine:
             logger.info("Injected dynamic system prompt into Ollama brain persona.")
             
         session_log = SessionLogger(session_id=self.session_id, session_dir=self.session_dir)
+        exec_logger = ExecutionLogger(session_id=self.session_id, session_dir=self.session_dir)
+        exec_logger.log_event("BACKEND_ENGINE", "ENGINE_START", {"max_turns": max_turns})
+        
         mic_writer = ContinuousMicWriter(filepath=self.wav_path)
         mic_writer.start()
         
@@ -182,9 +188,14 @@ class WorkflowVoiceEngine:
                     status_callback(turn_idx, "LISTENING_CANDIDATE", "", "")
                     
                 def vad_callback(data: dict[str, Any]):
+                    if exec_logger:
+                        exec_logger.log_event("BACKEND_ENGINE", f"VAD_{data.get('state', 'UNKNOWN')}", data)
                     if status_callback:
                         import json
                         status_callback(turn_idx, f"AUDIO_LEVEL|{json.dumps(data)}", "", "")
+                
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "STT_START", {"turn_id": turn_idx})
                 
                 audio_start_perf = session_log.elapsed_sec()
                 transcription_result = listen_and_transcribe(
@@ -203,6 +214,15 @@ class WorkflowVoiceEngine:
                     silence_before = 0.0
                 
                 audio_end_perf = session_log.elapsed_sec()
+                
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "STT_COMPLETE", {
+                        "turn_id": turn_idx,
+                        "transcript_length": len(candidate_transcript),
+                        "stt_latency_ms": stt_latency,
+                        "silence_before_sec": silence_before
+                    })
+                    
                 logger.info(f"Candidate Turn {turn_idx} STT: '{candidate_transcript}'")
                 
                 if not candidate_transcript:
@@ -233,12 +253,22 @@ class WorkflowVoiceEngine:
                 ack_history.append({"role": "user", "content": candidate_transcript})
                 ack_history.append({"role": "user", "content": llm_prompt})
                 
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "LLM_START", {"turn_id": turn_idx, "prompt_length": len(llm_prompt)})
+                
                 ttft_start = time.perf_counter()
                 try:
                     _, eva_response = brain.generate_eva_response(ack_history)
                 except Exception:
                     eva_response = "Got it. Let's move on. " + (target_question or "")
                 ttft_ms = (time.perf_counter() - ttft_start) * 1000.0
+                
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "LLM_COMPLETE", {
+                        "turn_id": turn_idx,
+                        "response_length": len(eva_response),
+                        "ttft_ms": ttft_ms
+                    })
                 
                 conversation_history.append({"role": "user", "content": candidate_transcript})
                 conversation_history.append({"role": "assistant", "content": eva_response})
@@ -258,14 +288,22 @@ class WorkflowVoiceEngine:
                 if status_callback:
                     status_callback(turn_idx, f"EVA_RESPONDING_BRANCH|{branch_taken}", target_question, f"{candidate_transcript}\n\n[Eva]: {eva_response}")
                     
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "TTS_START", {"turn_id": turn_idx})
+                
                 if not self.stop_event.is_set():
                     speak_text(eva_response)
+                    
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_ENGINE", "TTS_COMPLETE", {"turn_id": turn_idx})
                     
         except Exception as e:
             logger.error(f"Error during voice interview loop: {e}", exc_info=True)
         finally:
             mic_writer.stop()
             session_log.finalize()
+            if exec_logger:
+                exec_logger.log_event("BACKEND_ENGINE", "ENGINE_STOP", {})
             logger.info("Voice interview execution finished.")
 
     def stop(self):
