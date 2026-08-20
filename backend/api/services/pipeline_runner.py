@@ -241,7 +241,8 @@ def run_stage4(session_id: str):
         db.commit()
 
         if exec_log:
-            exec_log.log_event("BACKEND_API", "STAGE4_COMPLETE", {"overall_score": final_report.overall_score})
+            score = getattr(final_report, "overall_technical_score", getattr(final_report, "overall_score", 0))
+            exec_log.log_event("BACKEND_API", "STAGE4_COMPLETE", {"overall_score": score})
 
         logger.info(f"[Stage 4] Successfully generated report for session '{session_id}'.")
 
