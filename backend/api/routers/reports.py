@@ -60,6 +60,29 @@ def get_report(
     artifact = db.query(SessionArtifact).filter(SessionArtifact.session_id == session_id).first()
     evaluation_report = artifact.evaluation_report if artifact else None
 
+    # Enrich turn_evaluations with audio timings from transcript manifest if available
+    if evaluation_report and isinstance(evaluation_report, dict) and artifact and artifact.transcript:
+        raw_t = artifact.transcript
+        transcript_turns = (
+            raw_t.get("turns") or raw_t.get("full_chronological_transcript")
+            if isinstance(raw_t, dict)
+            else (raw_t if isinstance(raw_t, list) else [])
+        )
+        if isinstance(transcript_turns, list):
+            turn_map = {
+                t.get("turn_id", idx + 1): t
+                for idx, t in enumerate(transcript_turns)
+                if isinstance(t, dict)
+            }
+            turn_evals = evaluation_report.get("turn_evaluations", [])
+            for t_item in turn_evals:
+                if isinstance(t_item, dict):
+                    t_id = t_item.get("turn_id")
+                    if t_id in turn_map:
+                        src = turn_map[t_id]
+                        t_item["audio_start_sec"] = src.get("audio_start_sec", 0.0)
+                        t_item["audio_end_sec"] = src.get("audio_end_sec", 0.0)
+
     return ReportResponse(
         session_id=session.id,
         status=session.status,

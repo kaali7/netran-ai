@@ -67,8 +67,18 @@ export const Dashboard = () => {
     navigate('/setup');
   };
 
-  const handleViewFeedback = (sessionId) => {
-    navigate(`/report/${sessionId}`);
+  const handleViewFeedback = (session) => {
+    const sId = typeof session === 'object' ? session.id : session;
+    const status = typeof session === 'object' ? session.status : null;
+    const hasReport = typeof session === 'object' ? session.hasReport : false;
+
+    if (status === 'in_progress' || status === 'ready') {
+      navigate(`/interview/${sId}`);
+    } else if (status === 'evaluating' && !hasReport) {
+      navigate(`/processing/${sId}`);
+    } else {
+      navigate(`/report/${sId}`);
+    }
   };
 
   return (

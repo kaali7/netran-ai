@@ -12,23 +12,29 @@ from api.db import get_db
 from api.models import User, UserRole
 from api.security import decode_token
 
-# OAuth2 bearer scheme for HTTP Authorization header (points to form-data OAuth2 token endpoint)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+from typing import Generator, Optional
 
+# OAuth2 bearer scheme for HTTP Authorization header (auto_error=False to allow query token fallback)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
+    query_token: Optional[str] = Query(None, alias="token"),
     db: Session = Depends(get_db)
 ) -> User:
-    """Validate bearer token and retrieve authenticated user profile."""
+    """Validate bearer token (from Authorization header or query parameter) and retrieve authenticated user profile."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate authentication credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    token_data = decode_token(token)
+    auth_token = token or query_token
+    if not auth_token:
+        raise credentials_exception
+
+    token_data = decode_token(auth_token)
     if token_data is None or token_data.user_id is None:
         raise credentials_exception
 

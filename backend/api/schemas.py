@@ -294,6 +294,7 @@ class HistorySessionItem(BaseModel):
     total_questions: int = 15
     has_report: bool = False
     has_recording: bool = False
+    progress_message: Optional[str] = None
 
 
 class HistoryListResponse(BaseModel):
@@ -315,7 +316,15 @@ class HistorySessionDetailResponse(BaseModel):
     evaluation_report: Optional[dict[str, Any]] = None
     parsed_jd: Optional[dict[str, Any]] = None
     parsed_resume: Optional[dict[str, Any]] = None
+    turns: list[dict[str, Any]] = []
     has_recording: bool = False
+    progress_message: Optional[str] = None
+
+
+class SessionDeleteResponse(BaseModel):
+    """Response returned when a session is deleted."""
+    session_id: str
+    message: str = "Session deleted successfully"
 
 
 # --- Common Schemas ---

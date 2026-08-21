@@ -16,6 +16,7 @@ from api.schemas import (
     HistoryListResponse,
     HistorySessionItem,
     HistorySessionDetailResponse,
+    SessionDeleteResponse,
 )
 
 router = APIRouter(prefix="/history", tags=["History & Session Archive"])
@@ -114,9 +115,13 @@ def get_history_sessions(
             duration_text = "0m 00s"
 
         # Check audio recording presence
-        session_folder = base_dir / "sessions" / s.id
-        wav_file = session_folder / "recording.wav"
-        has_recording = wav_file.exists() or (artifact and artifact.transcript is not None)
+        possible_paths = [
+            base_dir / "data" / "sessions" / s.id / "continuous_mic_input.wav",
+            base_dir / "data" / "sessions" / s.id / "recording.wav",
+            base_dir / "sessions" / s.id / "recording.wav",
+            base_dir / "model" / "voice_to_voice_model" / "test" / "output" / s.id / "recording.wav",
+        ]
+        has_recording = any(p.exists() for p in possible_paths) or (artifact and artifact.transcript is not None)
 
         date_text = s.created_at.strftime("%b %d, %Y")
 
@@ -149,6 +154,7 @@ def get_history_sessions(
             total_questions=total_questions,
             has_report=evaluation_report is not None and len(evaluation_report) > 0,
             has_recording=has_recording,
+            progress_message=s.progress_message,
         ))
 
     return HistoryListResponse(
@@ -164,7 +170,7 @@ def get_history_session_detail(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Fetch comprehensive session detail payload including question tree, resume analysis, and evaluation report.
+    Fetch comprehensive session detail payload including question tree, resume analysis, turn transcripts, and evaluation report.
     """
     session = db.query(Session).filter(Session.id == session_id, Session.user_id == current_user.id).first()
     if not session:
@@ -178,9 +184,25 @@ def get_history_session_detail(
     resume_analysis = artifact.resume_analysis if artifact and artifact.resume_analysis else {}
     evaluation_report = artifact.evaluation_report if artifact and artifact.evaluation_report else {}
 
+    # Extract turns from transcript or evaluation report
+    turns = []
+    if artifact and artifact.transcript:
+        raw_t = artifact.transcript
+        if isinstance(raw_t, dict):
+            turns = raw_t.get("turns") or raw_t.get("full_chronological_transcript") or []
+        elif isinstance(raw_t, list):
+            turns = raw_t
+    elif evaluation_report and isinstance(evaluation_report, dict) and evaluation_report.get("turn_evaluations"):
+        turns = evaluation_report.get("turn_evaluations") or []
+
     base_dir = Path(__file__).resolve().parent.parent.parent
-    wav_file = base_dir / "sessions" / session_id / "recording.wav"
-    has_recording = wav_file.exists() or (artifact and artifact.transcript is not None)
+    possible_paths = [
+        base_dir / "data" / "sessions" / session_id / "continuous_mic_input.wav",
+        base_dir / "data" / "sessions" / session_id / "recording.wav",
+        base_dir / "sessions" / session_id / "recording.wav",
+        base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id / "recording.wav",
+    ]
+    has_recording = any(p.exists() for p in possible_paths) or (artifact and artifact.transcript is not None)
 
     return HistorySessionDetailResponse(
         session_id=session.id,
@@ -194,5 +216,47 @@ def get_history_session_detail(
         evaluation_report=evaluation_report,
         parsed_jd=parsed_jd,
         parsed_resume=parsed_resume,
+        turns=turns if isinstance(turns, list) else [],
         has_recording=has_recording,
+        progress_message=session.progress_message,
+    )
+
+
+@router.delete("/session/{session_id}", response_model=SessionDeleteResponse)
+def delete_history_session(
+    session_id: str,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Permanently delete a candidate session, associated artifacts, and local audio files.
+    """
+    import shutil
+    session = db.query(Session).filter(Session.id == session_id, Session.user_id == current_user.id).first()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    # Delete local session audio/artifact directories
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    possible_dirs = [
+        base_dir / "data" / "sessions" / session_id,
+        base_dir / "sessions" / session_id,
+        base_dir / "model" / "voice_to_voice_model" / "test" / "output" / session_id,
+        base_dir / "model" / "reports_model" / "test" / "output" / session_id,
+        base_dir / "model" / "question_model" / "test" / "output" / session_id,
+    ]
+    for d in possible_dirs:
+        if d.exists() and d.is_dir():
+            try:
+                shutil.rmtree(str(d), ignore_errors=True)
+            except Exception:
+                pass
+
+    # Delete from DB (cascading deletes SessionArtifact)
+    db.delete(session)
+    db.commit()
+
+    return SessionDeleteResponse(
+        session_id=session_id,
+        message="Session and all associated artifacts deleted successfully"
     )

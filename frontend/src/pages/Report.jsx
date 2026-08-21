@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   RotateCcw,
+  RotateCw,
   BarChart2,
   Share2,
   Calendar,
@@ -27,21 +28,172 @@ import {
   Download,
   Check,
   ArrowRight,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Headphones,
+  SlidersHorizontal,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import PageWrapper from '../components/layout/PageWrapper';
 import useReports from '../hooks/useReports';
 import useAuth from '../hooks/useAuth';
 
-
 export const Report = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { report, status, progressMessage, isLoading, error } = useReports(sessionId);
   const { user } = useAuth();
-  const userInitial = user?.display_name ? user.display_name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'C');
+  const userInitial = user?.display_name
+    ? user.display_name.charAt(0).toUpperCase()
+    : user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'C';
 
   const [isCopied, setIsCopied] = useState(false);
+
+  // Accordion state for turn breakdown
+  const [expandedQuestions, setExpandedQuestions] = useState({});
+
+  // Turn Audio playback state
+  const [playingTurnId, setPlayingTurnId] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [audioError, setAudioError] = useState(null);
+  const audioRef = useRef(null);
+
+  // Initialize first turn open when report loads
+  useEffect(() => {
+    if (report && report.turn_evaluations && report.turn_evaluations.length > 0) {
+      setExpandedQuestions({ 0: true });
+    }
+  }, [report]);
+
+  // High-frequency 60fps playhead updater while audio is actively playing
+  useEffect(() => {
+    let animId;
+    if (isPlaying) {
+      const step = () => {
+        if (audioRef.current && !audioRef.current.paused) {
+          setAudioCurrentTime(audioRef.current.currentTime || 0);
+          const dur = audioRef.current.duration;
+          if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+            setAudioDuration(dur);
+          }
+          animId = requestAnimationFrame(step);
+        }
+      };
+      animId = requestAnimationFrame(step);
+    }
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [isPlaying]);
+
+  const handleToggleTurnAudio = (turnId, startSec, endSec) => {
+    const token = localStorage.getItem('netran_token') || localStorage.getItem('token');
+    const audioEl = audioRef.current;
+    if (!audioEl) return;
+
+    if (playingTurnId === turnId) {
+      if (isPlaying) {
+        audioEl.pause();
+        setIsPlaying(false);
+      } else {
+        audioEl
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch((err) => {
+            console.error('Audio play error:', err);
+            setIsPlaying(false);
+          });
+      }
+      return;
+    }
+
+    // Calculate initial estimated duration from turn metadata
+    const expectedDur = (endSec && startSec && endSec > startSec) ? (endSec - startSec) : 0;
+    setPlayingTurnId(turnId);
+    setAudioCurrentTime(0);
+    setAudioDuration(expectedDur);
+    setAudioError(null);
+
+    const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+    const turnAudioUrl = `/api/v1/voice/recording/${sessionId}/turn/${turnId}${tokenQuery}`;
+
+    audioEl.src = turnAudioUrl;
+    audioEl.playbackRate = playbackRate;
+    audioEl.currentTime = 0;
+    audioEl.load();
+    audioEl
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+      })
+      .catch((err) => {
+        console.warn('Turn clip fallback to continuous stream:', err);
+        if (startSec !== undefined && startSec !== null) {
+          const fullAudioUrl = `/api/v1/voice/recording/${sessionId}${tokenQuery}`;
+          audioEl.src = fullAudioUrl;
+          audioEl.currentTime = startSec || 0;
+          audioEl
+            .play()
+            .then(() => setIsPlaying(true))
+            .catch((e) => {
+              console.error('Full stream error:', e);
+              setIsPlaying(false);
+            });
+        } else {
+          setIsPlaying(false);
+        }
+      });
+  };
+
+  const handleSeekTurnAudio = (e) => {
+    const newTime = parseFloat(e.target.value);
+    setAudioCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  };
+
+  const handleJumpTurnAudio = (delta) => {
+    if (audioRef.current) {
+      const targetTime = Math.max(
+        0,
+        Math.min(audioDuration || 9999, (audioRef.current.currentTime || 0) + delta)
+      );
+      audioRef.current.currentTime = targetTime;
+      setAudioCurrentTime(targetTime);
+    }
+  };
+
+  const handleCyclePlaybackRate = () => {
+    const rates = [1.0, 1.25, 1.5, 2.0];
+    const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length;
+    const nextRate = rates[nextIdx];
+    setPlaybackRate(nextRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate;
+    }
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const toggleQuestion = (index) => {
+    setExpandedQuestions((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
 
   const handleShare = async () => {
     try {
@@ -66,22 +218,17 @@ export const Report = () => {
     window.print();
   };
 
-  // Accordion state for turn breakdown
-  const [expandedQuestions, setExpandedQuestions] = useState({});
-
-
-  // Initialize first turn open when report loads
-  useEffect(() => {
+  const handleListenAllAudio = () => {
     if (report && report.turn_evaluations && report.turn_evaluations.length > 0) {
-      setExpandedQuestions({ 0: true });
-    }
-  }, [report]);
+      const allOpen = {};
+      report.turn_evaluations.forEach((_, idx) => {
+        allOpen[idx] = true;
+      });
+      setExpandedQuestions(allOpen);
 
-  const toggleQuestion = (index) => {
-    setExpandedQuestions((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+      const firstTurn = report.turn_evaluations[0];
+      handleToggleTurnAudio(firstTurn.turn_id, firstTurn.audio_start_sec, firstTurn.audio_end_sec);
+    }
   };
 
   // Helper for color styling hiring signal badge
@@ -119,13 +266,13 @@ export const Report = () => {
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '10px' }}>
             Preparing Evaluation Scorecard...
           </h2>
-          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
-            {progressMessage || 'Gemini 3.6 Flash multimodal engine is evaluating turn transcripts and audio metrics.'}
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px', lineHeight: '1.6' }}>
+            {progressMessage || 'Gemini multimodal evaluation engine is processing candidate audio telemetry and performance metrics.'}
           </p>
           <button
             onClick={() => navigate(`/processing/${sessionId}`)}
             style={{
-              padding: '10px 20px',
+              padding: '11px 22px',
               borderRadius: '9999px',
               background: '#65597b',
               color: '#ffffff',
@@ -151,19 +298,19 @@ export const Report = () => {
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '10px' }}>
             Report Not Found or Processing
           </h2>
-          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
             {error || 'No evaluation report artifact could be located for this session yet.'}
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button
               onClick={() => navigate(`/processing/${sessionId}`)}
-              style={{ padding: '10px 18px', borderRadius: '9999px', background: '#65597b', color: '#ffffff', border: 'none', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: '9999px', background: '#65597b', color: '#ffffff', border: 'none', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
             >
               Check Processing Status
             </button>
             <button
               onClick={() => navigate('/dashboard')}
-              style={{ padding: '10px 18px', borderRadius: '9999px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+              style={{ padding: '10px 20px', borderRadius: '9999px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
             >
               Go to Dashboard
             </button>
@@ -187,109 +334,124 @@ export const Report = () => {
   } = report;
 
   const signalStyle = getHiringSignalStyle(overall_hiring_signal);
-
-  // Compute aggregate filler word count across turns
   const totalFillerWords = turn_evaluations.reduce((acc, t) => acc + (t.filler_word_count || 0), 0);
 
   return (
-    <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'var(--font-family, system-ui)' }}>
-      {/* Top Header Bar */}
-      <header
-        className="no-print"
-        style={{
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          padding: '16px 32px',
+    <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '40px', fontFamily: 'var(--font-family, system-ui)' }}>
+      {/* Global Audio Element for Turn-by-Turn Playback */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        onTimeUpdate={(e) => {
+          setAudioCurrentTime(e.currentTarget.currentTime || 0);
         }}
-      >
+        onLoadedMetadata={(e) => {
+          const dur = e.currentTarget.duration;
+          if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+            setAudioDuration(dur);
+          }
+        }}
+        onDurationChange={(e) => {
+          const dur = e.currentTarget.duration;
+          if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+            setAudioDuration(dur);
+          }
+        }}
+        onCanPlay={(e) => {
+          const dur = e.currentTarget.duration;
+          if (dur && !isNaN(dur) && isFinite(dur) && dur > 0) {
+            setAudioDuration(dur);
+          }
+        }}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setAudioCurrentTime(0);
+        }}
+        onError={(e) => {
+          console.warn('Audio playback error event:', e);
+          setAudioError('Audio recording stream currently unavailable for this turn.');
+          setIsPlaying(false);
+        }}
+        style={{ display: 'none' }}
+      />
+
+      {/* Main Page Container with comfortable top margin and balanced padding */}
+      <PageWrapper className="report-page-wrapper" style={{ gap: '16px', padding: '24px 32px 48px 32px' }}>
+        {/* TOP-LEFT BACK BUTTON & CANDIDATE PROFILE BAR */}
         <div
+          className="no-print"
           style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            marginBottom: '4px',
           }}
         >
-          {/* Netran AI Brand */}
-          <div
+          {/* Back to Dashboard Button with Netran AI Branding */}
+          <button
             onClick={() => navigate('/dashboard')}
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
+              padding: '9px 18px',
+              borderRadius: '9999px',
+              color: '#374151',
+              fontSize: '13.5px',
+              fontWeight: '700',
               cursor: 'pointer',
-              fontWeight: '800',
-              fontSize: '20px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <ArrowLeft size={16} style={{ color: '#65597b' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#65597b' }}>
+              <Sparkles size={15} />
+              <span>Netran AI</span>
+            </span>
+            <span style={{ color: '#d1d5db' }}>|</span>
+            <span style={{ color: '#4b5563' }}>Back to Dashboard</span>
+          </button>
+
+          {/* Candidate Profile Avatar Badge */}
+          <div
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              background: '#f3e8ff',
               color: '#65597b',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              justifyContent: 'center',
+              fontWeight: '800',
+              fontSize: '14px',
+              boxShadow: '0 2px 8px rgba(101, 89, 123, 0.12)',
+              border: '1px solid #e9d8fd',
             }}
+            title={user?.email || 'Candidate Profile'}
           >
-            <Sparkles size={20} />
-            <span>Netran AI</span>
-          </div>
-
-          {/* Right Header Navigation */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              onClick={() => navigate('/dashboard')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'transparent',
-                border: 'none',
-                color: '#4b5563',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Dashboard</span>
-            </button>
-
-            {/* Profile Avatar Pill */}
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: '#f3e8ff',
-                color: '#65597b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: '700',
-                fontSize: '13px',
-              }}
-            >
-              {userInitial}
-            </div>
+            {userInitial}
           </div>
         </div>
-      </header>
 
-      {/* Main Page Container */}
-      <PageWrapper className="report-page-wrapper">
-
-        
         {/* PRINT-ONLY HEADER BANNER */}
-        <div className="print-only-header" style={{ display: 'none', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #65597b', paddingBottom: '16px' }}>
+        <div className="print-only-header" style={{ display: 'none', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #65597b', paddingBottom: '14px' }}>
             <div>
               <div style={{ fontSize: '22px', fontWeight: '800', color: '#65597b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={22} />
                 <span>Netran AI Candidate Evaluation Scorecard</span>
               </div>
-              <p style={{ fontSize: '12px', color: '#4b5563', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: '#4b5563', margin: '4px 0 0 0' }}>
                 Autonomous Technical Interview Evaluation & Multimodal Audio Telemetry
               </p>
             </div>
-            <div style={{ textAlign: 'right', fontSize: '12px', color: '#4b5563', lineHeight: '1.5' }}>
+            <div style={{ textAlign: 'right', fontSize: '13px', color: '#4b5563', lineHeight: '1.5' }}>
               <div>Session ID: <strong style={{ color: '#111827' }}>{sessionId}</strong></div>
               <div>Date: {formatDate(generated_at)}</div>
               <div>Hiring Signal: <strong style={{ color: signalStyle.text }}>{overall_hiring_signal}</strong></div>
@@ -300,29 +462,28 @@ export const Report = () => {
         {/* SESSION SUMMARY BANNER CARD */}
         <Card
           style={{
-            marginBottom: '24px',
-            padding: '28px 32px',
+            padding: '22px 28px',
             background: '#ffffff',
-            borderRadius: '24px',
+            borderRadius: '20px',
             border: '1px solid rgba(229, 231, 235, 0.8)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.02)',
           }}
           className="animate-entrance print-break-inside-avoid"
         >
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '20px',
+              gap: '18px',
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1
                   style={{
-                    fontSize: '26px',
+                    fontSize: '24px',
                     fontWeight: '800',
                     color: '#111827',
                     letterSpacing: '-0.02em',
@@ -331,7 +492,7 @@ export const Report = () => {
                 >
                   Multimodal Evaluation Scorecard
                 </h1>
-                <span style={{ fontSize: '24px' }}>🎯</span>
+                <Award size={24} style={{ color: '#65597b' }} />
               </div>
 
               {/* Session Meta Information */}
@@ -340,9 +501,9 @@ export const Report = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '16px',
-                  marginTop: '12px',
+                  marginTop: '8px',
                   color: '#6b7280',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   fontWeight: '500',
                   flexWrap: 'wrap',
                 }}
@@ -365,22 +526,44 @@ export const Report = () => {
             </div>
 
             {/* Banner Action Buttons */}
-            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleListenAllAudio}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '7px',
+                  padding: '9px 18px',
+                  borderRadius: '9999px',
+                  background: '#f3e8ff',
+                  color: '#65597b',
+                  border: '1px solid #d8b4fe',
+                  fontWeight: '700',
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                title="Listen to all recorded candidate question-and-answer turns"
+              >
+                <Headphones size={15} />
+                <span>Listen Audio</span>
+              </button>
+
               <button
                 onClick={handlePrint}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
+                  gap: '7px',
+                  padding: '9px 18px',
                   borderRadius: '9999px',
                   background: '#65597b',
                   color: '#ffffff',
                   border: 'none',
                   fontWeight: '700',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(101, 89, 123, 0.25)',
+                  boxShadow: '0 4px 12px rgba(101, 89, 123, 0.2)',
                 }}
               >
                 <Printer size={15} />
@@ -392,14 +575,14 @@ export const Report = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
+                  gap: '7px',
+                  padding: '9px 18px',
                   borderRadius: '9999px',
                   background: isCopied ? '#dcfce7' : '#ffffff',
                   color: isCopied ? '#15803d' : '#374151',
                   border: `1px solid ${isCopied ? '#bbf7d0' : '#e5e7eb'}`,
                   fontWeight: '600',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
@@ -413,14 +596,14 @@ export const Report = () => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
+                  gap: '7px',
+                  padding: '9px 18px',
                   borderRadius: '9999px',
                   background: '#f3e8ff',
                   color: '#65597b',
                   border: 'none',
                   fontWeight: '700',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   cursor: 'pointer',
                 }}
               >
@@ -431,135 +614,166 @@ export const Report = () => {
           </div>
         </Card>
 
-        {/* TOP ROW GRID: OVERALL READINESS & SKILL MATRIX */}
+        {/* TOP ROW GRID: OVERALL READINESS & DOMAIN PILLARS */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-            gap: '24px',
-            marginBottom: '24px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+            gap: '16px',
           }}
         >
-          {/* OVERALL READINESS CARD */}
+          {/* CARD 1: OVERALL EVALUATION & TELEMETRY */}
           <Card
             style={{
-              padding: '28px',
+              padding: '22px 24px',
               background: '#ffffff',
-              borderRadius: '24px',
+              borderRadius: '20px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)',
             }}
           >
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', margin: '0 0 20px 0' }}>
-              Overall Technical Score
-            </h2>
+            {/* Header with Title and Hiring Signal Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={18} style={{ color: '#65597b' }} />
+                <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: 0 }}>
+                  Overall Assessment
+                </h2>
+              </div>
 
-            {/* Circular Donut Gauge */}
-            <div style={{ position: 'relative', width: '160px', height: '160px', margin: '0 auto 16px auto' }}>
-              <svg width="160" height="160" viewBox="0 0 160 160">
-                {/* Background Ring */}
-                <circle cx="80" cy="80" r="62" fill="none" stroke="#f3f4f6" strokeWidth="14" />
-                {/* Active Progress Arc */}
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="62"
-                  fill="none"
-                  stroke="#65597b"
-                  strokeWidth="14"
-                  strokeDasharray={2 * Math.PI * 62}
-                  strokeDashoffset={2 * Math.PI * 62 * (1 - Math.min(100, Math.max(0, overall_technical_score)) / 100)}
-                  strokeLinecap="round"
-                  transform="rotate(-90 80 80)"
-                  style={{ transition: 'stroke-dashoffset 1s ease' }}
-                />
-              </svg>
-
-              {/* Score Center Text */}
-              <div
+              {/* Hiring Signal Badge Chip */}
+              <span
                 style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  display: 'flex',
-                  flexDirection: 'column',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                }}
-              >
-                <span style={{ fontSize: '36px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
-                  {overall_technical_score}
-                </span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginTop: '2px' }}>
-                  / 100
-                </span>
-              </div>
-            </div>
-
-            {/* Hiring Signal Badge Chip */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: signalStyle.bg,
-                color: signalStyle.text,
-                border: `1px solid ${signalStyle.border}`,
-                padding: '6px 18px',
-                borderRadius: '9999px',
-                fontSize: '13px',
-                fontWeight: '700',
-                marginBottom: '24px',
-              }}
-            >
-              <Award size={15} />
-              <span>Hiring Signal: {overall_hiring_signal}</span>
-            </div>
-
-            {/* Vocal Performance Sub-Card */}
-            <div
-              style={{
-                width: '100%',
-                background: '#f9fafb',
-                borderRadius: '16px',
-                padding: '16px',
-                border: '1px solid #f3f4f6',
-                textAlign: 'left',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '11px',
+                  gap: '5px',
+                  background: signalStyle.bg,
+                  color: signalStyle.text,
+                  border: `1px solid ${signalStyle.border}`,
+                  padding: '4px 12px',
+                  borderRadius: '9999px',
+                  fontSize: '12px',
                   fontWeight: '700',
-                  color: '#6b7280',
-                  letterSpacing: '0.05em',
-                  marginBottom: '12px',
-                  textTransform: 'uppercase',
                 }}
               >
-                Vocal & Speech Telemetry
+                <span>{overall_hiring_signal}</span>
+              </span>
+            </div>
+
+            {/* Main Score & Telemetry Two-Column Layout */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '130px 1fr',
+                gap: '18px',
+                alignItems: 'center',
+              }}
+            >
+              {/* Circular Donut Gauge */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                  <svg width="120" height="120" viewBox="0 0 160 160">
+                    <circle cx="80" cy="80" r="62" fill="none" stroke="#f3f4f6" strokeWidth="14" />
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="62"
+                      fill="none"
+                      stroke="#65597b"
+                      strokeWidth="14"
+                      strokeDasharray={2 * Math.PI * 62}
+                      strokeDashoffset={2 * Math.PI * 62 * (1 - Math.min(100, Math.max(0, overall_technical_score)) / 100)}
+                      strokeLinecap="round"
+                      transform="rotate(-90 80 80)"
+                      style={{ transition: 'stroke-dashoffset 1s ease' }}
+                    />
+                  </svg>
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span style={{ fontSize: '30px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
+                      {overall_technical_score}
+                    </span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', marginTop: '2px' }}>
+                      / 100
+                    </span>
+                  </div>
+                </div>
+                <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#65597b', marginTop: '6px' }}>
+                  Technical Score
+                </span>
               </div>
 
+              {/* Telemetry Micro-Cards */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '13px', fontWeight: '500' }}>
-                    <Zap size={14} style={{ color: '#6b7280' }} />
-                    <span>Vocal Confidence</span>
+                {/* Vocal Confidence Card */}
+                <div
+                  style={{
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    border: '1px solid #f3f4f6',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
+                      <Zap size={14} style={{ color: '#65597b' }} />
+                      <span>Vocal Confidence</span>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: overall_vocal_confidence_score >= 70 ? '#15803d' : '#b45309' }}>
+                      {overall_vocal_confidence_score}%
+                    </span>
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#15803d' }}>
-                    {overall_vocal_confidence_score} / 100
-                  </span>
+                  <div style={{ width: '100%', height: '5px', background: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${overall_vocal_confidence_score}%`,
+                        height: '100%',
+                        background: overall_vocal_confidence_score >= 70 ? '#15803d' : '#b45309',
+                        borderRadius: '9999px',
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#374151', fontSize: '13px', fontWeight: '500' }}>
-                    <Mic size={14} style={{ color: '#6b7280' }} />
+                {/* Speech & Audio Telemetry Card */}
+                <div
+                  style={{
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    border: '1px solid #f3f4f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
+                    <Mic size={14} style={{ color: '#65597b' }} />
                     <span>Est. Filler Words</span>
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: totalFillerWords > 8 ? '#dc2626' : '#15803d' }}>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      background: totalFillerWords > 8 ? '#fee2e2' : '#dcfce7',
+                      color: totalFillerWords > 8 ? '#991b1b' : '#15803d',
+                    }}
+                  >
                     {totalFillerWords} words
                   </span>
                 </div>
@@ -567,113 +781,130 @@ export const Report = () => {
             </div>
           </Card>
 
-          {/* SKILL BREAKDOWN MATRIX CARD */}
+          {/* CARD 2: TECHNICAL DOMAIN PILLARS */}
           <Card
             style={{
-              padding: '28px',
+              padding: '22px 24px',
               background: '#ffffff',
-              borderRadius: '24px',
+              borderRadius: '20px',
               border: '1px solid rgba(229, 231, 235, 0.8)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)',
             }}
           >
+            {/* Header */}
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', margin: '0 0 20px 0' }}>
-                Technical Domain Pillars
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <BarChart2 size={18} style={{ color: '#65597b' }} />
+                  <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: 0 }}>
+                    Technical Domain Pillars
+                  </h2>
+                </div>
+                <span
+                  style={{
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    color: '#65597b',
+                    background: '#f3e8ff',
+                    border: '1px solid #e9d8fd',
+                    padding: '3px 9px',
+                    borderRadius: '9999px',
+                  }}
+                >
+                  {technical_pillars.length} Pillars
+                </span>
+              </div>
 
-              {/* Skill Bars */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Clean, High-Legibility Skill Bars */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {technical_pillars.length > 0 ? (
                   technical_pillars.map((pillar, pIdx) => (
                     <div key={pIdx}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>
-                        <span>{pillar.pillar_name}</span>
-                        <span style={{ fontWeight: '700' }}>{pillar.score}%</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#374151' }}>
+                          {pillar.pillar_name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: '800',
+                            color: pillar.score >= 70 ? '#15803d' : pillar.score >= 40 ? '#b45309' : '#65597b',
+                            background: '#f9fafb',
+                            padding: '1px 7px',
+                            borderRadius: '6px',
+                            border: '1px solid #f3f4f6',
+                          }}
+                        >
+                          {pillar.score}%
+                        </span>
                       </div>
                       <div style={{ width: '100%', height: '8px', background: '#f3f4f6', borderRadius: '9999px', overflow: 'hidden' }}>
-                        <div style={{ width: `${pillar.score}%`, height: '100%', background: '#65597b', borderRadius: '9999px' }} />
+                        <div
+                          style={{
+                            width: `${pillar.score}%`,
+                            height: '100%',
+                            background: '#65597b',
+                            borderRadius: '9999px',
+                          }}
+                        />
                       </div>
-                      {pillar.summary && (
-                        <p style={{ fontSize: '11px', color: '#6b7280', margin: '4px 0 0 0', lineHeight: '1.4' }}>
-                          {pillar.summary}
-                        </p>
-                      )}
                     </div>
                   ))
                 ) : (
-                  <div style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '13.5px', color: '#6b7280', fontStyle: 'italic' }}>
                     No pillar breakdown scores generated.
                   </div>
                 )}
               </div>
             </div>
 
-            {/* AI Executive Summary Box */}
+            {/* Bottom Scale Legend Indicator */}
             <div
               style={{
-                marginTop: '24px',
-                background: '#f5f0fb',
-                borderRadius: '16px',
-                padding: '18px 20px',
-                border: '1px solid #e9d8fd',
                 display: 'flex',
-                gap: '14px',
-                alignItems: 'flex-start',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: '14px',
+                paddingTop: '10px',
+                borderTop: '1px solid #f3f4f6',
+                fontSize: '11px',
+                color: '#6b7280',
+                fontWeight: '600',
               }}
             >
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#65597b',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-                }}
-              >
-                <Lightbulb size={17} />
-              </div>
-
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#65597b', marginBottom: '4px' }}>
-                  Executive AI Summary
-                </div>
-                <p style={{ fontSize: '13px', color: '#49454d', margin: 0, lineHeight: '1.5' }}>
-                  {executive_summary}
-                </p>
-              </div>
+              <span>0-39% Needs Focus</span>
+              <span>•</span>
+              <span>40-69% Competent</span>
+              <span>•</span>
+              <span>70-100% Strong</span>
             </div>
           </Card>
         </div>
 
         {/* BEHAVIORAL FLAGS CARD (IF ANY) */}
         {behavioral_flags.length > 0 && (
-          <Card style={{ padding: '24px 28px', background: '#fff1f2', borderRadius: '20px', border: '1px solid #fecdd3', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <ShieldAlert size={20} style={{ color: '#e11d48' }} />
-              <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#9f1239', margin: 0 }}>
+          <Card style={{ padding: '18px 24px', background: '#fff1f2', borderRadius: '18px', border: '1px solid #fecdd3' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <ShieldAlert size={19} style={{ color: '#e11d48' }} />
+              <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#9f1239', margin: 0 }}>
                 Observed Behavioral & Telemetry Flags ({behavioral_flags.length})
               </h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
               {behavioral_flags.map((flag, idx) => (
                 <div key={idx} style={{ background: '#ffffff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #ffe4e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px', background: flag.severity === 'CRITICAL' ? '#fee2e2' : '#fef3c7', color: flag.severity === 'CRITICAL' ? '#991b1b' : '#92400e' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px', background: flag.severity === 'CRITICAL' ? '#fee2e2' : '#fef3c7', color: flag.severity === 'CRITICAL' ? '#991b1b' : '#92400e' }}>
                       {flag.severity}
                     </span>
-                    <span style={{ fontSize: '13px', color: '#374151', fontWeight: '500' }}>
+                    <span style={{ fontSize: '13.5px', color: '#1f2937', fontWeight: '500', lineHeight: '1.5' }}>
                       {flag.description}
                     </span>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '600' }}>
+                  <span style={{ fontSize: '12.5px', color: '#9ca3af', fontWeight: '700', flexShrink: 0, marginLeft: '12px' }}>
                     Turn #{flag.turn_id}
                   </span>
                 </div>
@@ -684,16 +915,16 @@ export const Report = () => {
 
         {/* CANDIDATE FEEDBACK & STUDY ROADMAP */}
         {candidate_feedback && (candidate_feedback.key_strengths || candidate_feedback.primary_growth_areas) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
             {/* Strengths */}
-            <Card style={{ padding: '24px', background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#15803d', fontWeight: '700', fontSize: '15px' }}>
+            <Card style={{ padding: '20px 24px', background: '#ffffff', borderRadius: '18px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#15803d', fontWeight: '800', fontSize: '15px' }}>
                 <CheckCircle2 size={18} />
                 <span>Key Technical Strengths</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {(candidate_feedback.key_strengths || []).map((str, i) => (
-                  <li key={i} style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
+                  <li key={i} style={{ fontSize: '13.5px', color: '#374151', lineHeight: '1.5' }}>
                     {str}
                   </li>
                 ))}
@@ -701,14 +932,14 @@ export const Report = () => {
             </Card>
 
             {/* Growth Areas */}
-            <Card style={{ padding: '24px', background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#b45309', fontWeight: '700', fontSize: '15px' }}>
+            <Card style={{ padding: '20px 24px', background: '#ffffff', borderRadius: '18px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#b45309', fontWeight: '800', fontSize: '15px' }}>
                 <TrendingUp size={18} />
                 <span>Primary Growth Areas</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {(candidate_feedback.primary_growth_areas || []).map((area, i) => (
-                  <li key={i} style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
+                  <li key={i} style={{ fontSize: '13.5px', color: '#374151', lineHeight: '1.5' }}>
                     {area}
                   </li>
                 ))}
@@ -719,59 +950,70 @@ export const Report = () => {
 
         {/* RECOMMENDED STUDY TOPICS */}
         {candidate_feedback?.recommended_topics_to_study?.length > 0 && (
-          <Card style={{ padding: '24px 28px', background: '#ffffff', borderRadius: '20px', border: '1px solid rgba(229, 231, 235, 0.8)', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#65597b', fontWeight: '700', fontSize: '15px' }}>
+          <Card style={{ padding: '18px 24px', background: '#ffffff', borderRadius: '18px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#65597b', fontWeight: '800', fontSize: '15px' }}>
               <BookOpen size={18} />
               <span>Recommended Topics & Frameworks to Study</span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {candidate_feedback.recommended_topics_to_study.map((topic, i) => (
-                <span key={i} style={{ fontSize: '13px', fontWeight: '600', padding: '6px 14px', borderRadius: '9999px', background: '#f5f0fb', color: '#65597b', border: '1px solid #e9d8fd' }}>
-                  📚 {topic}
+                <span key={i} style={{ fontSize: '13px', fontWeight: '600', padding: '6px 14px', borderRadius: '9999px', background: '#f5f0fb', color: '#65597b', border: '1px solid #e9d8fd', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <BookOpen size={13} />
+                  <span>{topic}</span>
                 </span>
               ))}
             </div>
           </Card>
         )}
 
-        {/* BOTTOM SECTION: QUESTION-BY-QUESTION BREAKDOWN WITH EVA */}
+        {/* BOTTOM SECTION: QUESTION-BY-QUESTION BREAKDOWN WITH EVA & AUDIO PLAYBACK */}
         <Card
           style={{
-            padding: '28px',
+            padding: '24px 28px',
             background: '#ffffff',
-            borderRadius: '24px',
+            borderRadius: '20px',
             border: '1px solid rgba(229, 231, 235, 0.8)',
           }}
         >
           {/* Section Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-            <MessageSquare size={18} style={{ color: '#65597b' }} />
-            <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#374151', letterSpacing: '0.04em', margin: 0, textTransform: 'uppercase' }}>
-              Question-By-Question Breakdown With Eva ({turn_evaluations.length} Turns)
-            </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+              <MessageSquare size={18} style={{ color: '#65597b' }} />
+              <h2 style={{ fontSize: '15px', fontWeight: '800', color: '#1f2937', letterSpacing: '0.04em', margin: 0, textTransform: 'uppercase' }}>
+                Question-By-Question Breakdown & Spoken Audio ({turn_evaluations.length} Turns)
+              </h2>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
+              <Headphones size={15} style={{ color: '#65597b' }} />
+              <span>Click "Listen Answer" on any turn to review how you spoke</span>
+            </div>
           </div>
 
           {/* Turn Accordions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {turn_evaluations.length > 0 ? (
               turn_evaluations.map((t, idx) => {
                 const isExpanded = expandedQuestions[idx];
+                const isThisTurnPlaying = playingTurnId === t.turn_id && isPlaying;
+                const isThisTurnSelected = playingTurnId === t.turn_id;
 
                 return (
                   <div
                     key={t.turn_id || idx}
                     style={{
-                      border: '1px solid #e5e7eb',
+                      border: `1px solid ${isThisTurnSelected ? '#d8b4fe' : '#e5e7eb'}`,
                       borderRadius: '16px',
                       overflow: 'hidden',
                       transition: 'all 0.2s ease',
+                      boxShadow: isThisTurnSelected ? '0 4px 16px rgba(101, 89, 123, 0.08)' : 'none',
                     }}
                   >
                     {/* Accordion Header */}
                     <div
                       onClick={() => toggleQuestion(idx)}
                       style={{
-                        padding: '18px 24px',
+                        padding: '16px 20px',
                         background: isExpanded ? '#fafafa' : '#ffffff',
                         display: 'flex',
                         alignItems: 'center',
@@ -786,29 +1028,49 @@ export const Report = () => {
                             width: '32px',
                             height: '32px',
                             borderRadius: '50%',
-                            background: '#f3e8ff',
-                            color: '#65597b',
+                            background: isThisTurnSelected ? '#65597b' : '#f3e8ff',
+                            color: isThisTurnSelected ? '#ffffff' : '#65597b',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: '800',
                             fontSize: '12px',
                             flexShrink: 0,
+                            transition: 'all 0.2s ease',
                           }}
                         >
                           Q{t.turn_id}
                         </span>
-                        <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#111827', margin: 0, flex: 1 }}>
+                        <h3 style={{ fontSize: '14.5px', fontWeight: '700', color: '#111827', margin: 0, flex: 1 }}>
                           {t.question_text}
                         </h3>
                       </div>
 
-                      {/* Header Score Badges */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
+                      {/* Header Score Badges & Inline Audio Indicator */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {isThisTurnPlaying && (
+                          <span
+                            style={{
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              padding: '3px 8px',
+                              borderRadius: '9999px',
+                              background: '#65597b',
+                              color: '#ffffff',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Volume2 size={12} />
+                            <span>Playing</span>
+                          </span>
+                        )}
+
+                        <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
                           Tech: {t.technical_score}/10
                         </span>
-                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '9999px', background: '#e0f2fe', color: '#0369a1' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#e0f2fe', color: '#0369a1' }}>
                           Vocal: {t.vocal_confidence_score}/10
                         </span>
                         <div style={{ color: '#6b7280' }}>
@@ -822,7 +1084,7 @@ export const Report = () => {
                       className="turn-accordion-body"
                       style={{
                         display: isExpanded ? 'block' : 'none',
-                        padding: '20px 24px 24px 24px',
+                        padding: '18px 22px 22px 22px',
                         borderTop: '1px solid #f3f4f6',
                         background: '#ffffff',
                       }}
@@ -831,30 +1093,30 @@ export const Report = () => {
                         style={{
                           display: 'grid',
                           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                          gap: '20px',
+                          gap: '18px',
                         }}
                       >
                         {/* Left Column: Dual Transcripts */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           {/* Candidate Live STT Transcript */}
-                          <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#6b7280' }}>
+                          <div style={{ background: '#fafafa', borderRadius: '14px', padding: '16px', border: '1px solid #f3f4f6' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px', fontSize: '12px', fontWeight: '800', color: '#6b7280' }}>
                               <Mic size={14} />
                               <span>Candidate Live Answer (STT)</span>
                             </div>
-                            <p style={{ fontSize: '13px', fontStyle: 'italic', color: '#374151', margin: 0, lineHeight: '1.6' }}>
+                            <p style={{ fontSize: '13.5px', fontStyle: 'italic', color: '#374151', margin: 0, lineHeight: '1.6' }}>
                               "{t.candidate_transcript || 'No candidate response recorded for this turn.'}"
                             </p>
                           </div>
 
                           {/* Gemini Verified Clean Transcript */}
                           {t.gemini_verified_transcript && t.gemini_verified_transcript !== t.candidate_transcript && (
-                            <div style={{ background: '#f0fdf4', borderRadius: '12px', padding: '16px', border: '1px solid #bbf7d0' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', fontWeight: '700', color: '#15803d' }}>
+                            <div style={{ background: '#f0fdf4', borderRadius: '14px', padding: '16px', border: '1px solid #bbf7d0' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px', fontSize: '12px', fontWeight: '800', color: '#15803d' }}>
                                 <CheckCircle2 size={14} />
                                 <span>Gemini Verified Audio Transcript</span>
                               </div>
-                              <p style={{ fontSize: '13px', color: '#166534', margin: 0, lineHeight: '1.6' }}>
+                              <p style={{ fontSize: '13.5px', color: '#166534', margin: 0, lineHeight: '1.6' }}>
                                 "{t.gemini_verified_transcript}"
                               </p>
                             </div>
@@ -862,9 +1124,9 @@ export const Report = () => {
                         </div>
 
                         {/* Right Column: Eva's Assessment */}
-                        <div style={{ background: '#fafafa', borderRadius: '12px', padding: '16px', border: '1px solid #f3f4f6' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: '700', color: '#65597b' }}>
-                            <Sparkles size={14} />
+                        <div style={{ background: '#fafafa', borderRadius: '14px', padding: '16px', border: '1px solid #f3f4f6' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px', fontSize: '12.5px', fontWeight: '800', color: '#65597b' }}>
+                            <Sparkles size={15} />
                             <span>Eva's Turn Assessment</span>
                           </div>
 
@@ -879,12 +1141,12 @@ export const Report = () => {
                             {/* Missing concepts */}
                             {t.missing_concepts && t.missing_concepts.length > 0 && (
                               <div>
-                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', marginBottom: '6px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#dc2626', marginBottom: '5px' }}>
                                   Missing Key Concepts:
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                   {t.missing_concepts.map((concept, cIdx) => (
-                                    <span key={cIdx} style={{ fontSize: '11px', fontWeight: '600', background: '#fee2e2', color: '#991b1b', padding: '3px 8px', borderRadius: '9999px' }}>
+                                    <span key={cIdx} style={{ fontSize: '11.5px', fontWeight: '700', background: '#fee2e2', color: '#991b1b', padding: '3px 8px', borderRadius: '9999px' }}>
                                       {concept}
                                     </span>
                                   ))}
@@ -901,6 +1163,206 @@ export const Report = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* TURN AUDIO PLAYBACK CONTROLS WIDGET */}
+                      <div
+                        style={{
+                          marginTop: '16px',
+                          background: isThisTurnSelected ? '#f8f4fc' : '#f9fafb',
+                          border: `1px solid ${isThisTurnSelected ? '#d8b4fe' : '#e5e7eb'}`,
+                          borderRadius: '16px',
+                          padding: '14px 18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '14px',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {/* Play Button & Spoken Audio Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '240px' }}>
+                          <button
+                            onClick={() => handleToggleTurnAudio(t.turn_id, t.audio_start_sec, t.audio_end_sec)}
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '50%',
+                              background: isThisTurnPlaying ? '#4c1d95' : '#65597b',
+                              color: '#ffffff',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 12px rgba(101, 89, 123, 0.2)',
+                              flexShrink: 0,
+                              transition: 'transform 0.15s ease',
+                            }}
+                            title={isThisTurnPlaying ? 'Pause Audio' : `Listen Spoken Answer for Turn #${t.turn_id}`}
+                          >
+                            {isThisTurnPlaying ? (
+                              <Pause size={18} fill="#ffffff" />
+                            ) : (
+                              <Play size={18} fill="#ffffff" style={{ marginLeft: '2px' }} />
+                            )}
+                          </button>
+
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#111827' }}>
+                                Candidate Spoken Answer Audio
+                              </span>
+                              {isThisTurnPlaying && (
+                                <span
+                                  style={{
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    padding: '2px 8px',
+                                    borderRadius: '9999px',
+                                    background: '#e9d5ff',
+                                    color: '#6b21a8',
+                                  }}
+                                >
+                                  Playing Turn #{t.turn_id}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Mic size={13} />
+                              <span>
+                                {isThisTurnSelected
+                                  ? `${formatTime(audioCurrentTime)} / ${formatTime((audioDuration && audioDuration > 0) ? audioDuration : ((t.audio_end_sec && t.audio_start_sec && t.audio_end_sec > t.audio_start_sec) ? (t.audio_end_sec - t.audio_start_sec) : (t.telemetry?.turn_duration_sec || 0)))}`
+                                  : (t.audio_end_sec && t.audio_start_sec && t.audio_end_sec > t.audio_start_sec)
+                                  ? `Duration: ~${Math.round(t.audio_end_sec - t.audio_start_sec)}s (Turn #${t.turn_id})`
+                                  : t.telemetry?.turn_duration_sec
+                                  ? `Duration: ~${Math.round(t.telemetry.turn_duration_sec)}s (Turn #${t.turn_id})`
+                                  : `Turn #${t.turn_id} Audio Stream`}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive Scrubber (When this turn is selected) */}
+                        {isThisTurnSelected && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 2, minWidth: '220px' }}>
+                            <input
+                              type="range"
+                              min={0}
+                              max={((audioDuration && audioDuration > 0) ? audioDuration : ((t.audio_end_sec && t.audio_start_sec && t.audio_end_sec > t.audio_start_sec) ? (t.audio_end_sec - t.audio_start_sec) : (t.telemetry?.turn_duration_sec || 1)))}
+                              step={0.1}
+                              value={audioCurrentTime}
+                              onChange={handleSeekTurnAudio}
+                              style={{
+                                width: '100%',
+                                accentColor: '#65597b',
+                                cursor: 'pointer',
+                                height: '6px',
+                              }}
+                            />
+                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#65597b', minWidth: '70px', textAlign: 'right' }}>
+                              {formatTime(audioCurrentTime)} / {formatTime((audioDuration && audioDuration > 0) ? audioDuration : ((t.audio_end_sec && t.audio_start_sec && t.audio_end_sec > t.audio_start_sec) ? (t.audio_end_sec - t.audio_start_sec) : (t.telemetry?.turn_duration_sec || 0)))}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Audio Controls (±5s, Speed, Listen CTA) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                          {isThisTurnSelected && (
+                            <>
+                              <button
+                                onClick={() => handleJumpTurnAudio(-5)}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '9999px',
+                                  padding: '5px 10px',
+                                  fontSize: '12px',
+                                  fontWeight: '700',
+                                  color: '#4b5563',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Rewind 5s"
+                              >
+                                <RotateCcw size={11} />
+                                <span>-5s</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleJumpTurnAudio(5)}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '9999px',
+                                  padding: '5px 10px',
+                                  fontSize: '12px',
+                                  fontWeight: '700',
+                                  color: '#4b5563',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Forward 5s"
+                              >
+                                <RotateCw size={11} />
+                                <span>+5s</span>
+                              </button>
+
+                              <button
+                                onClick={handleCyclePlaybackRate}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #d8b4fe',
+                                  borderRadius: '9999px',
+                                  padding: '5px 11px',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  color: '#65597b',
+                                  cursor: 'pointer',
+                                }}
+                                title="Change playback speed"
+                              >
+                                {playbackRate}x
+                              </button>
+                            </>
+                          )}
+
+                          {!isThisTurnSelected && (
+                            <button
+                              onClick={() => handleToggleTurnAudio(t.turn_id, t.audio_start_sec, t.audio_end_sec)}
+                              style={{
+                                padding: '8px 16px',
+                                borderRadius: '9999px',
+                                background: '#ffffff',
+                                border: '1px solid #d8b4fe',
+                                color: '#65597b',
+                                fontSize: '13px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                              }}
+                            >
+                              <Volume2 size={14} />
+                              <span>Listen Answer</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Optional Error Notice */}
+                      {isThisTurnSelected && audioError && (
+                        <div style={{ marginTop: '8px', fontSize: '12.5px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <AlertTriangle size={13} />
+                          <span>{audioError}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -917,25 +1379,24 @@ export const Report = () => {
         <Card
           className="next-steps-card no-print"
           style={{
-            marginTop: '28px',
-            padding: '28px 36px',
+            padding: '24px 32px',
             background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
-            borderRadius: '24px',
+            borderRadius: '20px',
             border: '1px solid rgba(101, 89, 123, 0.15)',
-            boxShadow: '0 12px 36px rgba(101, 89, 123, 0.06)',
+            boxShadow: '0 8px 24px rgba(101, 89, 123, 0.04)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '20px',
+            gap: '18px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
-              <Sparkles size={24} />
+            <div style={{ width: '46px', height: '46px', borderRadius: '15px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
+              <Sparkles size={22} />
             </div>
             <div>
-              <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#111827', margin: '0 0 4px 0' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: '0 0 3px 0' }}>
                 Ready for your next mock session?
               </h3>
               <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>
@@ -948,12 +1409,12 @@ export const Report = () => {
             <button
               onClick={() => navigate('/analytics')}
               style={{
-                padding: '10px 18px',
-                borderRadius: '12px',
+                padding: '9px 18px',
+                borderRadius: '11px',
                 border: '1px solid #d1d5db',
                 background: '#ffffff',
                 color: '#374151',
-                fontSize: '13px',
+                fontSize: '13.5px',
                 fontWeight: '700',
                 cursor: 'pointer',
               }}
@@ -963,12 +1424,12 @@ export const Report = () => {
             <button
               onClick={() => navigate('/dashboard')}
               style={{
-                padding: '10px 18px',
-                borderRadius: '12px',
+                padding: '9px 18px',
+                borderRadius: '11px',
                 border: '1px solid #d1d5db',
                 background: '#ffffff',
                 color: '#374151',
-                fontSize: '13px',
+                fontSize: '13.5px',
                 fontWeight: '700',
                 cursor: 'pointer',
               }}
@@ -981,15 +1442,15 @@ export const Report = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '10px 22px',
-                borderRadius: '12px',
+                padding: '9px 20px',
+                borderRadius: '11px',
                 border: 'none',
                 background: '#65597b',
                 color: '#ffffff',
-                fontSize: '13px',
+                fontSize: '13.5px',
                 fontWeight: '700',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(101, 89, 123, 0.25)',
+                boxShadow: '0 4px 14px rgba(101, 89, 123, 0.2)',
               }}
             >
               <span>Start New Session</span>
@@ -1003,4 +1464,3 @@ export const Report = () => {
 };
 
 export default Report;
-

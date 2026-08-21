@@ -58,9 +58,11 @@ def stream_audio_recording(
     """
     Stream continuous audio recording file (.wav) for candidate session playback.
     """
-    session = db.query(Session).filter(Session.id == session_id, Session.user_id == current_user.id).first()
+    session = db.query(Session).filter(Session.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id and session.user_id != current_user.id and getattr(current_user, "role", None) != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Access forbidden")
 
     base_dir = Path(__file__).resolve().parent.parent.parent
     possible_paths = [
@@ -78,6 +80,67 @@ def stream_audio_recording(
             )
 
     raise HTTPException(status_code=404, detail="Audio recording file not found for this session")
+
+
+@router.get("/recording/{session_id}/turn/{turn_id}")
+def stream_turn_audio_recording(
+    session_id: str,
+    turn_id: int,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Stream a sliced audio clip for a specific turn (e.g., turn_01.wav).
+    If pre-sliced clip does not exist, attempts to slice on-the-fly from the continuous recording.
+    """
+    session = db.query(Session).filter(Session.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id and session.user_id != current_user.id and getattr(current_user, "role", None) != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Access forbidden")
+
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    possible_dirs = [
+        base_dir / "data" / "sessions" / session_id,
+        base_dir / "sessions" / session_id,
+        base_dir / "model" / "reports_model" / "test" / "output" / session_id,
+    ]
+
+    # 1. Check for pre-sliced turn files
+    for s_dir in possible_dirs:
+        for fname in [f"turn_{turn_id:02d}.wav", f"turn_{turn_id}.wav"]:
+            clip_path = s_dir / fname
+            if clip_path.exists():
+                return FileResponse(
+                    path=str(clip_path),
+                    media_type="audio/wav",
+                    filename=f"turn_{turn_id:02d}_{session_id}.wav"
+                )
+
+    # 2. Check if continuous recording and manifest exist to slice on the fly
+    for s_dir in possible_dirs:
+        wav_path = s_dir / "continuous_mic_input.wav"
+        if not wav_path.exists():
+            wav_path = s_dir / "recording.wav"
+
+        if wav_path.exists():
+            artifact = db.query(SessionArtifact).filter(SessionArtifact.session_id == session_id).first()
+            manifest_data = artifact.transcript if artifact and artifact.transcript else None
+            if manifest_data:
+                try:
+                    from model.reports_model.model.audio_slicer import slice_audio
+                    clips = slice_audio(wav_path=wav_path, manifest=manifest_data, output_dir=s_dir)
+                    if turn_id in clips and clips[turn_id].exists():
+                        return FileResponse(
+                            path=str(clips[turn_id]),
+                            media_type="audio/wav",
+                            filename=f"turn_{turn_id:02d}_{session_id}.wav"
+                        )
+                except Exception as e:
+                    pass
+
+    # 3. Fallback: stream full continuous recording
+    return stream_audio_recording(session_id=session_id, db=db, current_user=current_user)
 
 
 @router.websocket("/stream/{session_id}")

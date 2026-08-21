@@ -1,12 +1,107 @@
 import React from 'react';
 import Card from '../ui/Card';
-import { Plus, FileText, Clock, Calendar, Layers } from 'lucide-react';
+import { Plus, FileText, Clock, Calendar, Layers, RotateCw, Play, Sparkles } from 'lucide-react';
 
 export const SessionsTable = ({
   sessions = [],
   onNewWorkspace,
   onViewFeedback,
 }) => {
+  const renderActionButton = (session) => {
+    if (session.status === 'in_progress') {
+      return (
+        <button
+          onClick={() => onViewFeedback && onViewFeedback(session)}
+          className="btn"
+          style={{
+            padding: '8px 18px',
+            fontSize: '13px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--primary)',
+            color: '#ffffff',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            border: 'none',
+          }}
+        >
+          <RotateCw size={13} />
+          <span>Resume Practice</span>
+        </button>
+      );
+    }
+
+    if (session.status === 'ready') {
+      return (
+        <button
+          onClick={() => onViewFeedback && onViewFeedback(session)}
+          className="btn"
+          style={{
+            padding: '8px 18px',
+            fontSize: '13px',
+            borderRadius: 'var(--radius-full)',
+            background: 'var(--primary)',
+            color: '#ffffff',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            border: 'none',
+          }}
+        >
+          <Play size={13} />
+          <span>Start Practice</span>
+        </button>
+      );
+    }
+
+    if (session.status === 'evaluating' && !session.hasReport) {
+      return (
+        <button
+          onClick={() => onViewFeedback && onViewFeedback(session)}
+          className="btn"
+          style={{
+            padding: '8px 18px',
+            fontSize: '13px',
+            borderRadius: 'var(--radius-full)',
+            background: '#d97706',
+            color: '#ffffff',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            border: 'none',
+          }}
+        >
+          <Sparkles size={13} />
+          <span>Complete Eval</span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => onViewFeedback && onViewFeedback(session)}
+        className="btn btn-ghost"
+        style={{
+          padding: '8px 18px',
+          fontSize: '13px',
+          borderRadius: 'var(--radius-full)',
+          borderColor: '#d1d3d6',
+          color: 'var(--on-surface)',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        View Feedback
+      </button>
+    );
+  };
+
   return (
     <Card className="animate-entrance animate-delay-3 sessions-table-card" style={{ padding: '24px 28px' }}>
       {/* Header with Title and + New Workspace Button */}
@@ -20,7 +115,7 @@ export const SessionsTable = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>📜</span>
+          <FileText size={20} style={{ color: 'var(--primary)' }} />
           <h2 className="text-headline-lg sessions-table-title">
             Recent Practice Sessions & Feedback
           </h2>
@@ -108,7 +203,7 @@ export const SessionsTable = ({
                 </div>
               </div>
 
-              {/* Right: Score and View Feedback CTA */}
+              {/* Right: Score and Contextual CTA */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div className="text-label-xs" style={{ fontSize: '10px', color: 'var(--on-surface-variant)' }}>
@@ -119,21 +214,7 @@ export const SessionsTable = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onViewFeedback && onViewFeedback(session.id)}
-                  className="btn btn-ghost"
-                  style={{
-                    padding: '8px 18px',
-                    fontSize: '13px',
-                    borderRadius: 'var(--radius-full)',
-                    borderColor: '#d1d3d6',
-                    color: 'var(--on-surface)',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  View Feedback
-                </button>
+                {renderActionButton(session)}
               </div>
             </div>
           ))}

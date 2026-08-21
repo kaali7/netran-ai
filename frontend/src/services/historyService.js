@@ -33,6 +33,26 @@ export async function getHistorySessionDetail(sessionId) {
 }
 
 /**
+ * Delete a candidate session and associated artifacts from backend.
+ * 
+ * @param {string} sessionId
+ */
+export async function deleteHistorySession(sessionId) {
+  const response = await api.delete(`/history/session/${sessionId}`);
+  return response.data;
+}
+
+/**
+ * Trigger Stage 4 report generation evaluation task for an incomplete session.
+ * 
+ * @param {string} sessionId
+ */
+export async function triggerEvaluation(sessionId) {
+  const response = await api.post(`/reports/generate/${sessionId}`);
+  return response.data;
+}
+
+/**
  * Export candidate session history array as a CSV download.
  * 
  * @param {Array} sessions 
@@ -64,3 +84,4 @@ export function exportHistoryCSV(sessions = []) {
   link.click();
   document.body.removeChild(link);
 }
+
