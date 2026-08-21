@@ -1787,19 +1787,19 @@ export const History = () => {
                 )}
               </div>
 
-              {/* Modal Bottom Sticky Master Controls Bar */}
+              {/* Modal Bottom Sticky Master Controls Bar - Serene Lavender Soft Light-Dark Theme */}
               <div
                 style={{
-                  padding: '16px 24px',
-                  background: '#ffffff',
-                  borderTop: '1px solid #f3f4f6',
+                  padding: '16px 24px 18px 24px',
+                  background: 'linear-gradient(180deg, #322b3f 0%, #252030 100%)',
+                  borderTop: '1px solid rgba(230, 214, 255, 0.16)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
-                  boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.03)',
+                  boxShadow: '0 -6px 22px rgba(50, 43, 63, 0.16)',
                 }}
               >
-                {/* Scrubbing Bar */}
+                {/* Scrubbing Bar & Time */}
                 <div>
                   <input
                     type="range"
@@ -1814,21 +1814,24 @@ export const History = () => {
                     }}
                     style={{
                       width: '100%',
-                      accentColor: '#65597b',
+                      accentColor: '#d6c7ee',
                       cursor: 'pointer',
                       height: '5px',
                     }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700', color: '#6b7280', marginTop: '4px' }}>
-                    <span>{formatTime(currentTime)}</span>
-                    <span>Total Session: {formatTime(duration)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: '700', marginTop: '5px' }}>
+                    <span style={{ color: '#f3e8ff' }}>{formatTime(currentTime)}</span>
+                    <span style={{ color: '#cfc0e8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Headphones size={11} style={{ color: '#e6d6ff' }} />
+                      <span>Total Session Audio: {formatTime(duration)}</span>
+                    </span>
                   </div>
                 </div>
 
                 {/* Controls Row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                   {/* Volume Control */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                       onClick={() => {
                         if (audioRef.current) {
@@ -1836,7 +1839,8 @@ export const History = () => {
                           setIsMuted(!isMuted);
                         }
                       }}
-                      style={{ background: 'transparent', border: 'none', color: '#6b7280', cursor: 'pointer', padding: 0 }}
+                      style={{ background: 'transparent', border: 'none', color: '#e6d6ff', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                      title={isMuted ? 'Unmute' : 'Mute'}
                     >
                       {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                     </button>
@@ -1855,7 +1859,7 @@ export const History = () => {
                           setIsMuted(v === 0);
                         }
                       }}
-                      style={{ width: '70px', accentColor: '#65597b', cursor: 'pointer' }}
+                      style={{ width: '72px', accentColor: '#d6c7ee', cursor: 'pointer' }}
                     />
                   </div>
 
@@ -1867,17 +1871,18 @@ export const History = () => {
                       disabled={activeTurnIndex === 0}
                       title="Previous Question"
                       style={{
-                        padding: '6px 12px',
+                        padding: '6px 14px',
                         borderRadius: '9999px',
-                        background: '#f3f4f6',
-                        border: 'none',
-                        color: activeTurnIndex === 0 ? '#9ca3af' : '#374151',
+                        background: 'rgba(230, 214, 255, 0.12)',
+                        border: '1px solid rgba(230, 214, 255, 0.18)',
+                        color: activeTurnIndex === 0 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: activeTurnIndex === 0 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
+                        transition: 'all 150ms ease',
                       }}
                     >
                       <ChevronLeft size={14} />
@@ -1891,17 +1896,19 @@ export const History = () => {
                         width: '46px',
                         height: '46px',
                         borderRadius: '50%',
-                        background: '#65597b',
+                        background: 'linear-gradient(135deg, #65597b 0%, #4d4162 100%)',
                         color: '#ffffff',
-                        border: 'none',
+                        border: '1px solid rgba(230, 214, 255, 0.3)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
                         boxShadow: '0 4px 14px rgba(101, 89, 123, 0.35)',
+                        transition: 'transform 150ms ease',
                       }}
+                      title={isPlayingAudio ? 'Pause Master Audio' : 'Play Master Audio'}
                     >
-                      {isPlayingAudio ? <Pause size={20} /> : <Play size={20} style={{ marginLeft: '2px' }} />}
+                      {isPlayingAudio ? <Pause size={19} fill="#ffffff" /> : <Play size={19} fill="#ffffff" style={{ marginLeft: '2px' }} />}
                     </button>
 
                     {/* Next Turn */}
@@ -1910,17 +1917,18 @@ export const History = () => {
                       disabled={activeTurnIndex >= getActiveTurnsList().length - 1}
                       title="Next Question"
                       style={{
-                        padding: '6px 12px',
+                        padding: '6px 14px',
                         borderRadius: '9999px',
-                        background: '#f3f4f6',
-                        border: 'none',
-                        color: activeTurnIndex >= getActiveTurnsList().length - 1 ? '#9ca3af' : '#374151',
+                        background: 'rgba(230, 214, 255, 0.12)',
+                        border: '1px solid rgba(230, 214, 255, 0.18)',
+                        color: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
+                        transition: 'all 150ms ease',
                       }}
                     >
                       <span>Next</span>
@@ -1929,7 +1937,7 @@ export const History = () => {
                   </div>
 
                   {/* Playback Speed Toggles */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#f3f4f6', padding: '3px', borderRadius: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(0, 0, 0, 0.18)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(230, 214, 255, 0.12)' }}>
                     {[1.0, 1.25, 1.5, 2.0].map((rate) => (
                       <button
                         key={rate}
@@ -1938,14 +1946,15 @@ export const History = () => {
                           if (audioRef.current) audioRef.current.playbackRate = rate;
                         }}
                         style={{
-                          padding: '3px 7px',
+                          padding: '3px 8px',
                           borderRadius: '7px',
                           border: 'none',
                           fontSize: '11px',
-                          fontWeight: '700',
-                          background: playbackRate === rate ? '#ffffff' : 'transparent',
-                          color: playbackRate === rate ? '#65597b' : '#6b7280',
+                          fontWeight: '800',
+                          background: playbackRate === rate ? '#65597b' : 'transparent',
+                          color: playbackRate === rate ? '#ffffff' : '#cfc0e8',
                           cursor: 'pointer',
+                          transition: 'all 150ms ease',
                         }}
                       >
                         {rate}x
