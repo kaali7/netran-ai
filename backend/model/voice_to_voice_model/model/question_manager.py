@@ -86,10 +86,9 @@ class QuestionManager:
 
         clean = (transcript or "").lower().strip()
 
-        # 0. Candidate explicitly requesting to stop the interview
-        # Avoid standalone words like 'end' or 'stop' to prevent false positives with 'back-end', 'front-end', or 'stop working'
+        # 0. Candidate explicitly requesting to stop the interview or expressing severe nervousness
         stop_pattern = re.compile(
-            r"\b(quit|terminate|bye|goodbye|stop the interview|stop this interview|end the interview|i want to stop|i need to stop|let's stop)\b", 
+            r"\b(quit|terminate|bye|goodbye|cancel\s+interview|stop\s+(the|this)?\s*interview|end\s+(the|this)?\s*interview|can\s+we\s+stop|can\s+stop|i\s+want\s+to\s+stop|i\s+need\s+to\s+stop|let'?s\s+stop|feel\s+nervous|too\s+nervous|very\s+nervous|extremely\s+nervous|having\s+anxiety|leave\s+interview|finish\s+early)\b", 
             re.IGNORECASE
         )
         if stop_pattern.search(clean):
@@ -221,14 +220,25 @@ class QuestionManager:
 
         # 1. FINAL INTERVIEW CONCLUSION
         if branch_taken == "interview_completed":
-            closing_text = (
-                "That concludes our technical evaluation for today! "
-                "Thank you so much for your time, and we will follow up with detailed feedback shortly."
-            )
-            instruction = (
-                f"React warmly and professionally to the candidate's last response (or request to finish). "
-                f"Then conclude the interview smoothly by saying: '{closing_text}'"
-            )
+            is_nervous = bool(re.search(r"\b(nervous|anxiety|panic|scared|stress|overwhelm)\b", (candidate_transcript or "").lower()))
+            if is_nervous:
+                closing_text = (
+                    "No worries at all, it's completely okay to feel nervous! "
+                    "We'll stop here for today. Take care, and thank you for your time."
+                )
+                instruction = (
+                    f"The candidate expressed nervousness: '{candidate_transcript}'. "
+                    f"Reassure them with genuine warmth and empathy in 1 sentence, and conclude smoothly by saying: '{closing_text}'"
+                )
+            else:
+                closing_text = (
+                    "That concludes our technical evaluation for today! "
+                    "Thank you so much for your time, and we will follow up with detailed feedback shortly."
+                )
+                instruction = (
+                    f"React warmly and professionally to the candidate's last response (or request to finish). "
+                    f"Then conclude the interview smoothly by saying: '{closing_text}'"
+                )
             return f"Candidate Final Answer: '{candidate_transcript}'\nInstruction: {instruction}", closing_text
 
         target_logged_q = current_q.question_text if current_q else ""

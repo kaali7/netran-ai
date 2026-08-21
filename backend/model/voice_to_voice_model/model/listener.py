@@ -496,11 +496,12 @@ def listen_and_transcribe(
                 )
                 original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
 
-            # --- Hardware Pre-Gain ---
-            # The diagnostic tool revealed the user's mic hardware captures at -78.4 dBFS.
-            # Apply a fixed 20x multiplier here so the entire pipeline (VAD, calibration, STT)
-            # sees normal volume levels without destroying the signal envelope.
-            original_frame = original_frame * 20.0
+            # --- Audio Pre-Gain ---
+            # For physical desktop mic hardware (low gain capture at -78.4 dBFS),
+            # apply 20x gain multiplier. For WebSockets (standard normalized browser audio),
+            # keep 1.0x gain to prevent background noise from saturating the continuation gate.
+            pre_gain = 1.0 if ws_audio_queue is not None else 20.0
+            original_frame = original_frame * pre_gain
             
             # 2. Prepare VAD frame: apply streaming DC blocker BEFORE Silero VAD.
             #    Silero VAD is trained on zero-centered audio. Even a tiny DC offset
@@ -693,15 +694,18 @@ def listen_and_transcribe(
             if has_spoken:
                 can_endpoint = total_frames_counter >= MIN_SPEECH_FRAMES
                 if (silence_frames_counter >= max_silence_frames and can_endpoint) or total_frames_counter > MAX_RECORDING_FRAMES:
-                    # Tier 1 + Tier 2 Hybrid Thought Completion Check
-                    if not has_extended_silence and total_frames_counter <= MAX_RECORDING_FRAMES:
+                    # Tier 1 + Tier 2 Hybrid Thought Completion Check (enabled for desktop or explicit flag)
+                    should_check_thought = (
+                        ws_audio_queue is None or getattr(state, "enable_thought_classifier", False)
+                    )
+                    if should_check_thought and not has_extended_silence and total_frames_counter <= MAX_RECORDING_FRAMES:
                         _cached_interim_transcript = _transcribe_audio_buffer(audio_buffer)
                         status = check_thought_completion(_cached_interim_transcript)
                         if status == "INCOMPLETE":
                             has_extended_silence = True
                             if state:
-                                state.pause_tolerance_ms = 2300
-                            max_silence_frames = max(8, (state.pause_tolerance_ms if state else 2300) // 32)
+                                state.pause_tolerance_ms = 2000
+                            max_silence_frames = max(8, (state.pause_tolerance_ms if state else 2000) // 32)
                             print(
                                 f"⏳ Candidate is thinking... extending wait time to {max_silence_frames * 32}ms "
                                 f"(interim transcript: '{_cached_interim_transcript}')",
@@ -718,7 +722,7 @@ def listen_and_transcribe(
 
                         if speaker_verifier.is_enrolled:
                             is_candidate, sv_score = speaker_verifier.verify(sv_audio)
-                            if not is_candidate:
+                            if not is_candidate and sv_score < 0.15:
                                 print(
                                     f"[SV] ❌ Rejected foreign voice "
                                     f"(score={sv_score:.3f} < {speaker_verifier.ACCEPT_THRESHOLD}). "
@@ -744,8 +748,8 @@ def listen_and_transcribe(
                             else:
                                 print(f"[SV] ✅ Candidate voice confirmed (score={sv_score:.3f})", flush=True)
                         else:
-                            # Auto-enroll from first utterance >= 2 seconds (ICEBREAKER turn)
-                            if sv_duration >= 2.0:
+                            # Auto-enroll from first utterance >= 1.5 seconds (ICEBREAKER turn)
+                            if sv_duration >= 1.5:
                                 speaker_verifier.enroll(sv_audio)
                                 print(
                                     f"[SV] 🎤 Auto-enrolled candidate voice from "

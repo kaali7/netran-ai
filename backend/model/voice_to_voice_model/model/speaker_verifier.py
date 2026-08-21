@@ -55,8 +55,8 @@ class SpeakerVerifier:
         transcript = listen_and_transcribe(..., speaker_verifier=verifier)
     """
 
-    # Default cosine similarity threshold (tunable via .env SV_THRESHOLD)
-    ACCEPT_THRESHOLD = float(os.getenv("SV_THRESHOLD", "0.55"))
+    # Default cosine similarity threshold (tunable via .env SV_THRESHOLD, default 0.30 for browser audio)
+    ACCEPT_THRESHOLD = float(os.getenv("SV_THRESHOLD", "0.30"))
 
     def __init__(self, model_source: str = "speechbrain/spkrec-ecapa-voxceleb"):
         """
@@ -147,8 +147,8 @@ class SpeakerVerifier:
         Returns:
             True if enrollment succeeded, False otherwise.
         """
-        if len(audio_np) < 16000 * 2:  # Minimum 2 seconds
-            print(f"[SpeakerVerifier] Enrollment audio too short ({len(audio_np)/16000:.1f}s < 2.0s)", flush=True)
+        if len(audio_np) < 16000 * 1.5:  # Minimum 1.5 seconds for robust enrollment
+            print(f"[SpeakerVerifier] Enrollment audio too short ({len(audio_np)/16000:.1f}s < 1.5s)", flush=True)
             return False
 
         embedding = self._compute_embedding(audio_np)
@@ -185,9 +185,9 @@ class SpeakerVerifier:
         if not self._ensure_loaded():
             return True, 1.0  # Model unavailable — fail-open
 
-        # Skip very short audio segments (< 0.5s) — not enough for reliable verification
-        if len(audio_np) < 16000 * 0.5:
-            return True, 1.0  # Too short to verify — pass through
+        # Skip short audio segments (< 1.2s) — not enough for reliable verification, pass through
+        if len(audio_np) < 16000 * 1.2:
+            return True, 1.0
 
         import torch
 

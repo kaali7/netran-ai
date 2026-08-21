@@ -16,6 +16,7 @@ from typing import Any
 
 try:
     from . import brain
+    from .config import SV_ENABLED
     from .listener import ContinuousMicWriter, listen_and_transcribe
     from .question_manager import QuestionManager
     from .schemas import InterviewQuestionInput
@@ -24,9 +25,14 @@ try:
     from .speaker import preload_models as preload_speaker
     from .speaker import speak_text
     from .execution_logger import ExecutionLogger
+    try:
+        from .speaker_verifier import SpeakerVerifier
+    except ImportError:
+        SpeakerVerifier = None
 except ImportError:
     try:
         from model.voice_to_voice_model.model import brain
+        from model.voice_to_voice_model.model.config import SV_ENABLED
         from model.voice_to_voice_model.model.listener import (
             ContinuousMicWriter,
             listen_and_transcribe,
@@ -40,8 +46,13 @@ except ImportError:
         )
         from model.voice_to_voice_model.model.speaker import speak_text
         from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+        try:
+            from model.voice_to_voice_model.model.speaker_verifier import SpeakerVerifier
+        except ImportError:
+            SpeakerVerifier = None
     except ImportError:
         import brain
+        from config import SV_ENABLED
         from listener import ContinuousMicWriter, listen_and_transcribe
         from question_manager import QuestionManager
         from schemas import InterviewQuestionInput
@@ -50,6 +61,10 @@ except ImportError:
         from speaker import preload_models as preload_speaker
         from speaker import speak_text
         from execution_logger import ExecutionLogger
+        try:
+            from speaker_verifier import SpeakerVerifier
+        except ImportError:
+            SpeakerVerifier = None
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +87,7 @@ class WorkflowVoiceEngine:
         self.question_tree: list[dict[str, Any]] = []
         self.system_prompt_text: str = ""
         self.session_state = SessionState()
+        self.speaker_verifier = SpeakerVerifier() if SV_ENABLED and SpeakerVerifier is not None else None
         self._load_stage2_artifacts()
         
     def _load_stage2_artifacts(self):
@@ -222,7 +238,9 @@ class WorkflowVoiceEngine:
                 transcription_result = listen_and_transcribe(
                     state=self.session_state,
                     ws_audio_queue=ws_audio_queue,
-                    ui_callback=vad_callback
+                    ui_callback=vad_callback,
+                    mic_writer=mic_writer,
+                    speaker_verifier=self.speaker_verifier
                 )
                 
                 if isinstance(transcription_result, dict):
@@ -255,12 +273,6 @@ class WorkflowVoiceEngine:
                     continue
                     
                 _dead_mic_retries = 0
-
-                if "stop interview" in candidate_transcript.lower() or "end interview" in candidate_transcript.lower():
-                    logger.info("Candidate requested to stop the interview.")
-                    speak_text("Alright, stopping the interview. Thank you for your time.")
-                    self.stop_event.set()
-                    break
                 
                 if status_callback:
                     status_callback(turn_idx, "PROCESSING_RESPONSE", "", candidate_transcript)
@@ -317,6 +329,11 @@ class WorkflowVoiceEngine:
                     
                 if exec_logger:
                     exec_logger.log_event("BACKEND_ENGINE", "TTS_COMPLETE", {"turn_id": turn_idx})
+                
+                if branch_taken == "interview_completed":
+                    logger.info("Interview reached completion or candidate requested to end. Stopping loop.")
+                    self.stop_event.set()
+                    break
                     
         except Exception as e:
             logger.error(f"Error during voice interview loop: {e}", exc_info=True)

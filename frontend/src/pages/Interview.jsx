@@ -307,6 +307,8 @@ export const Interview = () => {
             alignItems: 'center',
             textAlign: 'center',
             position: 'relative',
+            minHeight: '540px',
+            boxSizing: 'border-box',
           }}
           className="animate-entrance"
         >
@@ -400,81 +402,100 @@ export const Interview = () => {
           )}
 
           {/* Avatar Viewport Frame */}
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ width: '280px', height: '280px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <AvatarEva isSpeaking={isSpeaking} />
           </div>
 
-          {/* VAD Status Pill */}
+          {/* VAD Status Pill (Fixed-width & sanitized to eliminate label vibration) */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '8px',
-              padding: '8px 18px',
+              padding: '8px 20px',
               borderRadius: '9999px',
               background: isSpeaking ? '#dcfce7' : '#f3e8ff',
               color: isSpeaking ? '#15803d' : '#6b21a8',
               border: isSpeaking ? '1px solid #bbf7d0' : '1px solid #e9d5ff',
               fontWeight: '700',
               fontSize: '13px',
-              marginBottom: '28px',
-              transition: 'all 300ms ease',
+              marginBottom: '20px',
+              transition: 'background 250ms ease, color 250ms ease, border-color 250ms ease',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+              minHeight: '36px',
+              minWidth: '190px',
+              boxSizing: 'border-box',
+              textAlign: 'center',
             }}
           >
             {isSpeaking ? (
               <>
-                <Volume2 size={16} />
-                <span>VAD Status: AI Speaking</span>
+                <Volume2 size={16} style={{ flexShrink: 0 }} />
+                <span>Eva is Speaking</span>
               </>
             ) : (
               <>
-                <Mic size={16} />
-                <span>VAD Status: {vadState}</span>
+                <Mic size={16} style={{ flexShrink: 0 }} />
+                <span>
+                  {(() => {
+                    if (!vadState) return 'Listening...';
+                    const lower = vadState.toLowerCase();
+                    if (lower.includes('hearing')) return 'Hearing you...';
+                    if (lower.includes('processing') || lower.includes('transcription')) return 'Processing answer...';
+                    if (lower.includes('standby') || lower.includes('offline')) return 'Mic: Standby';
+                    return 'Listening...';
+                  })()}
+                </span>
               </>
             )}
           </div>
 
-          {/* Mic Volume Level Bar */}
-          {!isSpeaking && (
+          {/* Mic Volume Level Bar (Fixed Slot to prevent layout jumping) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '20px',
+              background: '#f9fafb',
+              padding: '6px 14px',
+              borderRadius: '12px',
+              border: '1px solid #e5e7eb',
+              opacity: isSpeaking ? 0.4 : 1,
+              pointerEvents: isSpeaking ? 'none' : 'auto',
+              transition: 'opacity 200ms ease',
+              minHeight: '34px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Mic size={14} style={{ color: !isSpeaking && micVolume > 5 ? '#22c55e' : '#9ca3af' }} />
+            <span style={{ fontSize: '12px', fontWeight: '600', color: isSpeaking ? '#9ca3af' : '#4b5563' }}>
+              {isSpeaking ? 'AI Output Active' : 'Mic Input Level:'}
+            </span>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '20px',
-                background: '#f9fafb',
-                padding: '6px 14px',
-                borderRadius: '12px',
-                border: '1px solid #e5e7eb',
+                width: '120px',
+                height: '8px',
+                background: '#e5e7eb',
+                borderRadius: '9999px',
+                overflow: 'hidden',
               }}
             >
-              <Mic size={14} style={{ color: micVolume > 5 ? '#22c55e' : '#9ca3af' }} />
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#4b5563' }}>Mic Input Level:</span>
               <div
                 style={{
-                  width: '120px',
-                  height: '8px',
-                  background: '#e5e7eb',
+                  width: isSpeaking ? '0%' : `${micVolume}%`,
+                  height: '100%',
+                  background: micVolume > 40 ? '#ef4444' : micVolume > 15 ? '#22c55e' : '#3b82f6',
                   borderRadius: '9999px',
-                  overflow: 'hidden',
+                  transition: 'width 100ms ease-out, background 200ms ease',
                 }}
-              >
-                <div
-                  style={{
-                    width: `${micVolume}%`,
-                    height: '100%',
-                    background: micVolume > 40 ? '#ef4444' : micVolume > 15 ? '#22c55e' : '#3b82f6',
-                    borderRadius: '9999px',
-                    transition: 'width 100ms ease-out, background 200ms ease',
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', minWidth: '28px' }}>
-                {micVolume}%
-              </span>
+              />
             </div>
-          )}
+            <span style={{ fontSize: '11px', fontWeight: '700', color: isSpeaking ? '#9ca3af' : '#6b7280', minWidth: '28px' }}>
+              {isSpeaking ? '—' : `${micVolume}%`}
+            </span>
+          </div>
 
           {/* Per-Question Pacing Helper Badge */}
           <div

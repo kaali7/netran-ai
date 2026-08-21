@@ -28,6 +28,8 @@ export const useInterviewSession = (sessionId) => {
   // TTS Playback state
   const nextStartTimeRef = useRef(0);
   const sourceNodesQueueRef = useRef([]);
+  const speakingDebounceTimerRef = useRef(null);
+  const pendingQuestionRef = useRef(null);
 
   const sendClientLog = useCallback((eventType, details = {}) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -70,9 +72,16 @@ export const useInterviewSession = (sessionId) => {
     };
 
     ws.onmessage = async (event) => {
-      // Handle Binary TTS Audio Chunk (assuming Int16 16kHz PCM from backend)
+      // Handle Binary TTS Audio Chunk (Int16 24kHz PCM from backend)
       if (event.data instanceof Blob) {
+        if (speakingDebounceTimerRef.current) {
+          clearTimeout(speakingDebounceTimerRef.current);
+        }
         setIsSpeaking(true);
+        if (pendingQuestionRef.current) {
+          setCurrentQuestion(pendingQuestionRef.current);
+          pendingQuestionRef.current = null;
+        }
         sendClientLog('AUDIO_BLOB_RECEIVED', { size_bytes: event.data.size });
         const arrayBuffer = await event.data.arrayBuffer();
         const int16Array = new Int16Array(arrayBuffer);
@@ -87,13 +96,18 @@ export const useInterviewSession = (sessionId) => {
           if (msg.event === 'INTERRUPT') {
             console.log('Barge-in detected: interrupting AI');
             sendClientLog('BARGE_IN_TRIGGERED');
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
             interruptPlayback();
             setIsSpeaking(false);
           } else if (msg.event === 'SPEAKING_QUESTION') {
-            setIsSpeaking(true);
             if (msg.question_text) setCurrentQuestion(msg.question_text);
             if (msg.turn_id !== undefined) setQuestionIndex(msg.turn_id > 0 ? msg.turn_id - 1 : 0);
           } else if (msg.event === 'LISTENING_CANDIDATE') {
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
             setIsSpeaking(false);
           } else if (msg.event === 'PROCESSING_RESPONSE') {
             setCurrentQuestion('Processing your answer...');
@@ -105,13 +119,17 @@ export const useInterviewSession = (sessionId) => {
             setMicVolume(Math.min(100, Math.round(displayVal * 100)));
             if (vadData.state) setVadState(vadData.state);
           } else if (msg.event === 'EVA_RESPONDING_BRANCH') {
-            setIsSpeaking(true);
-            if (msg.question_text) setCurrentQuestion(msg.question_text);
+            if (msg.question_text) {
+              pendingQuestionRef.current = msg.question_text;
+            }
           } else if (msg.event === 'TURN_COMPLETE') {
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
             setIsSpeaking(false);
           } else if (msg.event === 'QUESTION_COMPLETE' || msg.event === 'QUESTION_UPDATE') {
             if (msg.text) setCurrentQuestion(msg.text);
-            if (msg.question_text) setCurrentQuestion(msg.question_text); // some backend events use question_text
+            if (msg.question_text) setCurrentQuestion(msg.question_text);
             if (msg.question_index !== undefined) setQuestionIndex(msg.question_index);
           } else if (msg.event === 'INTERVIEW_COMPLETE' || msg.event === 'SESSION_DONE') {
             setIsSessionDone(true);
@@ -119,6 +137,9 @@ export const useInterviewSession = (sessionId) => {
           } else if (msg.event === 'AI_START_SPEAKING') {
             setIsSpeaking(true);
           } else if (msg.event === 'AI_STOP_SPEAKING') {
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
             setIsSpeaking(false);
           } else if (msg.event === 'ERROR') {
             console.error('Backend Error:', msg.detail);
@@ -240,12 +261,22 @@ export const useInterviewSession = (sessionId) => {
     source.onended = () => {
       sourceNodesQueueRef.current = sourceNodesQueueRef.current.filter(n => n !== source);
       if (sourceNodesQueueRef.current.length === 0) {
-        setIsSpeaking(false);
+        if (speakingDebounceTimerRef.current) {
+          clearTimeout(speakingDebounceTimerRef.current);
+        }
+        speakingDebounceTimerRef.current = setTimeout(() => {
+          if (sourceNodesQueueRef.current.length === 0) {
+            setIsSpeaking(false);
+          }
+        }, 180);
       }
     };
   };
 
   const interruptPlayback = () => {
+    if (speakingDebounceTimerRef.current) {
+      clearTimeout(speakingDebounceTimerRef.current);
+    }
     sourceNodesQueueRef.current.forEach(source => {
       try {
         source.stop();
