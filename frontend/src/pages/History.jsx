@@ -744,6 +744,98 @@ export const History = () => {
           .history-inspect-qkeywords {
             font-size: 11px !important;
           }
+
+          /* Audio Modal Phone Styles */
+          .history-audio-modal {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 92dvh !important;
+            max-height: 92dvh !important;
+            border-radius: 20px !important;
+          }
+          .history-audio-header {
+            padding: 12px 14px !important;
+          }
+          .history-audio-icon-box {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 10px !important;
+          }
+          .history-audio-icon-box svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .history-audio-title {
+            font-size: 14.5px !important;
+            line-height: 1.25 !important;
+          }
+          .history-audio-subtitle {
+            display: none !important;
+          }
+          .history-audio-autoadvance-btn {
+            padding: 4px 8px !important;
+            font-size: 11px !important;
+            border-radius: 9999px !important;
+          }
+          .history-audio-body {
+            padding: 12px 12px !important;
+            gap: 10px !important;
+          }
+          .history-audio-turn-card {
+            padding: 12px 12px !important;
+            border-radius: 14px !important;
+          }
+          .history-audio-turn-head {
+            flex-wrap: wrap !important;
+            gap: 6px !important;
+            margin-bottom: 8px !important;
+          }
+          .history-audio-turn-play-btn {
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+          .history-audio-dock {
+            padding: 8px 12px 12px 12px !important;
+            gap: 6px !important;
+          }
+          .history-audio-volume-slider {
+            display: none !important;
+          }
+          .history-audio-nav-btn {
+            width: 30px !important;
+            height: 30px !important;
+            min-width: 30px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0 !important;
+          }
+          .history-audio-playbtn {
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+          }
+          .history-audio-playbtn svg {
+            width: 15px !important;
+            height: 15px !important;
+          }
+          .history-audio-speed-group {
+            gap: 2px !important;
+            padding: 2px !important;
+          }
+          .history-audio-speed-btn {
+            padding: 2px 5px !important;
+            font-size: 10px !important;
+          }
         }
 
         .history-tab-desktop-text {
@@ -2094,6 +2186,7 @@ export const History = () => {
         {/* TURN-BY-TURN QUESTION & ANSWER INTERACTIVE AUDIO PLAYER MODAL */}
         {audioModalOpen && audioModalSession && (
           <div
+            className="history-modal-backdrop"
             style={{
               position: 'fixed',
               top: 0,
@@ -2110,6 +2203,7 @@ export const History = () => {
             }}
           >
             <div
+              className="history-audio-modal animate-entrance"
               style={{
                 width: '100%',
                 maxWidth: '820px',
@@ -2123,7 +2217,6 @@ export const History = () => {
                 overflow: 'hidden',
                 position: 'relative',
               }}
-              className="animate-entrance"
             >
               {/* Hidden HTML5 Audio Element */}
               <audio
@@ -2156,42 +2249,54 @@ export const History = () => {
 
               {/* Modal Top Header */}
               <div
+                className="history-audio-header"
                 style={{
-                  padding: '18px 24px',
+                  padding: '16px 20px',
                   borderBottom: '1px solid #f3f4f6',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   background: '#faf9fc',
+                  gap: '8px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: '#ede6f8', color: '#65597b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Headphones size={22} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                  <div
+                    className="history-audio-icon-box"
+                    style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#ede6f8', color: '#65597b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  >
+                    <Headphones size={20} />
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3
+                      className="history-audio-title"
+                      style={{ fontSize: '15.5px', fontWeight: '800', color: '#111827', margin: 0, wordBreak: 'break-word' }}
+                    >
                       {audioModalSession.role_title}
                     </h3>
-                    <span style={{ fontSize: '12px', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span
+                      className="history-audio-subtitle"
+                      style={{ fontSize: '11.5px', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}
+                    >
                       <span>{audioModalSession.company}</span>
                       <span>•</span>
-                      <Radio size={12} style={{ color: isPlayingAudio ? '#22c55e' : '#9ca3af' }} />
-                      <span>{isPlayingAudio ? `Playing Turn ${activeTurnIndex + 1}` : 'Paused'}</span>
+                      <Radio size={11} style={{ color: isPlayingAudio ? '#22c55e' : '#9ca3af' }} />
+                      <span>{isPlayingAudio ? `Turn ${activeTurnIndex + 1}` : 'Paused'}</span>
                     </span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   {/* Continuous Play Toggle */}
                   <button
+                    className="history-audio-autoadvance-btn"
                     onClick={() => setIsContinuousPlay((prev) => !prev)}
                     title="Toggle auto-play to next turn when current answer finishes"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 14px',
+                      gap: '5px',
+                      padding: '6px 12px',
                       borderRadius: '9999px',
                       border: isContinuousPlay ? '1px solid #65597b' : '1px solid #d1d5db',
                       background: isContinuousPlay ? '#ede6f8' : '#ffffff',
@@ -2200,42 +2305,47 @@ export const History = () => {
                       fontWeight: '700',
                       cursor: 'pointer',
                       transition: 'all 150ms ease',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     <RefreshCw size={12} />
-                    <span>Auto-Advance Q&A</span>
+                    <span className="history-tab-desktop-text">Auto-Advance Q&A</span>
+                    <span className="history-tab-mobile-text">Auto-Play</span>
                   </button>
 
                   {/* Close Modal Button */}
                   <button
+                    className="history-modal-close-btn"
                     onClick={handleCloseAudioModal}
                     style={{
                       background: '#f3f4f6',
                       border: 'none',
                       borderRadius: '50%',
-                      width: '32px',
-                      height: '32px',
+                      width: '30px',
+                      height: '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: '#6b7280',
                       cursor: 'pointer',
+                      flexShrink: 0,
                     }}
                   >
-                    <X size={18} />
+                    <X size={17} />
                   </button>
                 </div>
               </div>
 
               {/* Modal Body: Turn-by-Turn Q&A List */}
               <div
+                className="history-audio-body"
                 style={{
                   flex: 1,
                   overflowY: 'auto',
-                  padding: '20px 24px',
+                  padding: '18px 20px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '16px',
+                  gap: '14px',
                   background: '#fcfbfe',
                 }}
               >
@@ -2255,42 +2365,47 @@ export const History = () => {
                       <div
                         key={turn.turn_id || tIdx}
                         ref={(el) => (turnCardRefs.current[tIdx] = el)}
+                        className="history-audio-turn-card"
                         style={{
-                          borderRadius: '18px',
+                          borderRadius: '16px',
                           background: isActive ? '#ffffff' : '#fafafa',
                           border: isActive ? '2px solid #65597b' : '1px solid #ede8f5',
-                          padding: '18px 20px',
+                          padding: '16px 18px',
                           boxShadow: isActive ? '0 8px 24px rgba(101, 89, 123, 0.1)' : 'none',
                           transition: 'all 200ms ease',
                           position: 'relative',
                         }}
                       >
                         {/* Turn Header Bar */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', background: isActive ? '#65597b' : '#e5e7eb', color: isActive ? '#ffffff' : '#374151', padding: '3px 9px', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                        <div
+                          className="history-audio-turn-head"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', background: isActive ? '#65597b' : '#e5e7eb', color: isActive ? '#ffffff' : '#374151', padding: '2.5px 8px', borderRadius: '9999px', textTransform: 'uppercase' }}>
                               Turn {tIdx + 1}
                             </span>
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#4b5563' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#374151' }}>
                               {turn.topic || 'Domain Question'}
                             </span>
                             {turn.difficulty && (
-                              <span style={{ fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
+                              <span style={{ fontSize: '10.5px', fontWeight: '600', padding: '1.5px 7px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
                                 {turn.difficulty}
                               </span>
                             )}
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                             {turnDuration > 0 && (
-                              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <Clock size={12} />
+                              <span style={{ fontSize: '11.5px', fontWeight: '600', color: '#6b7280', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                <Clock size={11} />
                                 {formatTime(turnDuration)}
                               </span>
                             )}
 
                             {/* Play this specific turn button */}
                             <button
+                              className="history-audio-turn-play-btn"
                               onClick={() => {
                                 if (isActive && isPlayingAudio) {
                                   audioRef.current?.pause();
@@ -2299,56 +2414,57 @@ export const History = () => {
                                   playTurn(tIdx);
                                 }
                               }}
+                              title={isActive && isPlayingAudio ? 'Pause Turn' : 'Play Turn'}
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 14px',
+                                gap: '5px',
+                                padding: '5px 11px',
                                 borderRadius: '9999px',
                                 border: 'none',
                                 background: isActive && isPlayingAudio ? '#65597b' : '#ede6f8',
                                 color: isActive && isPlayingAudio ? '#ffffff' : '#65597b',
-                                fontSize: '12px',
+                                fontSize: '11.5px',
                                 fontWeight: '700',
                                 cursor: 'pointer',
                                 transition: 'all 150ms ease',
                               }}
                             >
-                              {isActive && isPlayingAudio ? <Pause size={12} /> : <Play size={12} />}
-                              <span>{isActive && isPlayingAudio ? 'Pause Turn' : 'Play Turn'}</span>
+                              {isActive && isPlayingAudio ? <Pause size={12} /> : <Play size={12} style={{ marginLeft: '1px' }} />}
+                              <span className="history-tab-desktop-text">{isActive && isPlayingAudio ? 'Pause' : 'Play'}</span>
                             </button>
                           </div>
                         </div>
 
                         {/* EVA'S QUESTION CARD */}
-                        <div style={{ background: '#f5f0fb', borderRadius: '12px', padding: '12px 14px', marginBottom: '12px', borderLeft: '3px solid #65597b' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <Sparkles size={13} style={{ color: '#65597b' }} />
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#65597b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              Eva (Interviewer) Question:
+                        <div style={{ background: '#f5f0fb', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px', borderLeft: '3px solid #65597b' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                            <Sparkles size={12} style={{ color: '#65597b' }} />
+                            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#65597b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Eva Question:
                             </span>
                           </div>
-                          <p style={{ fontSize: '14px', fontWeight: '700', color: '#111827', margin: 0, lineHeight: '1.4' }}>
+                          <p style={{ fontSize: '13px', fontWeight: '700', color: '#111827', margin: 0, lineHeight: '1.35' }}>
                             {turn.question_text || '(Question text unavailable)'}
                           </p>
                         </div>
 
                         {/* CANDIDATE'S SPOKEN RESPONSE */}
-                        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '12px 14px', border: '1px solid #f0edf5' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <Mic size={13} style={{ color: '#0369a1' }} />
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                Candidate Spoken Response:
+                        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '10px 12px', border: '1px solid #f0edf5' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Mic size={12} style={{ color: '#0369a1' }} />
+                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                Candidate Response:
                               </span>
                             </div>
                             {turn.audio_start_sec !== undefined && turn.audio_end_sec !== undefined && (
-                              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                              <span style={{ fontSize: '10.5px', color: '#9ca3af' }}>
                                 [{formatTime(turn.audio_start_sec)} → {formatTime(turn.audio_end_sec)}]
                               </span>
                             )}
                           </div>
-                          <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: '1.5', fontStyle: turn.candidate_transcript?.startsWith('(') ? 'italic' : 'normal' }}>
+                          <p style={{ fontSize: '12.5px', color: '#374151', margin: 0, lineHeight: '1.45', fontStyle: turn.candidate_transcript?.startsWith('(') ? 'italic' : 'normal' }}>
                             {turn.candidate_transcript || '(No transcript recorded for this turn)'}
                           </p>
                         </div>
@@ -2362,15 +2478,16 @@ export const History = () => {
                 )}
               </div>
 
-              {/* Modal Bottom Sticky Master Controls Bar - Serene Lavender Soft Light-Dark Theme */}
+              {/* Modal Bottom Sticky Master Controls Bar */}
               <div
+                className="history-audio-dock"
                 style={{
-                  padding: '16px 24px 18px 24px',
+                  padding: '14px 20px 16px 20px',
                   background: 'linear-gradient(180deg, #322b3f 0%, #252030 100%)',
                   borderTop: '1px solid rgba(230, 214, 255, 0.16)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '12px',
+                  gap: '10px',
                   boxShadow: '0 -6px 22px rgba(50, 43, 63, 0.16)',
                 }}
               >
@@ -2391,22 +2508,22 @@ export const History = () => {
                       width: '100%',
                       accentColor: '#d6c7ee',
                       cursor: 'pointer',
-                      height: '5px',
+                      height: '4px',
                     }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: '700', marginTop: '5px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700', marginTop: '4px' }}>
                     <span style={{ color: '#f3e8ff' }}>{formatTime(currentTime)}</span>
                     <span style={{ color: '#cfc0e8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       <Headphones size={11} style={{ color: '#e6d6ff' }} />
-                      <span>Total Session Audio: {formatTime(duration)}</span>
+                      <span>{formatTime(duration)}</span>
                     </span>
                   </div>
                 </div>
 
                 {/* Controls Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   {/* Volume Control */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
                       onClick={() => {
                         if (audioRef.current) {
@@ -2417,13 +2534,14 @@ export const History = () => {
                       style={{ background: 'transparent', border: 'none', color: '#e6d6ff', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
                       title={isMuted ? 'Unmute' : 'Mute'}
                     >
-                      {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                      {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
                     </button>
                     <input
                       type="range"
                       min="0"
                       max="1"
                       step="0.05"
+                      className="history-audio-volume-slider"
                       value={isMuted ? 0 : volume}
                       onChange={(e) => {
                         const v = parseFloat(e.target.value);
@@ -2434,42 +2552,44 @@ export const History = () => {
                           setIsMuted(v === 0);
                         }
                       }}
-                      style={{ width: '72px', accentColor: '#d6c7ee', cursor: 'pointer' }}
+                      style={{ width: '56px', accentColor: '#d6c7ee', cursor: 'pointer' }}
                     />
                   </div>
 
                   {/* Center Playback Steppers */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {/* Previous Turn */}
                     <button
+                      className="history-audio-nav-btn"
                       onClick={handlePrevTurn}
                       disabled={activeTurnIndex === 0}
                       title="Previous Question"
                       style={{
-                        padding: '6px 14px',
+                        padding: '5px 11px',
                         borderRadius: '9999px',
                         background: 'rgba(230, 214, 255, 0.12)',
                         border: '1px solid rgba(230, 214, 255, 0.18)',
                         color: activeTurnIndex === 0 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
-                        fontSize: '12px',
+                        fontSize: '11.5px',
                         fontWeight: '700',
                         cursor: activeTurnIndex === 0 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '3px',
                         transition: 'all 150ms ease',
                       }}
                     >
                       <ChevronLeft size={14} />
-                      <span>Prev</span>
+                      <span className="history-tab-desktop-text">Prev</span>
                     </button>
 
                     {/* Master Play/Pause Button */}
                     <button
+                      className="history-audio-playbtn"
                       onClick={toggleMasterPlayPause}
                       style={{
-                        width: '46px',
-                        height: '46px',
+                        width: '42px',
+                        height: '42px',
                         borderRadius: '50%',
                         background: 'linear-gradient(135deg, #65597b 0%, #4d4162 100%)',
                         color: '#ffffff',
@@ -2483,48 +2603,53 @@ export const History = () => {
                       }}
                       title={isPlayingAudio ? 'Pause Master Audio' : 'Play Master Audio'}
                     >
-                      {isPlayingAudio ? <Pause size={19} fill="#ffffff" /> : <Play size={19} fill="#ffffff" style={{ marginLeft: '2px' }} />}
+                      {isPlayingAudio ? <Pause size={17} fill="#ffffff" /> : <Play size={17} fill="#ffffff" style={{ marginLeft: '2px' }} />}
                     </button>
 
                     {/* Next Turn */}
                     <button
+                      className="history-audio-nav-btn"
                       onClick={handleNextTurn}
                       disabled={activeTurnIndex >= getActiveTurnsList().length - 1}
                       title="Next Question"
                       style={{
-                        padding: '6px 14px',
+                        padding: '5px 11px',
                         borderRadius: '9999px',
                         background: 'rgba(230, 214, 255, 0.12)',
                         border: '1px solid rgba(230, 214, 255, 0.18)',
                         color: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
-                        fontSize: '12px',
+                        fontSize: '11.5px',
                         fontWeight: '700',
                         cursor: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '3px',
                         transition: 'all 150ms ease',
                       }}
                     >
-                      <span>Next</span>
+                      <span className="history-tab-desktop-text">Next</span>
                       <ChevronRight size={14} />
                     </button>
                   </div>
 
                   {/* Playback Speed Toggles */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(0, 0, 0, 0.18)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(230, 214, 255, 0.12)' }}>
+                  <div
+                    className="history-audio-speed-group"
+                    style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0, 0, 0, 0.18)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(230, 214, 255, 0.12)' }}
+                  >
                     {[1.0, 1.25, 1.5, 2.0].map((rate) => (
                       <button
                         key={rate}
+                        className="history-audio-speed-btn"
                         onClick={() => {
                           setPlaybackRate(rate);
                           if (audioRef.current) audioRef.current.playbackRate = rate;
                         }}
                         style={{
-                          padding: '3px 8px',
-                          borderRadius: '7px',
+                          padding: '2.5px 6px',
+                          borderRadius: '6px',
                           border: 'none',
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: '800',
                           background: playbackRate === rate ? '#65597b' : 'transparent',
                           color: playbackRate === rate ? '#ffffff' : '#cfc0e8',
