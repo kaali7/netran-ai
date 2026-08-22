@@ -35,8 +35,31 @@ class SessionState:
     tts_speed: float = 1.00          # Dynamic Kokoro TTS synthesis speed factor
     current_tone: str = "direct"     # Master emotional tone attribute for turn synthesis
     selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset
-    input_mode: str = "VAD"          # Input mode: "VAD" or "PTT" (Push-To-Talk)
     ptt_active: threading.Event = field(default_factory=threading.Event)
     last_vocal_anchor: str = ""      # Tracks last anchor to enforce anti-repetition rotation
     speaker_verifier: object | None = None   # SpeakerVerifier instance (None if disabled)
+
+    # Thread-safe Pause/Resume & Restart primitives for live web interviews
+    is_paused: threading.Event = field(default_factory=threading.Event)
+    restart_requested: threading.Event = field(default_factory=threading.Event)
+
+    def pause(self):
+        """Pauses STT listening and triggers interrupt on active speech synthesis."""
+        self.is_paused.set()
+        self.interrupt_event.set()
+
+    def resume(self):
+        """Resumes active STT listening and turn processing."""
+        self.is_paused.clear()
+        self.interrupt_event.clear()
+
+    def request_restart(self):
+        """Signals engine to interrupt current turn and restart interview from Turn 0."""
+        self.restart_requested.set()
+        self.interrupt_event.set()
+
+    def clear_restart(self):
+        """Clears the restart signal after engine has reset session state."""
+        self.restart_requested.clear()
+        self.interrupt_event.clear()
 

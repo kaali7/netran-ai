@@ -14,7 +14,8 @@ Additionally, Stage 3 ingests Stage 2 session artifact bundles (`interview_quest
 │                          SHARED SESSION STATE                           │
 │   session_state.py ──► Thread-Safe Events & Runtime Parameters          │
 │   • is_agent_speaking    • is_candidate_speaking    • should_stop        │
-│   • force_speech_done    • interrupt_event (barge-in signal)            │
+│   • is_paused            • restart_requested        • force_speech_done  │
+│   • interrupt_event (barge-in signal)                                   │
 │   • interrupt_cooldown_sec (0.3s)  • last_interrupt_time (monotonic)    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │

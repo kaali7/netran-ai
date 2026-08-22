@@ -33,6 +33,7 @@ def run_voice_session_with_callback(
     total_questions: int,
     audio_queue: Any = None,
     audio_out_queue: Any = None,
+    engine_holder: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """
     Runs the WorkflowVoiceEngine in a background thread.
@@ -44,6 +45,8 @@ def run_voice_session_with_callback(
     engine = WorkflowVoiceEngine(session_dir=session_dir, session_id=session_id)
     engine.stop_event = stop_event
     engine.inject_question_tree(questions=question_tree, system_prompt=system_prompt)
+    if engine_holder is not None:
+        engine_holder["engine"] = engine
     
     def status_callback(turn_id: int, state: str, question: str, transcript: str):
         progress_pct = int((turn_id / total_questions) * 100) if total_questions > 0 else 0

@@ -470,10 +470,20 @@ def listen_and_transcribe(
 
     try:
         while True:
-            # Check external stop or manual submit flags
+            # Check external stop, restart, pause, or manual submit flags
             if state:
                 if state.should_stop.is_set():
                     break
+                if state.restart_requested.is_set():
+                    print("[Restart Requested! Aborting current listener turn...]", flush=True)
+                    break
+                if state.is_paused.is_set():
+                    # Drain any incoming audio while paused so buffer doesn't backlog
+                    while not audio_queue.empty():
+                        try: audio_queue.get_nowait()
+                        except queue.Empty: break
+                    time.sleep(0.05)
+                    continue
                 if state.force_speech_done.is_set():
                     print("[Manual Done Speaking Triggered! Processing speech...]", flush=True)
                     state.force_speech_done.clear()

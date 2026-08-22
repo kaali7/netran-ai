@@ -201,8 +201,7 @@ class WorkflowVoiceEngine:
                 if status_callback:
                     status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
                     
-                import threading
-                threading.Thread(target=speak_text, args=(initial_greeting,)).start()
+                speak_text(initial_greeting)
                 conversation_history.append({"role": "assistant", "content": initial_greeting})
 
             _dead_mic_retries = 0
@@ -215,6 +214,46 @@ class WorkflowVoiceEngine:
                 })
             
             while not self.stop_event.is_set() and not question_manager.is_finished():
+                # 1. Handle Pause Wait Loop
+                while self.session_state.is_paused.is_set() and not self.stop_event.is_set() and not self.session_state.restart_requested.is_set():
+                    time.sleep(0.1)
+
+                if self.stop_event.is_set():
+                    break
+
+                # 2. Handle Restart Request
+                if self.session_state.restart_requested.is_set():
+                    logger.info("Handling restart request in engine turn loop...")
+                    self.session_state.clear_restart()
+                    turn_idx = 0
+                    _dead_mic_retries = 0
+                    question_manager.current_index = 0
+                    conversation_history = []
+                    
+                    if ws_audio_queue:
+                        while not ws_audio_queue.empty():
+                            try: ws_audio_queue.get_nowait()
+                            except Exception: break
+                    if ws_audio_out_queue:
+                        while not ws_audio_out_queue.empty():
+                            try: ws_audio_out_queue.get_nowait()
+                            except Exception: break
+
+                    initial_q = question_manager.get_current_question()
+                    if initial_q:
+                        import datetime
+                        hour = datetime.datetime.now().hour
+                        time_greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
+                        initial_greeting = f"{time_greeting}. I'm Eva, your technical interviewer today. How are you doing?"
+                        
+                        logger.info("--- RESTART -> TURN 0: [ICEBREAKER] ---")
+                        if status_callback:
+                            status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
+                            
+                        speak_text(initial_greeting)
+                        conversation_history.append({"role": "assistant", "content": initial_greeting})
+                    continue
+
                 turn_idx += 1
                 curr_q = question_manager.get_current_question()
                 topic = curr_q.topic if curr_q else "Interview"
@@ -345,6 +384,28 @@ class WorkflowVoiceEngine:
             if exec_logger:
                 exec_logger.log_event("BACKEND_ENGINE", "ENGINE_STOP", {})
             logger.info("Voice interview execution finished.")
+
+    def pause(self):
+        """Pauses the voice interview loop and interrupts active speech synthesis."""
+        logger.info(f"Pausing voice interview for session {self.session_id}")
+        if hasattr(self, 'session_state'):
+            self.session_state.pause()
+        if hasattr(self, 'speaker') and self.speaker:
+            self.speaker.interrupt_event.set()
+
+    def resume(self):
+        """Resumes the active voice interview turn loop."""
+        logger.info(f"Resuming voice interview for session {self.session_id}")
+        if hasattr(self, 'session_state'):
+            self.session_state.resume()
+
+    def restart(self):
+        """Signals engine to interrupt current turn and reset to Turn 0."""
+        logger.info(f"Restarting voice interview for session {self.session_id}")
+        if hasattr(self, 'session_state'):
+            self.session_state.request_restart()
+        if hasattr(self, 'speaker') and self.speaker:
+            self.speaker.interrupt_event.set()
 
     def stop(self):
         """Stops the voice interview loop immediately and unblocks microphone listening."""

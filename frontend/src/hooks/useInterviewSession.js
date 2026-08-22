@@ -8,6 +8,7 @@ export const useInterviewSession = (sessionId) => {
   const [connectionState, setConnectionState] = useState('connecting'); // 'connecting' | 'connected' | 'disconnected' | 'error'
   const [micPermissionDenied, setMicPermissionDenied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('Initializing interview session...');
   const [questionIndex, setQuestionIndex] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(15);
@@ -18,6 +19,7 @@ export const useInterviewSession = (sessionId) => {
   const [error, setError] = useState(null);
 
   const wsRef = useRef(null);
+  const isPausedRef = useRef(false);
   const audioContextRef = useRef(null);
   const workletNodeRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -131,6 +133,24 @@ export const useInterviewSession = (sessionId) => {
             if (msg.text) setCurrentQuestion(msg.text);
             if (msg.question_text) setCurrentQuestion(msg.question_text);
             if (msg.question_index !== undefined) setQuestionIndex(msg.question_index);
+          } else if (msg.event === 'INTERVIEW_PAUSED') {
+            setIsPaused(true);
+            isPausedRef.current = true;
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
+            interruptPlayback();
+          } else if (msg.event === 'INTERVIEW_RESUMED') {
+            setIsPaused(false);
+            isPausedRef.current = false;
+          } else if (msg.event === 'INTERVIEW_RESTARTED') {
+            setIsPaused(false);
+            isPausedRef.current = false;
+            setQuestionIndex(0);
+            if (speakingDebounceTimerRef.current) {
+              clearTimeout(speakingDebounceTimerRef.current);
+            }
+            interruptPlayback();
           } else if (msg.event === 'INTERVIEW_COMPLETE' || msg.event === 'SESSION_DONE') {
             setIsSessionDone(true);
             stopSession();
@@ -196,6 +216,17 @@ export const useInterviewSession = (sessionId) => {
       audioContextRef.current = audioCtx;
       setAudioState(audioCtx.state);
       
+      const unlockAudio = () => {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().then(() => {
+            setAudioState(audioCtx.state);
+          }).catch(() => {});
+        }
+      };
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
+      window.addEventListener('keydown', unlockAudio, { once: true });
+      
       audioCtx.onstatechange = () => {
         setAudioState(audioCtx.state);
         sendClientLog('AUDIO_CONTEXT_STATE_CHANGE', { state: audioCtx.state });
@@ -211,8 +242,28 @@ export const useInterviewSession = (sessionId) => {
 
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.5;
       analyserRef.current = analyser;
       source.connect(analyser);
+
+      // Real-time local mic volume polling at ~20fps for responsive visual feedback
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      if (volumeIntervalRef.current) clearInterval(volumeIntervalRef.current);
+      volumeIntervalRef.current = setInterval(() => {
+        if (!analyserRef.current || isPausedRef.current) {
+          setMicVolume(0);
+          return;
+        }
+        analyserRef.current.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / (dataArray.length || 1);
+        // Scale and boost sensitivity so normal speaking voice reaches 30-80%
+        const volPct = Math.min(100, Math.round((avg / 90) * 100));
+        setMicVolume(volPct);
+      }, 50);
 
       const workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
       workletNodeRef.current = workletNode;
@@ -220,7 +271,8 @@ export const useInterviewSession = (sessionId) => {
       workletNode.connect(audioCtx.destination);
 
       workletNode.port.onmessage = (event) => {
-        // Send Int16Array to backend over WebSocket
+        // Send Int16Array to backend over WebSocket (muted if paused)
+        if (isPausedRef.current) return;
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           // Send audio regardless of isSpeaking state to allow barge-in detection
           wsRef.current.send(event.data);
@@ -235,6 +287,7 @@ export const useInterviewSession = (sessionId) => {
   };
 
   const playAudioChunk = (int16Array) => {
+    if (isPausedRef.current) return;
     const audioCtx = audioContextRef.current;
     if (!audioCtx) return;
 
@@ -290,6 +343,49 @@ export const useInterviewSession = (sessionId) => {
     }
     setIsSpeaking(false);
   };
+
+  const pauseInterview = useCallback(() => {
+    setIsPaused(true);
+    isPausedRef.current = true;
+    interruptPlayback();
+    sendClientLog('PAUSE_INTERVIEW');
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({ action: 'pause' }));
+      } catch (e) {
+        console.error('Failed to send pause action:', e);
+      }
+    }
+  }, [sendClientLog]);
+
+  const resumeInterview = useCallback(() => {
+    setIsPaused(false);
+    isPausedRef.current = false;
+    sendClientLog('RESUME_INTERVIEW');
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({ action: 'resume' }));
+      } catch (e) {
+        console.error('Failed to send resume action:', e);
+      }
+    }
+  }, [sendClientLog]);
+
+  const restartInterview = useCallback(() => {
+    setIsPaused(false);
+    isPausedRef.current = false;
+    interruptPlayback();
+    setQuestionIndex(0);
+    setCurrentQuestion('Restarting interview from beginning...');
+    sendClientLog('RESTART_INTERVIEW');
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify({ action: 'restart' }));
+      } catch (e) {
+        console.error('Failed to send restart action:', e);
+      }
+    }
+  }, [sendClientLog]);
 
   const resumeAudio = async () => {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -354,6 +450,7 @@ export const useInterviewSession = (sessionId) => {
     connectionState,
     micPermissionDenied,
     isSpeaking,
+    isPaused,
     currentQuestion,
     questionIndex,
     totalQuestions,
@@ -361,6 +458,9 @@ export const useInterviewSession = (sessionId) => {
     micVolume,
     vadState,
     audioState,
+    pauseInterview,
+    resumeInterview,
+    restartInterview,
     resumeAudio,
     error,
     stopSession,

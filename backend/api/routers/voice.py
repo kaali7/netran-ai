@@ -247,6 +247,27 @@ async def voice_interview_stream(
                     if action == "client_log":
                         if exec_logger:
                             exec_logger.log_event("FRONTEND", data.get("event_type", "UNKNOWN"), data.get("details", {}))
+                    elif action == "pause":
+                        logger.info(f"Client requested pause for session {session_id}")
+                        if exec_logger:
+                            exec_logger.log_event("FRONTEND", "PAUSE_REQUESTED", {})
+                        if "engine" in engine_holder:
+                            engine_holder["engine"].pause()
+                        await ws_queue.put({"event": "INTERVIEW_PAUSED", "session_id": session_id})
+                    elif action == "resume":
+                        logger.info(f"Client requested resume for session {session_id}")
+                        if exec_logger:
+                            exec_logger.log_event("FRONTEND", "RESUME_REQUESTED", {})
+                        if "engine" in engine_holder:
+                            engine_holder["engine"].resume()
+                        await ws_queue.put({"event": "INTERVIEW_RESUMED", "session_id": session_id})
+                    elif action == "restart":
+                        logger.info(f"Client requested restart for session {session_id}")
+                        if exec_logger:
+                            exec_logger.log_event("FRONTEND", "RESTART_REQUESTED", {})
+                        if "engine" in engine_holder:
+                            engine_holder["engine"].restart()
+                        await ws_queue.put({"event": "INTERVIEW_RESTARTED", "session_id": session_id})
                     elif action == "stop":
                         logger.info(f"Client requested stop for session {session_id}")
                         stop_event.set()
@@ -275,6 +296,7 @@ async def voice_interview_stream(
         except (WebSocketDisconnect, RuntimeError, asyncio.CancelledError):
             pass
 
+    engine_holder = {}
     send_task = asyncio.create_task(send_worker())
     audio_send_task = asyncio.create_task(audio_send_worker())
     recv_task = asyncio.create_task(recv_worker())
@@ -290,7 +312,8 @@ async def voice_interview_stream(
             system_prompt,
             total_questions,
             audio_queue,
-            audio_out_queue
+            audio_out_queue,
+            engine_holder
         )
         
         # Interview finished or stopped

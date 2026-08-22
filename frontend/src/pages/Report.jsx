@@ -338,6 +338,323 @@ export const Report = () => {
 
   return (
     <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '40px', fontFamily: 'var(--font-family, system-ui)' }}>
+      {/* Scoped CSS for Phone & Responsive Viewports */}
+      <style>{`
+        .report-page-wrapper {
+          padding: 24px 32px 48px 32px !important;
+          max-width: 1100px;
+          margin: 0 auto;
+        }
+        .report-hero-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+          gap: 16px;
+        }
+        .report-feedback-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+          gap: 16px;
+        }
+        .report-assessment-layout {
+          display: grid;
+          grid-template-columns: 130px 1fr;
+          gap: 18px;
+          align-items: center;
+        }
+        .report-q-body-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 18px;
+        }
+        .report-flag-item {
+          background: #ffffff;
+          padding: 12px 16px;
+          border-radius: 12px;
+          border: 1px solid #ffe4e6;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .report-flag-content {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+        }
+        .report-q-header {
+          padding: 16px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          user-select: none;
+          gap: 14px;
+        }
+        .report-q-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex: 1;
+        }
+        .report-audio-widget {
+          margin-top: 16px;
+          border-radius: 16px;
+          padding: 14px 18px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 14px;
+        }
+        .report-next-steps-card {
+          padding: 24px 32px;
+          border-radius: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 18px;
+        }
+
+        /* Mobile Adjustments (<= 640px) */
+        @media (max-width: 640px) {
+          .report-page-wrapper {
+            padding: 12px 14px 48px 14px !important;
+            gap: 12px !important;
+          }
+          .report-top-bar {
+            margin-bottom: 2px !important;
+          }
+          .report-back-btn {
+            padding: 7px 14px !important;
+            font-size: 12.5px !important;
+          }
+          .report-back-btn-subtext {
+            display: none !important;
+          }
+          .report-banner-card {
+            padding: 12px 13px 12px 13px !important;
+            border-radius: 14px !important;
+          }
+          .report-banner-title {
+            font-size: 16px !important;
+            line-height: 1.25 !important;
+          }
+          .report-banner-icon {
+            width: 19px !important;
+            height: 19px !important;
+          }
+          .report-banner-meta {
+            gap: 5px !important;
+            font-size: 11px !important;
+            margin-top: 6px !important;
+          }
+          .report-meta-bullet {
+            display: none !important;
+          }
+          .report-banner-meta > div {
+            background: #f9fafb;
+            padding: 2.5px 7px !important;
+            border-radius: 6px;
+            border: 1px solid #f3f4f6;
+            font-size: 11px !important;
+            gap: 4px !important;
+          }
+          .report-banner-meta svg {
+            width: 12px !important;
+            height: 12px !important;
+          }
+          .report-banner-actions {
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 6px !important;
+            margin-top: 8px !important;
+          }
+          .report-banner-actions button {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 6px 8px !important;
+            font-size: 11.5px !important;
+            height: 33px !important;
+            border-radius: 9999px !important;
+            gap: 5px !important;
+          }
+          .report-banner-actions button svg {
+            width: 13px !important;
+            height: 13px !important;
+          }
+          .report-hero-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+          .report-hero-card {
+            padding: 13px 14px 13px 14px !important;
+            border-radius: 14px !important;
+          }
+          .report-hero-card-header {
+            margin-bottom: 10px !important;
+          }
+          .report-hero-card-title {
+            font-size: 14.5px !important;
+          }
+          .report-hero-card-title svg {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .report-hero-signal-badge {
+            padding: 2px 8px !important;
+            font-size: 11px !important;
+          }
+          .report-assessment-layout {
+            grid-template-columns: 88px 1fr !important;
+            gap: 10px !important;
+          }
+          .report-donut-wrapper {
+            width: 84px !important;
+            height: 84px !important;
+          }
+          .report-donut-svg {
+            width: 84px !important;
+            height: 84px !important;
+          }
+          .report-donut-score {
+            font-size: 21px !important;
+          }
+          .report-donut-denom {
+            font-size: 9.5px !important;
+          }
+          .report-donut-label {
+            font-size: 10px !important;
+            margin-top: 3px !important;
+          }
+          .report-telemetry-container {
+            gap: 6px !important;
+          }
+          .report-telemetry-card {
+            padding: 6px 9px !important;
+            border-radius: 9px !important;
+          }
+          .report-telemetry-label {
+            font-size: 11px !important;
+            gap: 5px !important;
+          }
+          .report-telemetry-label svg {
+            width: 12px !important;
+            height: 12px !important;
+          }
+          .report-telemetry-val {
+            font-size: 11.5px !important;
+          }
+          .report-telemetry-bar {
+            height: 3.5px !important;
+          }
+          .report-filler-badge {
+            font-size: 10.5px !important;
+            padding: 1.5px 6px !important;
+          }
+          .report-flag-item {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 8px !important;
+            padding: 12px 14px !important;
+          }
+          .report-flag-content {
+            width: 100% !important;
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+          }
+          .report-flag-turn {
+            align-self: flex-end !important;
+            margin-left: 0 !important;
+            margin-top: -22px !important;
+          }
+          .report-feedback-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .report-q-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+            padding: 14px 14px !important;
+          }
+          .report-q-left {
+            width: 100% !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+          }
+          .report-q-right {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding-top: 8px !important;
+            border-top: 1px dashed #f3f4f6 !important;
+          }
+          .report-q-badges {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+          }
+          .report-q-badges span {
+            font-size: 11px !important;
+            padding: 3px 8px !important;
+          }
+          .report-q-body {
+            padding: 14px 12px !important;
+          }
+          .report-q-body-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .report-audio-widget {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 12px 12px !important;
+            gap: 12px !important;
+          }
+          .report-audio-main-row {
+            width: 100% !important;
+          }
+          .report-audio-scrubber-row {
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+          .report-audio-controls-row {
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 6px !important;
+          }
+          .report-next-steps-card {
+            padding: 18px 16px !important;
+            border-radius: 16px !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 14px !important;
+          }
+          .report-next-steps-buttons {
+            width: 100% !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+          }
+          .report-next-steps-buttons button {
+            flex: 1 1 calc(50% - 4px) !important;
+            justify-content: center !important;
+            padding: 9px 12px !important;
+            font-size: 12.5px !important;
+          }
+          .report-next-steps-buttons button.start-new-btn {
+            flex: 1 1 100% !important;
+          }
+        }
+      `}</style>
+
       {/* Global Audio Element for Turn-by-Turn Playback */}
       <audio
         ref={audioRef}
@@ -378,10 +695,10 @@ export const Report = () => {
       />
 
       {/* Main Page Container with comfortable top margin and balanced padding */}
-      <PageWrapper className="report-page-wrapper" style={{ gap: '16px', padding: '24px 32px 48px 32px' }}>
+      <PageWrapper className="report-page-wrapper" style={{ gap: '16px' }}>
         {/* TOP-LEFT BACK BUTTON & CANDIDATE PROFILE BAR */}
         <div
-          className="no-print"
+          className="report-top-bar no-print"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -392,6 +709,7 @@ export const Report = () => {
           {/* Back to Dashboard Button with Netran AI Branding */}
           <button
             onClick={() => navigate('/dashboard')}
+            className="report-back-btn"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -413,8 +731,8 @@ export const Report = () => {
               <Sparkles size={15} />
               <span>Netran AI</span>
             </span>
-            <span style={{ color: '#d1d5db' }}>|</span>
-            <span style={{ color: '#4b5563' }}>Back to Dashboard</span>
+            <span className="report-back-btn-subtext" style={{ color: '#d1d5db' }}>|</span>
+            <span className="report-back-btn-subtext" style={{ color: '#4b5563' }}>Back to Dashboard</span>
           </button>
 
           {/* Candidate Profile Avatar Badge */}
@@ -468,7 +786,7 @@ export const Report = () => {
             border: '1px solid rgba(229, 231, 235, 0.8)',
             boxShadow: '0 4px 18px rgba(0, 0, 0, 0.02)',
           }}
-          className="animate-entrance print-break-inside-avoid"
+          className="report-banner-card animate-entrance print-break-inside-avoid"
         >
           <div
             style={{
@@ -482,6 +800,7 @@ export const Report = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1
+                  className="report-banner-title"
                   style={{
                     fontSize: '24px',
                     fontWeight: '800',
@@ -492,11 +811,12 @@ export const Report = () => {
                 >
                   Multimodal Evaluation Scorecard
                 </h1>
-                <Award size={24} style={{ color: '#65597b' }} />
+                <Award className="report-banner-icon" size={24} style={{ color: '#65597b', flexShrink: 0 }} />
               </div>
 
               {/* Session Meta Information */}
               <div
+                className="report-banner-meta"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -512,12 +832,12 @@ export const Report = () => {
                   <User size={15} />
                   <span>Interviewed by Eva (AI)</span>
                 </div>
-                <span>•</span>
+                <span className="report-meta-bullet">•</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Calendar size={15} />
                   <span>Completed {formatDate(generated_at)}</span>
                 </div>
-                <span>•</span>
+                <span className="report-meta-bullet">•</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Clock size={15} />
                   <span>Turns Evaluated: {turn_evaluations.length}</span>
@@ -526,7 +846,7 @@ export const Report = () => {
             </div>
 
             {/* Banner Action Buttons */}
-            <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="report-banner-actions no-print" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 onClick={handleListenAllAudio}
                 style={{
@@ -615,15 +935,9 @@ export const Report = () => {
         </Card>
 
         {/* TOP ROW GRID: OVERALL READINESS & DOMAIN PILLARS */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
-            gap: '16px',
-          }}
-        >
-          {/* CARD 1: OVERALL EVALUATION & TELEMETRY */}
+        <div className="report-hero-grid">
           <Card
+            className="report-hero-card"
             style={{
               padding: '22px 24px',
               background: '#ffffff',
@@ -636,8 +950,8 @@ export const Report = () => {
             }}
           >
             {/* Header with Title and Hiring Signal Badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="report-hero-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div className="report-hero-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Award size={18} style={{ color: '#65597b' }} />
                 <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: 0 }}>
                   Overall Assessment
@@ -646,6 +960,7 @@ export const Report = () => {
 
               {/* Hiring Signal Badge Chip */}
               <span
+                className="report-hero-signal-badge"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -664,18 +979,11 @@ export const Report = () => {
             </div>
 
             {/* Main Score & Telemetry Two-Column Layout */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '130px 1fr',
-                gap: '18px',
-                alignItems: 'center',
-              }}
-            >
+            <div className="report-assessment-layout">
               {/* Circular Donut Gauge */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <div style={{ position: 'relative', width: '120px', height: '120px' }}>
-                  <svg width="120" height="120" viewBox="0 0 160 160">
+                <div className="report-donut-wrapper" style={{ position: 'relative', width: '120px', height: '120px' }}>
+                  <svg className="report-donut-svg" width="120" height="120" viewBox="0 0 160 160">
                     <circle cx="80" cy="80" r="62" fill="none" stroke="#f3f4f6" strokeWidth="14" />
                     <circle
                       cx="80"
@@ -703,23 +1011,24 @@ export const Report = () => {
                       alignItems: 'center',
                     }}
                   >
-                    <span style={{ fontSize: '30px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
+                    <span className="report-donut-score" style={{ fontSize: '30px', fontWeight: '800', color: '#111827', lineHeight: '1' }}>
                       {overall_technical_score}
                     </span>
-                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', marginTop: '2px' }}>
+                    <span className="report-donut-denom" style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', marginTop: '2px' }}>
                       / 100
                     </span>
                   </div>
                 </div>
-                <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#65597b', marginTop: '6px' }}>
+                <span className="report-donut-label" style={{ fontSize: '11.5px', fontWeight: '700', color: '#65597b', marginTop: '6px' }}>
                   Technical Score
                 </span>
               </div>
 
               {/* Telemetry Micro-Cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="report-telemetry-container" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Vocal Confidence Card */}
                 <div
+                  className="report-telemetry-card"
                   style={{
                     background: '#f9fafb',
                     borderRadius: '12px',
@@ -728,15 +1037,15 @@ export const Report = () => {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
+                    <div className="report-telemetry-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
                       <Zap size={14} style={{ color: '#65597b' }} />
                       <span>Vocal Confidence</span>
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: overall_vocal_confidence_score >= 70 ? '#15803d' : '#b45309' }}>
+                    <span className="report-telemetry-val" style={{ fontSize: '13px', fontWeight: '800', color: overall_vocal_confidence_score >= 70 ? '#15803d' : '#b45309' }}>
                       {overall_vocal_confidence_score}%
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: '5px', background: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div className="report-telemetry-bar" style={{ width: '100%', height: '5px', background: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
                     <div
                       style={{
                         width: `${overall_vocal_confidence_score}%`,
@@ -750,6 +1059,7 @@ export const Report = () => {
 
                 {/* Speech & Audio Telemetry Card */}
                 <div
+                  className="report-telemetry-card"
                   style={{
                     background: '#f9fafb',
                     borderRadius: '12px',
@@ -760,11 +1070,12 @@ export const Report = () => {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
+                  <div className="report-telemetry-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '12.5px', fontWeight: '600' }}>
                     <Mic size={14} style={{ color: '#65597b' }} />
                     <span>Est. Filler Words</span>
                   </div>
                   <span
+                    className="report-filler-badge"
                     style={{
                       fontSize: '12px',
                       fontWeight: '800',
@@ -783,6 +1094,7 @@ export const Report = () => {
 
           {/* CARD 2: TECHNICAL DOMAIN PILLARS */}
           <Card
+            className="report-hero-card"
             style={{
               padding: '22px 24px',
               background: '#ffffff',
@@ -796,14 +1108,15 @@ export const Report = () => {
           >
             {/* Header */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="report-hero-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div className="report-hero-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <BarChart2 size={18} style={{ color: '#65597b' }} />
                   <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#111827', margin: 0 }}>
                     Technical Domain Pillars
                   </h2>
                 </div>
                 <span
+                  className="report-hero-signal-badge"
                   style={{
                     fontSize: '11.5px',
                     fontWeight: '700',
@@ -895,18 +1208,20 @@ export const Report = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
               {behavioral_flags.map((flag, idx) => (
-                <div key={idx} style={{ background: '#ffffff', padding: '12px 16px', borderRadius: '12px', border: '1px solid #ffe4e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '11.5px', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px', background: flag.severity === 'CRITICAL' ? '#fee2e2' : '#fef3c7', color: flag.severity === 'CRITICAL' ? '#991b1b' : '#92400e' }}>
-                      {flag.severity}
-                    </span>
+                <div key={idx} className="report-flag-item">
+                  <div className="report-flag-content">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px', background: flag.severity === 'CRITICAL' ? '#fee2e2' : '#fef3c7', color: flag.severity === 'CRITICAL' ? '#991b1b' : '#92400e' }}>
+                        {flag.severity}
+                      </span>
+                      <span className="report-flag-turn" style={{ fontSize: '12.5px', color: '#9ca3af', fontWeight: '700' }}>
+                        Turn #{flag.turn_id}
+                      </span>
+                    </div>
                     <span style={{ fontSize: '13.5px', color: '#1f2937', fontWeight: '500', lineHeight: '1.5' }}>
                       {flag.description}
                     </span>
                   </div>
-                  <span style={{ fontSize: '12.5px', color: '#9ca3af', fontWeight: '700', flexShrink: 0, marginLeft: '12px' }}>
-                    Turn #{flag.turn_id}
-                  </span>
                 </div>
               ))}
             </div>
@@ -915,7 +1230,7 @@ export const Report = () => {
 
         {/* CANDIDATE FEEDBACK & STUDY ROADMAP */}
         {candidate_feedback && (candidate_feedback.key_strengths || candidate_feedback.primary_growth_areas) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+          <div className="report-feedback-grid">
             {/* Strengths */}
             <Card style={{ padding: '20px 24px', background: '#ffffff', borderRadius: '18px', border: '1px solid rgba(229, 231, 235, 0.8)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#15803d', fontWeight: '800', fontSize: '15px' }}>
@@ -974,6 +1289,7 @@ export const Report = () => {
             borderRadius: '20px',
             border: '1px solid rgba(229, 231, 235, 0.8)',
           }}
+          className="report-hero-card"
         >
           {/* Section Title */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
@@ -1012,17 +1328,12 @@ export const Report = () => {
                     {/* Accordion Header */}
                     <div
                       onClick={() => toggleQuestion(idx)}
+                      className="report-q-header"
                       style={{
-                        padding: '16px 20px',
                         background: isExpanded ? '#fafafa' : '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        userSelect: 'none',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, pr: '16px' }}>
+                      <div className="report-q-left">
                         <span
                           style={{
                             width: '32px',
@@ -1041,38 +1352,40 @@ export const Report = () => {
                         >
                           Q{t.turn_id}
                         </span>
-                        <h3 style={{ fontSize: '14.5px', fontWeight: '700', color: '#111827', margin: 0, flex: 1 }}>
+                        <h3 style={{ fontSize: '14.5px', fontWeight: '700', color: '#111827', margin: 0, flex: 1, lineHeight: '1.4' }}>
                           {t.question_text}
                         </h3>
                       </div>
 
                       {/* Header Score Badges & Inline Audio Indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {isThisTurnPlaying && (
-                          <span
-                            style={{
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              padding: '3px 8px',
-                              borderRadius: '9999px',
-                              background: '#65597b',
-                              color: '#ffffff',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <Volume2 size={12} />
-                            <span>Playing</span>
-                          </span>
-                        )}
+                      <div className="report-q-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="report-q-badges">
+                          {isThisTurnPlaying && (
+                            <span
+                              style={{
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                padding: '3px 8px',
+                                borderRadius: '9999px',
+                                background: '#65597b',
+                                color: '#ffffff',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <Volume2 size={12} />
+                              <span>Playing</span>
+                            </span>
+                          )}
 
-                        <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
-                          Tech: {t.technical_score}/10
-                        </span>
-                        <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#e0f2fe', color: '#0369a1' }}>
-                          Vocal: {t.vocal_confidence_score}/10
-                        </span>
+                          <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
+                            Tech: {t.technical_score}/10
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '9999px', background: '#e0f2fe', color: '#0369a1' }}>
+                            Vocal: {t.vocal_confidence_score}/10
+                          </span>
+                        </div>
                         <div style={{ color: '#6b7280' }}>
                           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </div>
@@ -1081,7 +1394,7 @@ export const Report = () => {
 
                     {/* Accordion Body */}
                     <div
-                      className="turn-accordion-body"
+                      className="report-q-body turn-accordion-body"
                       style={{
                         display: isExpanded ? 'block' : 'none',
                         padding: '18px 22px 22px 22px',
@@ -1089,13 +1402,7 @@ export const Report = () => {
                         background: '#ffffff',
                       }}
                     >
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-                          gap: '18px',
-                        }}
-                      >
+                      <div className="report-q-body-grid">
                         {/* Left Column: Dual Transcripts */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           {/* Candidate Live STT Transcript */}
@@ -1166,6 +1473,7 @@ export const Report = () => {
 
                       {/* TURN AUDIO PLAYBACK CONTROLS WIDGET */}
                       <div
+                        className="report-audio-widget"
                         style={{
                           marginTop: '16px',
                           background: isThisTurnSelected ? '#f8f4fc' : '#f9fafb',
@@ -1181,7 +1489,7 @@ export const Report = () => {
                         }}
                       >
                         {/* Play Button & Spoken Audio Info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '240px' }}>
+                        <div className="report-audio-main-row" style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '240px' }}>
                           <button
                             onClick={() => handleToggleTurnAudio(t.turn_id, t.audio_start_sec, t.audio_end_sec)}
                             style={{
@@ -1245,7 +1553,7 @@ export const Report = () => {
 
                         {/* Interactive Scrubber (When this turn is selected) */}
                         {isThisTurnSelected && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 2, minWidth: '220px' }}>
+                          <div className="report-audio-scrubber-row" style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 2, minWidth: '220px' }}>
                             <input
                               type="range"
                               min={0}
@@ -1267,7 +1575,7 @@ export const Report = () => {
                         )}
 
                         {/* Audio Controls (±5s, Speed, Listen CTA) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <div className="report-audio-controls-row" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                           {isThisTurnSelected && (
                             <>
                               <button
@@ -1377,22 +1685,15 @@ export const Report = () => {
 
         {/* NEXT STEPS & NAVIGATION ACTION CARD */}
         <Card
-          className="next-steps-card no-print"
+          className="report-next-steps-card no-print"
           style={{
-            padding: '24px 32px',
             background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
-            borderRadius: '20px',
             border: '1px solid rgba(101, 89, 123, 0.15)',
             boxShadow: '0 8px 24px rgba(101, 89, 123, 0.04)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '18px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '15px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '15px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b', flexShrink: 0 }}>
               <Sparkles size={22} />
             </div>
             <div>
@@ -1405,7 +1706,7 @@ export const Report = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="report-next-steps-buttons" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => navigate('/analytics')}
               style={{
@@ -1438,6 +1739,7 @@ export const Report = () => {
             </button>
             <button
               onClick={() => navigate('/setup')}
+              className="start-new-btn"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1464,3 +1766,4 @@ export const Report = () => {
 };
 
 export default Report;
+

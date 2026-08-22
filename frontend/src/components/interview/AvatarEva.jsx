@@ -8,8 +8,6 @@ export const AvatarEva = ({ isSpeaking = true, className = '', style = {} }) => 
         position: 'relative',
         width: '100%',
         height: '100%',
-        minWidth: '280px',
-        minHeight: '280px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -61,8 +59,8 @@ export const AvatarEva = ({ isSpeaking = true, className = '', style = {} }) => 
 
       `}</style>
 
-      {/* SVG Container with preserveAspectRatio to handle zooming/cropping beautifully */}
-      <svg viewBox="0 0 500 500" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0}}>
+      {/* SVG Container with preserveAspectRatio to display the full character without clipping */}
+      <svg viewBox="0 25 500 475" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width: '100%', height: '100%', position: 'absolute', top: 0, left: 0}}>
         
         {/* BACK HAIR LAYER */}
         <g className="anim-head">
