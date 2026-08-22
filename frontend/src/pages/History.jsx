@@ -437,6 +437,323 @@ export const History = () => {
 
   return (
     <div style={{ background: '#f8f9fa', minHeight: '100vh', paddingBottom: '60px', fontFamily: 'var(--font-family, system-ui)', position: 'relative' }}>
+      {/* Scoped CSS for Responsive History Page */}
+      <style>{`
+        .history-desktop-table {
+          display: block;
+        }
+        .history-mobile-cards {
+          display: none;
+        }
+        .history-filter-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .history-dropdown-wrapper {
+          position: relative;
+          z-index: 70;
+        }
+        .page-wrapper-container {
+          gap: 14px !important;
+        }
+
+        @media (max-width: 768px) {
+          .page-wrapper-container {
+            padding: 0 14px 48px 14px !important;
+            gap: 12px !important;
+          }
+          .app-header-nav {
+            padding: 12px 0 10px 0 !important;
+            margin-bottom: 6px !important;
+          }
+          .history-hero-card {
+            padding: 14px 16px !important;
+            border-radius: 16px !important;
+            margin-bottom: 0 !important;
+          }
+          .history-hero-icon-box {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 9px !important;
+          }
+          .history-hero-icon-box svg {
+            width: 17px !important;
+            height: 17px !important;
+          }
+          .history-hero-title {
+            font-size: 16px !important;
+          }
+          .history-hero-subtitle {
+            font-size: 11px !important;
+            margin-top: 4px !important;
+            line-height: 1.35 !important;
+          }
+          .history-filter-card {
+            padding: 6px 6px !important;
+            border-radius: 12px !important;
+            margin-bottom: 0 !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+          }
+          .history-filter-inputs {
+            width: auto !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            flex-wrap: nowrap !important;
+            gap: 6px !important;
+          }
+          .history-search-box {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            padding: 0 10px !important;
+            height: 36px !important;
+            border-radius: 10px !important;
+          }
+          .history-search-box input {
+            font-size: 12px !important;
+          }
+          .history-filter-row {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 6px !important;
+            flex-shrink: 0 !important;
+          }
+          .history-dropdown-wrapper {
+            flex: 0 0 auto !important;
+            position: relative !important;
+          }
+          .history-dropdown-btn {
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            border-radius: 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+          }
+          .history-btn-label,
+          .history-btn-chevron {
+            display: none !important;
+          }
+          .history-dropdown-menu {
+            right: 0 !important;
+            left: auto !important;
+            top: 42px !important;
+          }
+          .history-export-btn {
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            border-radius: 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+            margin-top: 0 !important;
+            box-sizing: border-box !important;
+          }
+          .history-table-card {
+            padding: 10px 10px !important;
+            border-radius: 14px !important;
+            margin-bottom: 0 !important;
+          }
+          .history-desktop-table {
+            display: none !important;
+          }
+          .history-mobile-cards {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+          .history-session-card {
+            background: #ffffff;
+            border: 1px solid #eef0f4;
+            border-radius: 14px;
+            padding: 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            transition: all 150ms ease;
+          }
+          .history-session-card:active {
+            transform: scale(0.99);
+          }
+          .history-session-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .history-session-date {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          }
+          .history-session-main {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+          }
+          .history-session-info {
+            flex: 1;
+            min-width: 0;
+          }
+          .history-session-role {
+            font-size: 14px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.25;
+            margin: 0 0 2px 0;
+            word-break: break-word;
+          }
+          .history-session-company {
+            font-size: 11.5px;
+            color: #6b7280;
+            font-weight: 500;
+          }
+          .history-session-score-pill {
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 2.5px 8px;
+            border-radius: 9999px;
+            background: #ede6f8;
+            color: #65597b;
+            flex-shrink: 0;
+            align-self: flex-start;
+          }
+          .history-session-actions-row {
+            display: flex !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+            padding-top: 8px !important;
+            border-top: 1px dashed #f3f4f6 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .history-session-actions-row button {
+            font-size: 10.5px !important;
+            padding: 4px 7px !important;
+            border-radius: 9999px !important;
+            height: 28px !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            gap: 4px !important;
+          }
+          .history-session-actions-row button svg {
+            width: 12px !important;
+            height: 12px !important;
+            flex-shrink: 0 !important;
+          }
+          .history-session-actions-row button.action-delete-btn {
+            margin-left: auto !important;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            flex-shrink: 0 !important;
+          }
+
+          /* Inspect Modal Phone Styles */
+          .history-modal-backdrop {
+            padding: 12px !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          .history-inspect-modal {
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: 90dvh !important;
+            border-radius: 20px !important;
+          }
+          .history-inspect-header {
+            padding: 12px 14px !important;
+          }
+          .history-inspect-title {
+            font-size: 15px !important;
+            line-height: 1.25 !important;
+          }
+          .history-inspect-subtitle {
+            font-size: 11px !important;
+          }
+          .history-modal-close-btn {
+            width: 30px !important;
+            height: 30px !important;
+            border-radius: 50% !important;
+            background: #f3f4f6 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+          }
+          .history-inspect-tabs {
+            padding: 0 10px !important;
+            display: flex !important;
+          }
+          .history-inspect-tab-btn {
+            flex: 1 1 50% !important;
+            padding: 10px 4px !important;
+            font-size: 12px !important;
+            justify-content: center !important;
+            gap: 5px !important;
+          }
+          .history-tab-desktop-text {
+            display: none !important;
+          }
+          .history-tab-mobile-text {
+            display: inline !important;
+          }
+          .history-inspect-body {
+            padding: 12px 12px !important;
+            gap: 10px !important;
+          }
+          .history-inspect-qcard {
+            padding: 10px 12px !important;
+            border-radius: 12px !important;
+          }
+          .history-inspect-qhead {
+            margin-bottom: 6px !important;
+            gap: 4px !important;
+          }
+          .history-inspect-qtopic {
+            font-size: 10px !important;
+          }
+          .history-inspect-qdiff {
+            font-size: 10px !important;
+            padding: 1.5px 6px !important;
+          }
+          .history-inspect-qtext {
+            font-size: 13px !important;
+            line-height: 1.35 !important;
+            margin: 0 0 6px 0 !important;
+          }
+          .history-inspect-qkeywords {
+            font-size: 11px !important;
+          }
+        }
+
+        .history-tab-desktop-text {
+          display: inline;
+        }
+        .history-tab-mobile-text {
+          display: none;
+        }
+      `}</style>
+
       {/* Shared Top Navbar */}
       <Navbar />
 
@@ -472,7 +789,6 @@ export const History = () => {
         {/* HERO BANNER CARD */}
         <Card
           style={{
-            marginBottom: '28px',
             padding: '36px 40px',
             background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
             borderRadius: '24px',
@@ -482,7 +798,7 @@ export const History = () => {
           className="animate-entrance history-hero-card"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
+            <div className="history-hero-icon-box" style={{ width: '42px', height: '42px', borderRadius: '14px', background: '#ede6f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#65597b' }}>
               <FileText size={22} />
             </div>
             <h1
@@ -510,7 +826,6 @@ export const History = () => {
             background: '#ffffff',
             borderRadius: '20px',
             border: '1px solid rgba(229, 231, 235, 0.8)',
-            marginBottom: '24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -554,171 +869,77 @@ export const History = () => {
               />
             </div>
 
-            {/* Custom Glassmorphic Status Filter Dropdown */}
-            <div ref={statusDropdownRef} style={{ position: 'relative', zIndex: 70 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsStatusDropdownOpen((prev) => !prev);
-                  setIsDateDropdownOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: '#ffffff',
-                  border: isStatusDropdownOpen ? '1px solid #65597b' : '1px solid #e5e7eb',
-                  padding: '8px 16px',
-                  borderRadius: '9999px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  color: '#374151',
-                  cursor: 'pointer',
-                  boxShadow: isStatusDropdownOpen ? '0 0 0 3px rgba(101, 89, 123, 0.12)' : '0 2px 6px rgba(0, 0, 0, 0.03)',
-                  transition: 'all 200ms ease',
-                }}
-              >
-                <Filter size={14} style={{ color: '#65597b' }} />
-                <span>
-                  {statusOptions.find((o) => o.value === statusFilter)?.label || 'All Statuses'}
-                </span>
-                <ChevronDown
-                  size={14}
-                  style={{
-                    color: '#6b7280',
-                    transform: isStatusDropdownOpen ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 200ms ease',
+            {/* Filter Dropdown Row on Mobile / Inline on Desktop */}
+            <div className="history-filter-row">
+              {/* Custom Glassmorphic Status Filter Dropdown */}
+              <div className="history-dropdown-wrapper" ref={statusDropdownRef}>
+                <button
+                  type="button"
+                  className="history-dropdown-btn"
+                  onClick={() => {
+                    setIsStatusDropdownOpen((prev) => !prev);
+                    setIsDateDropdownOpen(false);
                   }}
-                />
-              </button>
-
-              {/* Glassmorphic Dropdown Menu */}
-              {isStatusDropdownOpen && (
-                <div
+                  title={statusOptions.find((o) => o.value === statusFilter)?.label || 'All Statuses'}
                   style={{
-                    position: 'absolute',
-                    top: '44px',
-                    left: 0,
-                    zIndex: 9999,
-                    width: '210px',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(229, 231, 235, 0.8)',
-                    borderRadius: '16px',
-                    padding: '6px',
-                    boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: '#ffffff',
+                    border: isStatusDropdownOpen ? '1px solid #65597b' : '1px solid #e5e7eb',
+                    padding: '8px 16px',
+                    borderRadius: '9999px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    boxShadow: isStatusDropdownOpen ? '0 0 0 3px rgba(101, 89, 123, 0.12)' : '0 2px 6px rgba(0, 0, 0, 0.03)',
+                    transition: 'all 200ms ease',
                   }}
-                  className="animate-entrance"
                 >
-                  {statusOptions.map((opt) => {
-                    const isSelected = statusFilter === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => {
-                          setIsStatusDropdownOpen(false);
-                          setStatusFilter(opt.value);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '10px',
-                          border: 'none',
-                          background: isSelected ? '#ede6f8' : 'transparent',
-                          color: isSelected ? '#65597b' : '#374151',
-                          fontSize: '13px',
-                          fontWeight: isSelected ? '700' : '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          transition: 'background 150ms ease, color 150ms ease',
-                          textAlign: 'left',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) e.currentTarget.style.background = '#f5f3ff';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <span>{opt.label}</span>
-                        {isSelected && <Check size={14} style={{ color: '#65597b' }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                  <Filter size={15} style={{ color: '#65597b', flexShrink: 0 }} />
+                  <span className="history-btn-label">
+                    {statusOptions.find((o) => o.value === statusFilter)?.label || 'All Statuses'}
+                  </span>
+                  <span className="history-btn-chevron">
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        color: '#6b7280',
+                        transform: isStatusDropdownOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 200ms ease',
+                      }}
+                    />
+                  </span>
+                </button>
 
-            {/* Custom Glassmorphic Date Filter Dropdown */}
-            <div ref={dateDropdownRef} style={{ position: 'relative', zIndex: 70 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDateDropdownOpen((prev) => !prev);
-                  setIsStatusDropdownOpen(false);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: '#ffffff',
-                  border: isDateDropdownOpen ? '1px solid #65597b' : '1px solid #e5e7eb',
-                  padding: '8px 16px',
-                  borderRadius: '9999px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  color: '#374151',
-                  cursor: 'pointer',
-                  boxShadow: isDateDropdownOpen ? '0 0 0 3px rgba(101, 89, 123, 0.12)' : '0 2px 6px rgba(0, 0, 0, 0.03)',
-                  transition: 'all 200ms ease',
-                }}
-              >
-                <Calendar size={14} style={{ color: '#65597b' }} />
-                <span>
-                  {dateOptions.find((o) => o.value === dateFilter)?.label || 'All Time'}
-                </span>
-                <ChevronDown
-                  size={14}
-                  style={{
-                    color: '#6b7280',
-                    transform: isDateDropdownOpen ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 200ms ease',
-                  }}
-                />
-              </button>
-
-              {/* Glassmorphic Dropdown Menu */}
-              {isDateDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '44px',
-                    left: 0,
-                    zIndex: 9999,
-                    width: '190px',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(229, 231, 235, 0.8)',
-                    borderRadius: '16px',
-                    padding: '6px',
-                    boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
-                  }}
-                  className="animate-entrance"
-                >
-                  {dateOptions.map((opt) => {
-                    const isSelected = dateFilter === opt.value;
-                    const isCustom = opt.value === 'custom';
-                    return (
-                      <React.Fragment key={opt.value}>
-                        {isCustom && <div style={{ height: '1px', background: '#f3f4f6', margin: '4px 0' }} />}
+                {/* Glassmorphic Dropdown Menu */}
+                {isStatusDropdownOpen && (
+                  <div
+                    className="history-dropdown-menu animate-entrance"
+                    style={{
+                      position: 'absolute',
+                      top: '44px',
+                      left: 0,
+                      zIndex: 9999,
+                      width: '210px',
+                      background: 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(229, 231, 235, 0.8)',
+                      borderRadius: '16px',
+                      padding: '6px',
+                      boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
+                    }}
+                  >
+                    {statusOptions.map((opt) => {
+                      const isSelected = statusFilter === opt.value;
+                      return (
                         <button
+                          key={opt.value}
                           type="button"
                           onClick={() => {
-                            setIsDateDropdownOpen(false);
-                            handleSelectDateFilter(opt.value);
+                            setIsStatusDropdownOpen(false);
+                            setStatusFilter(opt.value);
                           }}
                           style={{
                             width: '100%',
@@ -746,176 +967,283 @@ export const History = () => {
                           <span>{opt.label}</span>
                           {isSelected && <Check size={14} style={{ color: '#65597b' }} />}
                         </button>
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Custom Range Popover Card */}
-              {showCustomModal && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '48px',
-                    left: 0,
-                    zIndex: 9999,
-                    width: '320px',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '20px',
-                    padding: '20px',
-                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
-                  }}
-                  className="animate-entrance"
-                >
-                  <h3 style={{ fontSize: '15px', fontWeight: '800', margin: '0 0 14px 0', color: '#111827' }}>
-                    Select Custom Time Window
-                  </h3>
-
-                  <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '12px', marginBottom: '16px' }}>
-                    <button
-                      onClick={() => setCustomMode('days')}
-                      style={{
-                        flex: 1,
-                        padding: '6px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        background: customMode === 'days' ? '#ffffff' : 'transparent',
-                        color: customMode === 'days' ? '#111827' : '#6b7280',
-                        cursor: 'pointer',
-                        boxShadow: customMode === 'days' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                      }}
-                    >
-                      Days Count
-                    </button>
-                    <button
-                      onClick={() => setCustomMode('dates')}
-                      style={{
-                        flex: 1,
-                        padding: '6px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        background: customMode === 'dates' ? '#ffffff' : 'transparent',
-                        color: customMode === 'dates' ? '#111827' : '#6b7280',
-                        cursor: 'pointer',
-                        boxShadow: customMode === 'dates' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                      }}
-                    >
-                      Date Picker
-                    </button>
+                      );
+                    })}
                   </div>
+                )}
+              </div>
 
-                  {customMode === 'days' ? (
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>
-                        Number of Lookback Days
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={customDays}
-                        onChange={(e) => setCustomDays(e.target.value)}
+              {/* Custom Glassmorphic Date Filter Dropdown */}
+              <div className="history-dropdown-wrapper" ref={dateDropdownRef}>
+                <button
+                  type="button"
+                  className="history-dropdown-btn"
+                  onClick={() => {
+                    setIsDateDropdownOpen((prev) => !prev);
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  title={dateOptions.find((o) => o.value === dateFilter)?.label || 'All Time'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: '#ffffff',
+                    border: isDateDropdownOpen ? '1px solid #65597b' : '1px solid #e5e7eb',
+                    padding: '8px 16px',
+                    borderRadius: '9999px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    boxShadow: isDateDropdownOpen ? '0 0 0 3px rgba(101, 89, 123, 0.12)' : '0 2px 6px rgba(0, 0, 0, 0.03)',
+                    transition: 'all 200ms ease',
+                  }}
+                >
+                  <Calendar size={15} style={{ color: '#65597b', flexShrink: 0 }} />
+                  <span className="history-btn-label">
+                    {dateOptions.find((o) => o.value === dateFilter)?.label || 'All Time'}
+                  </span>
+                  <span className="history-btn-chevron">
+                    <ChevronDown
+                      size={14}
+                      style={{
+                        color: '#6b7280',
+                        transform: isDateDropdownOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 200ms ease',
+                      }}
+                    />
+                  </span>
+                </button>
+
+                {/* Glassmorphic Dropdown Menu */}
+                {isDateDropdownOpen && (
+                  <div
+                    className="history-dropdown-menu animate-entrance"
+                    style={{
+                      position: 'absolute',
+                      top: '44px',
+                      left: 0,
+                      zIndex: 9999,
+                      width: '190px',
+                      background: 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(229, 231, 235, 0.8)',
+                      borderRadius: '16px',
+                      padding: '6px',
+                      boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06)',
+                    }}
+                  >
+                    {dateOptions.map((opt) => {
+                      const isSelected = dateFilter === opt.value;
+                      const isCustom = opt.value === 'custom';
+                      return (
+                        <React.Fragment key={opt.value}>
+                          {isCustom && <div style={{ height: '1px', background: '#f3f4f6', margin: '4px 0' }} />}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsDateDropdownOpen(false);
+                              handleSelectDateFilter(opt.value);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              background: isSelected ? '#ede6f8' : 'transparent',
+                              color: isSelected ? '#65597b' : '#374151',
+                              fontSize: '13px',
+                              fontWeight: isSelected ? '700' : '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              cursor: 'pointer',
+                              transition: 'background 150ms ease, color 150ms ease',
+                              textAlign: 'left',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = '#f5f3ff';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <span>{opt.label}</span>
+                            {isSelected && <Check size={14} style={{ color: '#65597b' }} />}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Custom Range Popover Card */}
+                {showCustomModal && (
+                  <div
+                    className="history-dropdown-menu animate-entrance"
+                    style={{
+                      position: 'absolute',
+                      top: '48px',
+                      left: 0,
+                      zIndex: 9999,
+                      width: '320px',
+                      background: 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(16px)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '20px',
+                      padding: '20px',
+                      boxShadow: '0 16px 40px rgba(0, 0, 0, 0.12)',
+                    }}
+                  >
+                    <h3 style={{ fontSize: '15px', fontWeight: '800', margin: '0 0 14px 0', color: '#111827' }}>
+                      Select Custom Time Window
+                    </h3>
+
+                    <div style={{ display: 'flex', background: '#f3f4f6', padding: '4px', borderRadius: '12px', marginBottom: '16px' }}>
+                      <button
+                        onClick={() => setCustomMode('days')}
                         style={{
-                          width: '100%',
-                          padding: '10px 14px',
+                          flex: 1,
+                          padding: '6px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          background: customMode === 'days' ? '#ffffff' : 'transparent',
+                          color: customMode === 'days' ? '#111827' : '#6b7280',
+                          cursor: 'pointer',
+                          boxShadow: customMode === 'days' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                        }}
+                      >
+                        Days Count
+                      </button>
+                      <button
+                        onClick={() => setCustomMode('dates')}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          background: customMode === 'dates' ? '#ffffff' : 'transparent',
+                          color: customMode === 'dates' ? '#111827' : '#6b7280',
+                          cursor: 'pointer',
+                          boxShadow: customMode === 'dates' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                        }}
+                      >
+                        Date Picker
+                      </button>
+                    </div>
+
+                    {customMode === 'days' ? (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>
+                          Number of Lookback Days
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={customDays}
+                          onChange={(e) => setCustomDays(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '10px',
+                            border: '1px solid #d1d5db',
+                            fontSize: '14px',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              border: '1px solid #d1d5db',
+                              fontSize: '13px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                            End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              border: '1px solid #d1d5db',
+                              fontSize: '13px',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setShowCustomModal(false)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
                           borderRadius: '10px',
                           border: '1px solid #d1d5db',
-                          fontSize: '14px',
-                          outline: 'none',
-                          boxSizing: 'border-box',
+                          background: '#ffffff',
+                          color: '#374151',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
                         }}
-                      />
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleApplyCustom}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          background: '#65597b',
+                          color: '#ffffff',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Apply Filter
+                      </button>
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>
-                          Start Date
-                        </label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid #d1d5db',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '4px' }}>
-                          End Date
-                        </label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            border: '1px solid #d1d5db',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => setShowCustomModal(false)}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        borderRadius: '10px',
-                        border: '1px solid #d1d5db',
-                        background: '#ffffff',
-                        color: '#374151',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleApplyCustom}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: '#65597b',
-                        color: '#ffffff',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Apply Filter
-                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 
           {/* Right Action Button */}
           <button
+            className="history-export-btn"
             onClick={() => exportHistoryCSV(sessions)}
+            title="Export session archives to CSV"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -931,8 +1259,8 @@ export const History = () => {
               boxShadow: '0 2px 8px rgba(34, 197, 94, 0.15)',
             }}
           >
-            <Download size={14} />
-            <span>Export CSV</span>
+            <Download size={15} style={{ flexShrink: 0 }} />
+            <span className="history-btn-label">Export CSV</span>
           </button>
         </Card>
 
@@ -947,7 +1275,8 @@ export const History = () => {
           }}
           className="history-table-card"
         >
-          <div style={{ overflowX: 'auto' }}>
+          {/* Desktop Table View (>= 769px) */}
+          <div className="history-desktop-table" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
@@ -1236,8 +1565,210 @@ export const History = () => {
             </table>
           </div>
 
+          {/* Mobile Card List View (< 769px) */}
+          <div className="history-mobile-cards">
+            {loading ? (
+              <div style={{ padding: '30px 10px', textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
+                Loading candidate session history archives...
+              </div>
+            ) : sessions.length > 0 ? (
+              sessions.map((session, idx) => (
+                <div key={session.id || idx} className="history-session-card">
+                  {/* Top Row: Date & Status Badge */}
+                  <div className="history-session-card-top">
+                    <div className="history-session-date">
+                      <Calendar size={13} style={{ color: '#65597b' }} />
+                      <span>{session.date_text || 'Recent'}</span>
+                    </div>
+                    {renderStatusBadge(session.status)}
+                  </div>
+
+                  {/* Middle Row: Role Title, Company & Score */}
+                  <div className="history-session-main">
+                    <div className="history-session-info">
+                      <h4 className="history-session-role">
+                        {session.role_title}
+                      </h4>
+                      <div className="history-session-company">
+                        {session.company}
+                      </div>
+                    </div>
+                    {session.score !== null && session.score !== undefined && (
+                      <div className="history-session-score-pill">
+                        {session.score}/100
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions Row */}
+                  <div className="history-session-actions-row">
+                    {/* Listen Q&A */}
+                    <button
+                      onClick={() => handleOpenAudioModal(session)}
+                      title="Open turn-by-turn question & candidate audio player"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: '#f8f5fc',
+                        border: '1px solid #ede6f8',
+                        color: '#65597b',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Headphones size={12} />
+                      <span>Listen</span>
+                    </button>
+
+                    {/* Contextual Action Button */}
+                    {session.status === 'in_progress' && (
+                      <button
+                        onClick={() => handleContextualAction(session)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#65597b',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <RotateCw size={12} />
+                        <span>Resume</span>
+                      </button>
+                    )}
+
+                    {session.status === 'ready' && (
+                      <button
+                        onClick={() => handleContextualAction(session)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#65597b',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Play size={12} />
+                        <span>Start</span>
+                      </button>
+                    )}
+
+                    {session.status === 'evaluating' && !session.has_report && (
+                      <button
+                        onClick={() => handleContextualAction(session)}
+                        disabled={actionLoadingId === session.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#d97706',
+                          color: '#ffffff',
+                          border: 'none',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Sparkles size={12} />
+                        <span>Evaluate</span>
+                      </button>
+                    )}
+
+                    {(session.status === 'completed' || session.has_report) && (
+                      <button
+                        onClick={() => handleContextualAction(session)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: '#ede6f8',
+                          color: '#65597b',
+                          border: '1px solid #d8b4fe',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <FileText size={12} />
+                        <span>Report</span>
+                      </button>
+                    )}
+
+                    {/* Details button */}
+                    <button
+                      onClick={() => handleOpenInspectModal(session.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: '#f3f4f6',
+                        color: '#374151',
+                        border: '1px solid #e5e7eb',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Eye size={12} />
+                      <span>Details</span>
+                    </button>
+
+                    {/* Delete button */}
+                    <button
+                      className="action-delete-btn"
+                      onClick={() => handleDeleteClick(session)}
+                      title="Delete this session"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: '#fff1f2',
+                        color: '#e11d48',
+                        border: '1px solid #ffe4e6',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '30px 10px', textAlign: 'center' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#f3f4f6', color: '#65597b', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px auto' }}>
+                  <Sparkles size={20} />
+                </div>
+                <h4 style={{ fontSize: '15px', fontWeight: '800', color: '#111827', margin: '0 0 6px 0' }}>
+                  No Session History Found
+                </h4>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: '0 0 12px 0' }}>
+                  No practice sessions match your filter.
+                </p>
+                <button
+                  onClick={() => navigate('/setup')}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '9999px',
+                    background: '#65597b',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Configure Practice Track
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* PAGINATION / FOOTER INFO */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f3f4f6' }}>
             <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '500' }}>
               Showing {sessions.length} session archives
             </span>
@@ -1343,6 +1874,7 @@ export const History = () => {
         {/* DEEP-DIVE SESSION INSPECTION MODAL */}
         {inspectModalOpen && (
           <div
+            className="history-modal-backdrop"
             style={{
               position: 'fixed',
               top: 0,
@@ -1359,6 +1891,7 @@ export const History = () => {
             }}
           >
             <div
+              className="history-inspect-modal animate-entrance"
               style={{
                 width: '100%',
                 maxWidth: '780px',
@@ -1371,32 +1904,52 @@ export const History = () => {
                 overflow: 'hidden',
                 border: '1px solid rgba(255, 255, 255, 0.8)',
               }}
-              className="animate-entrance"
             >
               {/* Modal Header */}
-              <div style={{ padding: '20px 28px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafafa' }}>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: 0 }}>
+              <div
+                className="history-inspect-header"
+                style={{
+                  padding: '20px 28px',
+                  borderBottom: '1px solid #f3f4f6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: '#fafafa',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0, paddingRight: '8px' }}>
+                  <h3
+                    className="history-inspect-title"
+                    style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: 0, wordBreak: 'break-word' }}
+                  >
                     {inspectDetail?.role_title || 'Session Inspection'}
                   </h3>
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                  <span
+                    className="history-inspect-subtitle"
+                    style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginTop: '2px' }}
+                  >
                     {inspectDetail?.company} • {inspectDetail?.seniority_level} Level
                   </span>
                 </div>
                 <button
+                  className="history-modal-close-btn"
                   onClick={() => {
                     setInspectModalOpen(false);
                     setInspectDetail(null);
                   }}
                   style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
               {/* Modal Navigation Tabs */}
-              <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', background: '#ffffff', padding: '0 28px' }}>
+              <div
+                className="history-inspect-tabs"
+                style={{ display: 'flex', borderBottom: '1px solid #f3f4f6', background: '#ffffff', padding: '0 28px' }}
+              >
                 <button
+                  className="history-inspect-tab-btn"
                   onClick={() => setInspectTab('questions')}
                   style={{
                     padding: '14px 20px',
@@ -1412,10 +1965,12 @@ export const History = () => {
                     gap: '6px',
                   }}
                 >
-                  <HelpCircle size={16} />
-                  <span>Question Tree ({inspectDetail?.question_tree?.length || 0})</span>
+                  <HelpCircle size={15} style={{ flexShrink: 0 }} />
+                  <span className="history-tab-desktop-text">Question Tree ({inspectDetail?.question_tree?.length || 0})</span>
+                  <span className="history-tab-mobile-text">Questions ({inspectDetail?.question_tree?.length || 0})</span>
                 </button>
                 <button
+                  className="history-inspect-tab-btn"
                   onClick={() => setInspectTab('resume')}
                   style={{
                     padding: '14px 20px',
@@ -1431,21 +1986,26 @@ export const History = () => {
                     gap: '6px',
                   }}
                 >
-                  <UserCheck size={16} />
-                  <span>Resume & Profile Analysis</span>
+                  <UserCheck size={15} style={{ flexShrink: 0 }} />
+                  <span className="history-tab-desktop-text">Resume & Profile Analysis</span>
+                  <span className="history-tab-mobile-text">Resume Analysis</span>
                 </button>
               </div>
 
               {/* Modal Body Content */}
-              <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}>
+              <div
+                className="history-inspect-body"
+                style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}
+              >
                 {inspectLoading ? (
                   <p style={{ textAlign: 'center', color: '#6b7280', padding: '32px' }}>Loading inspection data...</p>
                 ) : inspectTab === 'questions' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {inspectDetail?.question_tree?.length > 0 ? (
                       inspectDetail.question_tree.map((q, qIdx) => (
                         <div
                           key={qIdx}
+                          className="history-inspect-qcard"
                           style={{
                             padding: '16px',
                             borderRadius: '16px',
@@ -1453,21 +2013,36 @@ export const History = () => {
                             border: '1px solid #f3f4f6',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#65597b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <div
+                            className="history-inspect-qhead"
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}
+                          >
+                            <span
+                              className="history-inspect-qtopic"
+                              style={{ fontSize: '11px', fontWeight: '800', color: '#65597b', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                            >
                               Q{qIdx + 1} • {q.topic || 'Domain Question'}
                             </span>
                             {q.difficulty && (
-                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
+                              <span
+                                className="history-inspect-qdiff"
+                                style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b', flexShrink: 0 }}
+                              >
                                 {q.difficulty}
                               </span>
                             )}
                           </div>
-                          <p style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0', lineHeight: '1.4' }}>
+                          <p
+                            className="history-inspect-qtext"
+                            style={{ fontSize: '14px', fontWeight: '600', color: '#111827', margin: '0 0 8px 0', lineHeight: '1.4' }}
+                          >
                             {q.question_text || q.text}
                           </p>
                           {q.expected_keywords && (
-                            <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            <div
+                              className="history-inspect-qkeywords"
+                              style={{ fontSize: '12px', color: '#6b7280' }}
+                            >
                               <strong>Rubric Keywords:</strong> {Array.isArray(q.expected_keywords) ? q.expected_keywords.join(', ') : q.expected_keywords}
                             </div>
                           )}
@@ -1482,21 +2057,21 @@ export const History = () => {
                 ) : (
                   <div>
                     {inspectDetail?.resume_analysis ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{ background: '#f5f0fb', padding: '16px', borderRadius: '16px', border: '1px solid #e9d5ff' }}>
-                          <h4 style={{ fontSize: '14px', fontWeight: '800', color: '#65597b', margin: '0 0 6px 0' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ background: '#f5f0fb', padding: '14px', borderRadius: '14px', border: '1px solid #e9d5ff' }}>
+                          <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: '#65597b', margin: '0 0 4px 0' }}>
                             Candidate Profile Match
                           </h4>
-                          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0, lineHeight: '1.5' }}>
+                          <p style={{ fontSize: '12.5px', color: '#4b5563', margin: 0, lineHeight: '1.45' }}>
                             {inspectDetail.resume_analysis.summary || inspectDetail.resume_analysis.overview || 'Profile analyzed against target job description requirements.'}
                           </p>
                         </div>
                         {inspectDetail.resume_analysis.skills_overlap && (
                           <div>
-                            <strong style={{ fontSize: '13px', color: '#111827', display: 'block', marginBottom: '6px' }}>Skill Overlap Highlights:</strong>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            <strong style={{ fontSize: '12.5px', color: '#111827', display: 'block', marginBottom: '6px' }}>Skill Overlap Highlights:</strong>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                               {(inspectDetail.resume_analysis.skills_overlap || []).map((s, idx) => (
-                                <span key={idx} style={{ fontSize: '12px', padding: '4px 10px', background: '#dcfce7', color: '#15803d', borderRadius: '9999px', fontWeight: '600' }}>
+                                <span key={idx} style={{ fontSize: '11px', padding: '3px 8px', background: '#dcfce7', color: '#15803d', borderRadius: '9999px', fontWeight: '600' }}>
                                   {s}
                                 </span>
                               ))}

@@ -79,10 +79,11 @@ export const Navbar = ({ userName }) => {
   return (
     <>
       <header
+        className="app-header-nav"
         style={{
           width: '100%',
           padding: '16px 0',
-          marginBottom: '24px',
+          marginBottom: '10px',
           borderBottom: '1px solid rgba(101, 89, 123, 0.08)',
           position: 'relative',
           zIndex: 1000,
