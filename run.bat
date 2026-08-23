@@ -18,7 +18,7 @@ echo ===================================================================
 echo             NETRAN AI - MASTER OPERATIONAL SUITE
 echo ===================================================================
 echo.
-echo  --- BACKEND API, CLIENT & WORKFLOW RUNNERS ---
+echo  --- BACKEND API, CLIENT ^& WORKFLOW RUNNERS ---
 echo   1. Launch FastAPI Web API Server (uvicorn api.main:app --reload)
 echo   2. Launch React + Vite Web Frontend Client (npm run dev)
 echo   3. Launch Unified 6-Screen Netran AI Interview Workflow (Kivy Desktop)
@@ -45,15 +45,16 @@ echo  17. Check System Requirements ^& Dependencies (check_dependencies.py)
 echo.
 echo  --- MAINTENANCE ^& DATA CLEANING ---
 echo  18. Clean Stage Test Output Directories (model/*/test/output/ ^& model/*/test/process/)
-echo  19. Clean Generated Session Artifacts (model/sessions/ ^& sessions/)
-echo  20. Clean SQLite Research Cache Database (cache.db)
-echo  21. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
-echo  22. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + Cache DB + Trash)
-echo  23. Run Code Quality Audit (scan_code_quality.py)
+echo  19. Clean All Session Directories (backend\data\sessions, model\sessions, sessions)
+echo  20. Clean SQLite Cache ^& App Databases (data\cache.db, model\*\cache.db)
+echo  21. Reset Full Backend Database ^& Web Sessions (data\cache.db + data\sessions)
+echo  22. Clean Python Bytecode Trash ^& Temporary Logs (__pycache__, *.pyc, *.log)
+echo  23. PERFORM FULL DEEP CLEAN (Test Outputs + Sessions + DB + Trash)
+echo  24. Run Code Quality Audit (scan_code_quality.py)
 echo.
 echo   0. Exit
 echo ===================================================================
-set /p choice="Enter your choice (0-23): "
+set /p choice="Enter your choice (0-24): "
 
 if "%choice%"=="1" goto run_fastapi_server
 if "%choice%"=="2" goto run_frontend_vite
@@ -75,9 +76,10 @@ if "%choice%"=="17" goto check_deps
 if "%choice%"=="18" goto clean_test_outputs
 if "%choice%"=="19" goto clean_sessions
 if "%choice%"=="20" goto clean_cache_db
-if "%choice%"=="21" goto clean_bytecode_trash
-if "%choice%"=="22" goto clean_full_deep
-if "%choice%"=="23" goto run_quality_audit
+if "%choice%"=="21" goto clean_full_db_sessions
+if "%choice%"=="22" goto clean_bytecode_trash
+if "%choice%"=="23" goto clean_full_deep
+if "%choice%"=="24" goto run_quality_audit
 if "%choice%"=="0" goto end
 
 goto menu
@@ -262,20 +264,38 @@ goto menu
 
 :clean_sessions
 echo.
-echo [CLEANING] Deleting deprecated session directories (model\sessions ^& sessions)...
+echo [CLEANING] Deleting all active ^& legacy session directories (data\sessions, model\sessions, sessions)...
+if exist "data\sessions" powershell -NoProfile -Command "Get-ChildItem -Path 'data\sessions' -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
-echo Clean complete: Deprecated session directories deleted.
+echo Clean complete: All session directories cleared.
 pause
 goto menu
 
 :clean_cache_db
 echo.
-echo [CLEANING] Deleting SQLite cache databases (cache.db)...
+echo [CLEANING] Deleting SQLite research cache ^& app databases (cache.db)...
+if exist "data\cache.db" del /f /q "data\cache.db"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
-if exist "data\cache.db" del /f /q "data\cache.db"
 echo Clean complete: SQLite cache.db files deleted.
+pause
+goto menu
+
+:clean_full_db_sessions
+echo.
+echo ===================================================================
+echo [RESET BACKEND DB ^& SESSIONS] Resetting database and active sessions...
+echo ===================================================================
+if exist "data\cache.db" del /f /q "data\cache.db"
+if exist "data\sessions" powershell -NoProfile -Command "Get-ChildItem -Path 'data\sessions' -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+echo.
+echo Initializing clean database tables...
+.\.venv\Scripts\python.exe -c "from api.db import init_db; init_db(); print('Clean database initialized!')"
+echo.
+echo Backend SQLite DB (data\cache.db) and sessions (data\sessions) have been fully reset!
 pause
 goto menu
 
@@ -291,18 +311,22 @@ goto menu
 :clean_full_deep
 echo.
 echo ===================================================================
-echo [DEEP CLEAN] Purging ALL test data, sessions, cache DB, and trash...
+echo [DEEP CLEAN] Purging ALL test data, sessions, database, and trash...
 echo ===================================================================
 powershell -NoProfile -Command "Remove-Item -Path 'model\*\test\output\*', 'model\*\test\process\*' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "data\sessions" powershell -NoProfile -Command "Get-ChildItem -Path 'data\sessions' -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "model\sessions" powershell -NoProfile -Command "Remove-Item -Path 'model\sessions' -Recurse -Force -ErrorAction SilentlyContinue"
 if exist "sessions" powershell -NoProfile -Command "Remove-Item -Path 'sessions' -Recurse -Force -ErrorAction SilentlyContinue"
+if exist "data\cache.db" del /f /q "data\cache.db"
 if exist "model\research_model\model\cache.db" del /f /q "model\research_model\model\cache.db"
 if exist "model\question_model\model\cache.db" del /f /q "model\question_model\model\cache.db"
-if exist "data\cache.db" del /f /q "data\cache.db"
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 powershell -NoProfile -Command "Get-ChildItem -Path '.' -Recurse -File -Include '*.pyc','*.pyo','*.log','_interview_log.txt' | Remove-Item -Force -ErrorAction SilentlyContinue"
 echo.
-echo DEEP CLEAN COMPLETE: System returned to pristine condition!
+echo Initializing pristine SQLite database...
+.\.venv\Scripts\python.exe -c "from api.db import init_db; init_db(); print('Pristine database ready!')"
+echo.
+echo DEEP CLEAN COMPLETE: System, databases (data\cache.db), and sessions (data\sessions) returned to pristine condition!
 pause
 goto menu
 
