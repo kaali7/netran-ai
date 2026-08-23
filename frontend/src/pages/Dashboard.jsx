@@ -23,13 +23,13 @@ export const Dashboard = () => {
   };
 
   const handlePracticeCustomJD = () => {
-    navigate('/setup');
+    navigate('/setup', { state: { from: '/dashboard' } });
   };
 
   /** Called when TemplatePicker successfully creates a session — navigate to voice interview. */
   const handleSessionReady = (sessionId) => {
     setShowTemplatePicker(false);
-    navigate(`/interview/${sessionId}`);
+    navigate(`/interview/${sessionId}`, { state: { from: '/dashboard' } });
   };
 
   const [isDuplicating, setIsDuplicating] = useState(false);
@@ -40,31 +40,31 @@ export const Dashboard = () => {
         setIsDuplicating(true);
         const res = await duplicateSession(data.lastSession.id);
         if (res?.session_id) {
-          navigate(`/interview/${res.session_id}`);
+          navigate(`/interview/${res.session_id}`, { state: { from: '/dashboard' } });
         } else {
-          navigate('/setup');
+          navigate('/setup', { state: { from: '/dashboard' } });
         }
       } catch (err) {
         console.error("Failed to duplicate session:", err);
-        navigate('/setup');
+        navigate('/setup', { state: { from: '/dashboard' } });
       } finally {
         setIsDuplicating(false);
       }
     } else {
-      navigate('/setup');
+      navigate('/setup', { state: { from: '/dashboard' } });
     }
   };
 
   const handleViewReport = () => {
     if (data?.lastSession?.id) {
-      navigate(`/report/${data.lastSession.id}`);
+      navigate(`/report/${data.lastSession.id}`, { state: { from: '/dashboard' } });
     } else {
-      navigate('/setup');
+      navigate('/setup', { state: { from: '/dashboard' } });
     }
   };
 
   const handleNewWorkspace = () => {
-    navigate('/setup');
+    navigate('/setup', { state: { from: '/dashboard' } });
   };
 
   const handleViewFeedback = (session) => {
@@ -73,11 +73,11 @@ export const Dashboard = () => {
     const hasReport = typeof session === 'object' ? session.hasReport : false;
 
     if (status === 'in_progress' || status === 'ready') {
-      navigate(`/interview/${sId}`);
+      navigate(`/interview/${sId}`, { state: { from: '/dashboard' } });
     } else if (status === 'evaluating' && !hasReport) {
-      navigate(`/processing/${sId}`);
+      navigate(`/processing/${sId}`, { state: { from: '/dashboard' } });
     } else {
-      navigate(`/report/${sId}`);
+      navigate(`/report/${sId}`, { state: { from: '/dashboard' } });
     }
   };
 

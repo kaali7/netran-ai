@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -31,7 +31,9 @@ import {
 
 export const Setup = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const returnTo = location.state?.from || '/dashboard';
 
   const {
     sessionId,
@@ -52,9 +54,9 @@ export const Setup = () => {
   } = useSetup();
 
   // Local state for interactive form controls
-  const [trackTitle, setTrackTitle] = useState('Custom Technical Practice Track');
-  const [targetLevel, setTargetLevel] = useState('Mid-Level');
-  const [jdText, setJdText] = useState('');
+  const [trackTitle, setTrackTitle] = useState(location.state?.role_title || 'Custom Technical Practice Track');
+  const [targetLevel, setTargetLevel] = useState(location.state?.target_level || 'Mid-Level');
+  const [jdText, setJdText] = useState(location.state?.jd_text || '');
   const [attachedJdFileName, setAttachedJdFileName] = useState('');
   const [resumeFileName, setResumeFileName] = useState('');
   const [resumeFileSize, setResumeFileSize] = useState('');
@@ -121,7 +123,7 @@ export const Setup = () => {
   // Handle Launch CTA Click
   const handleLaunchTrackClick = async () => {
     if (isCompleted && sessionId) {
-      navigate(`/interview/${sessionId}`);
+      navigate(`/interview/${sessionId}`, { state: { from: returnTo } });
       return;
     }
 
@@ -177,7 +179,7 @@ export const Setup = () => {
         }}
       >
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(returnTo)}
           className="btn btn-ghost"
           style={{
             borderRadius: '9999px',
@@ -189,7 +191,7 @@ export const Setup = () => {
           }}
         >
           <ArrowLeft size={16} />
-          <span>Back to Dashboard</span>
+          <span>{returnTo === '/history' ? 'Back to History' : 'Back to Dashboard'}</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>

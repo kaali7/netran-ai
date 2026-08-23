@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AvatarEva from '../components/interview/AvatarEva';
 import useInterviewSession from '../hooks/useInterviewSession';
 import useAuth from '../hooks/useAuth';
@@ -21,6 +21,7 @@ import {
 
 export const Interview = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { sessionId } = useParams();
   const { user } = useAuth();
   const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'C';
@@ -92,9 +93,24 @@ export const Interview = () => {
     }
   };
 
+  const handleExit = () => {
+    stopSession();
+    const fromPath = location.state?.from;
+    if (fromPath && fromPath !== '/setup') {
+      navigate(fromPath);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const handleAbortSession = () => {
     stopSession();
-    navigate('/dashboard');
+    const fromPath = location.state?.from;
+    if (fromPath && fromPath !== '/setup') {
+      navigate(fromPath);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleRestartConfirm = () => {
@@ -550,9 +566,9 @@ export const Interview = () => {
         {/* Left: Exit & Branding */}
         <div className="interview-header-left">
           <button
-            onClick={() => navigate('/setup')}
+            onClick={handleExit}
             className="interview-exit-btn"
-            title="Exit to Setup"
+            title="Exit Interview Room"
           >
             <ArrowLeft size={15} />
             <span>Exit</span>

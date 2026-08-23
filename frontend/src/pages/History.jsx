@@ -34,6 +34,8 @@ import {
   Mic,
   RefreshCw,
   AlertTriangle,
+  SlidersHorizontal,
+  MoreVertical,
 } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -126,6 +128,9 @@ export const History = () => {
     }, 450);
   };
 
+  // 3-Dot Action Menu State
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+
   // Action Button Loading State
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
@@ -171,6 +176,9 @@ export const History = () => {
       if (volumeRef.current && !volumeRef.current.contains(event.target)) {
         if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
         setVolumeSliderOpen(false);
+      }
+      if (!event.target.closest('.history-action-menu-container')) {
+        setOpenActionMenuId(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -277,12 +285,12 @@ export const History = () => {
   // Contextual Primary Action Click (Resume / Complete / Start / View)
   const handleContextualAction = async (session) => {
     if (session.status === 'in_progress') {
-      navigate(`/interview/${session.id}`);
+      navigate(`/interview/${session.id}`, { state: { from: '/history' } });
     } else if (session.status === 'ready') {
-      navigate(`/interview/${session.id}`);
+      navigate(`/interview/${session.id}`, { state: { from: '/history' } });
     } else if (session.status === 'evaluating') {
       if (session.has_report) {
-        navigate(`/report/${session.id}`);
+        navigate(`/report/${session.id}`, { state: { from: '/history' } });
       } else {
         setActionLoadingId(session.id);
         try {
@@ -291,14 +299,26 @@ export const History = () => {
           console.warn('Evaluation trigger note:', e);
         } finally {
           setActionLoadingId(null);
-          navigate(`/processing/${session.id}`);
+          navigate(`/processing/${session.id}`, { state: { from: '/history' } });
         }
       }
     } else if (session.status === 'completed' || session.has_report) {
-      navigate(`/report/${session.id}`);
+      navigate(`/report/${session.id}`, { state: { from: '/history' } });
     } else {
-      navigate('/setup');
+      navigate('/setup', { state: { from: '/history' } });
     }
+  };
+
+  // Edit / Reconfigure Track in Setup
+  const handleEditSetup = (session) => {
+    navigate('/setup', {
+      state: {
+        from: '/history',
+        role_title: session.role_title,
+        target_level: session.seniority_level || 'Mid-Level',
+        company: session.company,
+      },
+    });
   };
 
   // --- Turn-by-Turn Audio Player Logic ---
@@ -1637,56 +1657,148 @@ export const History = () => {
                             </button>
                           )}
 
-                          {/* Secondary Inspect Details Button */}
-                          <button
-                            onClick={() => handleOpenInspectModal(session.id)}
-                            title="Inspect generated question bank & resume profile analysis"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              padding: '8px 12px',
-                              borderRadius: '9999px',
-                              background: '#f3e8ff',
-                              color: '#65597b',
-                              border: '1px solid #e9d5ff',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Eye size={13} />
-                            <span>Details</span>
-                          </button>
+                          {/* 3-Dot More Actions Menu */}
+                          <div className="history-action-menu-container" style={{ position: 'relative', display: 'inline-flex' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenActionMenuId((prev) => (prev === session.id ? null : session.id));
+                              }}
+                              title="More options"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: openActionMenuId === session.id ? '#ede6f8' : '#f8f5fc',
+                                color: '#65597b',
+                                border: '1px solid #ede6f8',
+                                cursor: 'pointer',
+                                transition: 'all 150ms ease',
+                              }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.background = '#ede6f8';
+                              }}
+                              onMouseOut={(e) => {
+                                if (openActionMenuId !== session.id) e.currentTarget.style.background = '#f8f5fc';
+                              }}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
 
-                          {/* Delete Session Button */}
-                          <button
-                            onClick={() => handleDeleteClick(session)}
-                            title="Delete this practice session"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '50%',
-                              background: '#fff1f2',
-                              color: '#e11d48',
-                              border: '1px solid #ffe4e6',
-                              cursor: 'pointer',
-                              transition: 'all 150ms ease',
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.background = '#e11d48';
-                              e.currentTarget.style.color = '#ffffff';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.background = '#fff1f2';
-                              e.currentTarget.style.color = '#e11d48';
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                            {openActionMenuId === session.id && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  right: 0,
+                                  top: '100%',
+                                  marginTop: '6px',
+                                  background: '#ffffff',
+                                  borderRadius: '14px',
+                                  border: '1px solid #e5e7eb',
+                                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)',
+                                  padding: '5px',
+                                  zIndex: 50,
+                                  minWidth: '155px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  textAlign: 'left',
+                                }}
+                              >
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenActionMenuId(null);
+                                    handleOpenInspectModal(session.id);
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#374151',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    transition: 'background 120ms ease',
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.background = '#f3f4f6')}
+                                  onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                  <Eye size={14} style={{ color: '#65597b' }} />
+                                  <span>Inspect Details</span>
+                                </button>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenActionMenuId(null);
+                                    handleEditSetup(session);
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#374151',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    transition: 'background 120ms ease',
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.background = '#f3f4f6')}
+                                  onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                  <SlidersHorizontal size={14} style={{ color: '#65597b' }} />
+                                  <span>Edit in Setup</span>
+                                </button>
+
+                                <div style={{ height: '1px', background: '#f3f4f6', margin: '3px 0' }} />
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenActionMenuId(null);
+                                    handleDeleteClick(session);
+                                  }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: '#e11d48',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    transition: 'background 120ms ease',
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.background = '#fff1f2')}
+                                  onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                                >
+                                  <Trash2 size={14} style={{ color: '#e11d48' }} />
+                                  <span>Delete Session</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -1738,13 +1850,144 @@ export const History = () => {
             ) : sessions.length > 0 ? (
               sessions.map((session, idx) => (
                 <div key={session.id || idx} className="history-session-card">
-                  {/* Top Row: Date & Status Badge */}
+                  {/* Top Row: Date & Status Badge on Left + 3-Dot Menu on Far Right */}
                   <div className="history-session-card-top">
-                    <div className="history-session-date">
-                      <Calendar size={13} style={{ color: '#65597b' }} />
-                      <span>{session.date_text || 'Recent'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div className="history-session-date">
+                        <Calendar size={13} style={{ color: '#65597b' }} />
+                        <span>{session.date_text || 'Recent'}</span>
+                      </div>
+                      {renderStatusBadge(session.status)}
                     </div>
-                    {renderStatusBadge(session.status)}
+
+                    {/* 3-Dot More Actions Menu on Top Right */}
+                    <div className="history-action-menu-container" style={{ position: 'relative', display: 'inline-flex' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenActionMenuId((prev) => (prev === session.id ? null : session.id));
+                        }}
+                        title="More options"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: openActionMenuId === session.id ? '#ede6f8' : '#f8f5fc',
+                          color: '#65597b',
+                          border: '1px solid #ede6f8',
+                          cursor: 'pointer',
+                          padding: 0,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+
+                      {openActionMenuId === session.id && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '100%',
+                            marginTop: '4px',
+                            background: '#ffffff',
+                            borderRadius: '14px',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05)',
+                            padding: '5px',
+                            zIndex: 100,
+                            minWidth: '150px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionMenuId(null);
+                              handleOpenInspectModal(session.id);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#374151',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              width: '100%',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <Eye size={13} style={{ color: '#65597b' }} />
+                            <span>Inspect Details</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionMenuId(null);
+                              handleEditSetup(session);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#374151',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              width: '100%',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <SlidersHorizontal size={13} style={{ color: '#65597b' }} />
+                            <span>Edit in Setup</span>
+                          </button>
+
+                          <div style={{ height: '1px', background: '#f3f4f6', margin: '2px 0' }} />
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionMenuId(null);
+                              handleDeleteClick(session);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#e11d48',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              width: '100%',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <Trash2 size={13} style={{ color: '#e11d48' }} />
+                            <span>Delete Session</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Middle Row: Role Title, Company & Score */}
@@ -1862,42 +2105,6 @@ export const History = () => {
                         <span>Report</span>
                       </button>
                     )}
-
-                    {/* Details button */}
-                    <button
-                      onClick={() => handleOpenInspectModal(session.id)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        background: '#f3f4f6',
-                        color: '#374151',
-                        border: '1px solid #e5e7eb',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Eye size={12} />
-                      <span>Details</span>
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      className="action-delete-btn"
-                      onClick={() => handleDeleteClick(session)}
-                      title="Delete this session"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#fff1f2',
-                        color: '#e11d48',
-                        border: '1px solid #ffe4e6',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
                   </div>
                 </div>
               ))
@@ -2095,16 +2302,44 @@ export const History = () => {
                     {inspectDetail?.company} • {inspectDetail?.seniority_level} Level
                   </span>
                 </div>
-                <button
-                  className="history-modal-close-btn"
-                  onClick={() => {
-                    setInspectModalOpen(false);
-                    setInspectDetail(null);
-                  }}
-                  style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
-                >
-                  <X size={18} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      const detail = inspectDetail;
+                      setInspectModalOpen(false);
+                      setInspectDetail(null);
+                      handleEditSetup(detail || { role_title: 'Custom Technical Track' });
+                    }}
+                    title="Edit or customize this practice track in Setup"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 12px',
+                      borderRadius: '9999px',
+                      background: '#ede6f8',
+                      color: '#65597b',
+                      border: '1px solid #d8b4fe',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 150ms ease',
+                    }}
+                  >
+                    <SlidersHorizontal size={13} />
+                    <span>Edit in Setup</span>
+                  </button>
+                  <button
+                    className="history-modal-close-btn"
+                    onClick={() => {
+                      setInspectModalOpen(false);
+                      setInspectDetail(null);
+                    }}
+                    style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Modal Navigation Tabs */}
