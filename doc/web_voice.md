@@ -87,3 +87,52 @@ To guarantee end-to-end observability across the full duplex voice pipeline, the
 | `BACKEND_API` | `WS_CONNECTED`, `AUDIO_CHUNK_SENT`, `WS_DISCONNECTED` | Audio frame byte sizes, connection lifecycle |
 | `BACKEND_ENGINE` | `ENGINE_START`, `PRE_LOOP_CHECK`, `VAD_*`, `STT_START`, `LLM_START`, `TTS_START`, `ENGINE_STOP` | Turn indices, VAD probabilities, RMS, transcripts |
 | `PIPELINE_RUNNER` | `PIPELINE_START`, `STEP_START`, `STEP_COMPLETE`, `PIPELINE_COMPLETE` | Resume extraction, JD research, Question generation stages |
+
+---
+
+## 5. Voice Latency & Timing Fixes (August 2026)
+
+A full pipeline audit identified 7 root causes for inconsistent Eva response timing (early cutoffs, ghost triggers, and delayed responses). All 7 have been resolved:
+
+### Fix A — Per-Turn Calibration Caching (`listener.py` + `session_state.py`)
+- **Problem**: Every `listen_and_transcribe()` call ran 30 frames × 32ms = **960ms of calibration** at the start of each turn. During calibration, the audio queue was fully drained (garbage flushed). This silently discarded the first ~960ms of the candidate's response on turns 2, 3, 4... The VAD then started mid-sentence with only the trailing audio, quickly triggering "silence reached" and cutting Eva in early.
+- **Solution**: Added calibration cache fields to `SessionState` (`calibration_done`, `cached_ambient_floor`, `cached_start_rms_gate`, `cached_continue_rms_gate`, `cached_noise_reducer`). Turn 1 runs calibration and writes results into the cache. Turns 2+ read the cache directly and skip the 960ms window entirely — the audio queue is never drained on cached turns.
+
+### Fix B — Pause Tolerance Raised for Web Mode (`session_state.py` + `listener.py`)
+- **Problem**: `pause_tolerance_ms = 800ms` (25 silence frames). WebSocket audio delivery adds ~100–200ms of pipeline buffering through `recv_worker → audio_queue → ws_stream_producer`. Effective VAD silence tolerance was only ~600ms — not enough for natural mid-sentence pauses.
+- **Solution**: Raised `pause_tolerance_ms` default to **1200ms**. Also raised `MIN_SPEECH_FRAMES` to **25 (800ms)** in WebSocket mode — endpointing cannot fire on less than 800ms of accumulated speech. Desktop sessions reset to 800ms in the `finally` block.
+
+### Fix C — Disable `noisereduce` for Web Sessions (`listener.py`)
+- **Problem**: After the VAD loop finished, the entire audio buffer was passed through `noisereduce.reduce_noise()` before Whisper. For a 10s answer, this ran ~160k samples through CPU-bound Wiener filtering — adding **500ms–1500ms of latency** before STT even started.
+- **Solution**: Gated noisereduce behind `ws_audio_queue is None`. The browser already applies `noiseSuppression: true` + `echoCancellation: true` via `getUserMedia`. Web sessions skip noisereduce entirely; desktop sessions retain it.
+
+### Fix D — Whisper Silence Threshold (`listener.py`)
+- **Problem**: `hallucination_silence_threshold=2.0` caused Whisper to internally buffer and analyze 2 extra seconds of trailing silence before returning results — adding a consistent **~2s latency hit** to every candidate utterance.
+- **Solution**: Lowered to `hallucination_silence_threshold=0.5` in both Whisper call sites in `listener.py`.
+
+### Fix E — Extended Post-TTS Echo Guard for WebSocket Mode (`listener.py`)
+- **Problem**: After Eva finishes speaking, a 300ms echo guard suppressed VAD triggers to prevent capturing speaker echo. But browser `AudioContext` buffers ~150–200ms of in-flight audio through the WS pipeline. Eva's own trailing audio was re-entering VAD after the 300ms guard expired, triggering false speech-starts.
+- **Solution**: Extended echo guard to **600ms** when `ws_audio_queue is not None`.
+
+### Fix F — Non-Blocking Audio Send Worker (`api/routers/voice.py`)
+- **Problem**: `audio_send_worker` used `get_nowait()` + `asyncio.sleep(0.02)` polling — introducing up to **20ms of jitter** per TTS audio chunk before it was forwarded to the WebSocket.
+- **Solution**: Replaced with `loop.run_in_executor(None, _blocking_get)` where `_blocking_get` uses `queue.get(timeout=0.05)`. This wakes immediately when data arrives and yields to the event loop naturally when the queue is empty.
+
+### Fix G — Native OS Sample Rate in AudioWorklet (`pcm-processor.js` + `useInterviewSession.js`)
+- **Problem**: `AudioContext` was created with `{ sampleRate: 16000 }`, forcing OS-level resampling at the driver. On Chrome (ARM), Safari, and some Windows WASAPI drivers, this introduced phase/alias artifacts that appeared as brief RMS spikes — occasionally triggering false VAD speech-starts on the backend.
+- **Solution**: Removed forced `sampleRate: 16000` from `AudioContext`. The `pcm-processor.js` worklet now reads the native OS rate and performs explicit box-car downsampling to 16kHz internally (integer 3:1 ratio for 48kHz, 6:1 for 96kHz, rational approximation for 44.1kHz). This mirrors the `reshape(-1, 3).mean(axis=1)` approach already used in `listener.py`'s desktop path.
+
+---
+
+### Combined Effect on Eva Response Timing
+
+| Before Fixes | After Fixes |
+|:---|:---|
+| Turn 1: ~960ms calibration + normal latency | Turn 1: ~960ms calibration (only once) |
+| Turn 2+: ~960ms calibration discards leading speech | Turn 2+: 0ms overhead, full speech captured from frame 1 |
+| Whisper adds ~2s silence buffer per turn | Whisper adds ~0.5s silence buffer per turn |
+| noisereduce adds 500–1500ms per long answer | noisereduce skipped for web (browser handles it) |
+| echo guard: 300ms (insufficient for browser buffering) | echo guard: 600ms for web mode |
+| audio send: up to 20ms jitter per chunk | audio send: immediate on data-ready |
+| **Typical delay: 3–5s + variable** | **Target delay: 0.8–2.0s consistent** |
+

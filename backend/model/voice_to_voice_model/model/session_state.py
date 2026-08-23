@@ -31,13 +31,34 @@ class SessionState:
     # Updated by listener.py on each successful barge-in trigger.
     last_interrupt_time: float = 0.0
 
-    pause_tolerance_ms: int = 800      # Default ⚡ Fast Response (800ms / 0.8s)
+    # FIX-B: Raised from 800ms → 1200ms for web interview sessions.
+    # WebSocket audio delivery introduces ~100–200ms of buffering latency through the
+    # recv_worker → audio_queue → ws_stream_producer → listener chain. With the old
+    # 800ms gate, effective VAD silence tolerance was only ~600ms, causing premature
+    # cutoffs mid-sentence. 1200ms ensures a full 1.0s+ of real silence before endpointing.
+    # Desktop/CLI sessions (no ws_audio_queue) reset to 800ms in listener.py finally block.
+    pause_tolerance_ms: int = 1200     # Default — Web-safe (1200ms / 1.2s)
     tts_speed: float = 1.00          # Dynamic Kokoro TTS synthesis speed factor
     current_tone: str = "direct"     # Master emotional tone attribute for turn synthesis
     selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset
     ptt_active: threading.Event = field(default_factory=threading.Event)
     last_vocal_anchor: str = ""      # Tracks last anchor to enforce anti-repetition rotation
     speaker_verifier: object | None = None   # SpeakerVerifier instance (None if disabled)
+    input_mode: str = "VAD"          # "VAD" (default) or "PTT"
+
+    # FIX-A: Noise floor calibration cache — shared across all listen_and_transcribe() turns.
+    # On the first turn, listener.py computes ambient_floor, start/continue RMS gates, and
+    # optionally a NoiseReducer from 30 frames (~960ms) of startup silence. These are then
+    # stored here so that subsequent turns SKIP the 960ms calibration window entirely.
+    # Without caching, calibration runs at the beginning of EVERY turn and flushes the first
+    # ~960ms of the candidate's audio from the queue before VAD even starts — causing the
+    # leading edge of the candidate's response to be silently discarded, which then triggers
+    # a premature "silence" endpoint while they are still mid-sentence.
+    calibration_done: bool = False           # True after first successful calibration
+    cached_ambient_floor: float = 0.008     # Fallback default until first calibration
+    cached_start_rms_gate: float = 0.020    # RMS gate to start speech capture
+    cached_continue_rms_gate: float = 0.014 # RMS gate to continue speech capture
+    cached_noise_reducer: object | None = None  # NoiseReducer instance (desktop only)
 
     # Thread-safe Pause/Resume & Restart primitives for live web interviews
     is_paused: threading.Event = field(default_factory=threading.Event)

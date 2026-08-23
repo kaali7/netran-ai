@@ -284,15 +284,33 @@ async def voice_interview_stream(
             stop_event.set()
 
     async def audio_send_worker():
+        """
+        Streams binary TTS audio chunks from the synchronous audio_out_queue to the WebSocket.
+
+        FIX-F: Replaced get_nowait() + asyncio.sleep(0.02) polling with a blocking
+        queue.get(timeout=0.05) executed in a thread executor. The old approach introduced
+        up to 20ms of systematic latency per chunk because every time the queue was momentarily
+        empty, the coroutine slept a full 20ms before re-checking — adding cumulative jitter
+        to the TTS audio stream. The new approach blocks the executor thread for at most 50ms
+        when the queue is empty and wakes immediately when data arrives.
+        """
+        loop = asyncio.get_running_loop()
+
+        def _blocking_get():
+            """Blocking queue.get with short timeout — runs in thread pool."""
+            try:
+                return audio_out_queue.get(timeout=0.05)
+            except queue.Empty:
+                return None
+
         try:
             while not stop_event.is_set():
-                try:
-                    chunk = audio_out_queue.get_nowait()
-                    if exec_logger:
-                        exec_logger.log_event("BACKEND_API", "AUDIO_CHUNK_SENT", {"size_bytes": len(chunk)})
-                    await websocket.send_bytes(chunk)
-                except queue.Empty:
-                    await asyncio.sleep(0.02)
+                chunk = await loop.run_in_executor(None, _blocking_get)
+                if chunk is None:
+                    continue
+                if exec_logger:
+                    exec_logger.log_event("BACKEND_API", "AUDIO_CHUNK_SENT", {"size_bytes": len(chunk)})
+                await websocket.send_bytes(chunk)
         except (WebSocketDisconnect, RuntimeError, asyncio.CancelledError):
             pass
 

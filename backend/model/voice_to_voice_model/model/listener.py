@@ -207,7 +207,7 @@ def _transcribe_audio_buffer(audio_buffer, whisper_prompt=""):
         temperature=0.0,
         condition_on_previous_text=False,
         no_speech_threshold=0.6,
-        hallucination_silence_threshold=2.0,
+        hallucination_silence_threshold=0.5,  # FIX-D: was 2.0 — avoids 2s wait on trailing silence
         vad_filter=False,
         compression_ratio_threshold=2.4,
     )
@@ -355,36 +355,55 @@ def listen_and_transcribe(
     else:
         print("\n[Listening...] Speak into your microphone now.", flush=True)
 
-    # --- INLINE NOISE FLOOR CALIBRATION ---
-    # Perform calibration using the ALREADY RUNNING producer queue.
-    # This completely eliminates PortAudio hook lockups caused by rapid stream open/close events on Windows.
+    # --- INLINE NOISE FLOOR CALIBRATION (FIX-A: Cached across turns) ---
+    # FIX-A: Calibration is now cached in SessionState after the first turn.
+    # Previously, EVERY listen_and_transcribe() call ran 30 frames × 32ms = 960ms of calibration
+    # and drained+discarded all queued audio before starting. This silently threw away the first
+    # ~960ms of the candidate's response on turns 2, 3, 4... The effective VAD window started
+    # mid-sentence, then quickly triggered "silence reached" — causing Eva to cut in early.
+    #
+    # Now: Turn 1 runs calibration and caches results in state.cached_*. Turns 2+ skip calibration
+    # entirely and restore the cached gates directly. The audio queue is NOT drained on cached turns.
     _ratecv_state = None   # Persistent audioop.ratecv interpolation state across chunks
     ambient_floor = 0.008
     noise_reducer = None
-    
+
     env_override = os.environ.get("NOISE_FLOOR_OVERRIDE", "").strip()
+
     if env_override:
         try:
             ambient_floor = float(env_override)
             print(f"[Calibration] NOISE_FLOOR_OVERRIDE active: {ambient_floor:.5f}", flush=True)
         except ValueError:
             pass
+
+    elif state is not None and getattr(state, "calibration_done", False):
+        # --- CACHE HIT: Restore from SessionState, skip 960ms calibration window ---
+        ambient_floor = state.cached_ambient_floor
+        noise_reducer = state.cached_noise_reducer
+        print(
+            f"[Calibration] CACHE HIT — restored gates from SessionState "
+            f"(floor={ambient_floor:.5f}). Skipping 960ms calibration window.",
+            flush=True,
+        )
+
     else:
+        # --- CACHE MISS: Run full calibration (first turn only) ---
         num_frames = 30
-        print(f"[Calibration] Sampling inline noise profile ({num_frames * 32}ms)...", flush=True)
+        print(f"[Calibration] Turn 1: sampling inline noise profile ({num_frames * 32}ms)...", flush=True)
         rms_samples = []
         clean_frames = []
-        
-        # Drain any immediate garbage frames
+
+        # Drain any immediate garbage frames that accumulated during WS connection setup
         while not audio_queue.empty():
             try: audio_queue.get_nowait()
             except queue.Empty: break
-            
+
         for _ in range(num_frames):
             try:
                 raw_data = audio_queue.get(timeout=1.0)
                 original_frame = raw_data.flatten()
-                
+
                 if native_rate == 48000 and RATE == 16000:
                     original_frame = original_frame.reshape(-1, 3).mean(axis=1).astype(np.float32)
                 elif native_rate != RATE:
@@ -393,18 +412,18 @@ def listen_and_transcribe(
                         pcm16.tobytes(), 2, 1, native_rate, RATE, _ratecv_state
                     )
                     original_frame = np.frombuffer(resampled_pcm, dtype=np.int16).astype(np.float32) / 32767.0
-                    
+
                 frame = original_frame.copy()
                 if len(frame) >= CHUNK:
                     frame = frame[:CHUNK]
                 else:
                     frame = np.pad(frame, (0, CHUNK - len(frame)), mode='constant')
-                    
+
                 rms_samples.append(float(np.sqrt(np.mean(frame ** 2))))
                 clean_frames.append(frame)
             except queue.Empty:
                 break
-                
+
         if rms_samples:
             ambient_floor = float(np.percentile(rms_samples, 90))
             ambient_floor = min(ambient_floor, 0.040)
@@ -424,15 +443,36 @@ def listen_and_transcribe(
         else:
             print("[Calibration] Timed out waiting for audio frames. Using default 0.008 floor.", flush=True)
 
-    _start_rms_gate    = max(ambient_floor * 2.5, 0.012)
-    _continue_rms_gate = max(ambient_floor * 1.8, 0.010)
+        # --- Write calibration results to SessionState cache ---
+        if state is not None:
+            _start_gate_computed = max(ambient_floor * 2.5, 0.012)
+            _continue_gate_computed = max(ambient_floor * 1.8, 0.010)
+            state.cached_ambient_floor = ambient_floor
+            state.cached_start_rms_gate = _start_gate_computed
+            state.cached_continue_rms_gate = _continue_gate_computed
+            state.cached_noise_reducer = noise_reducer
+            state.calibration_done = True
+            print(
+                f"[Calibration] Results cached in SessionState for future turns "
+                f"(floor={ambient_floor:.5f}, start={_start_gate_computed:.5f}, continue={_continue_gate_computed:.5f})",
+                flush=True,
+            )
+
+    # Apply cached or freshly computed gates
+    if state is not None and getattr(state, "calibration_done", False):
+        _start_rms_gate    = state.cached_start_rms_gate
+        _continue_rms_gate = state.cached_continue_rms_gate
+    else:
+        _start_rms_gate    = max(ambient_floor * 2.5, 0.012)
+        _continue_rms_gate = max(ambient_floor * 1.8, 0.010)
+
     print(
         f"[Calibration] Gates → start_rms={_start_rms_gate:.5f}  "
         f"continue_rms={_continue_rms_gate:.5f}  "
         f"noise_suppress={'ON' if noise_reducer is not None else 'OFF'}",
         flush=True,
     )
-    
+
     audio_buffer = []
     _cached_interim_transcript = None
     pre_speech_buffer = collections.deque(maxlen=15)  # 480ms ring buffer
@@ -446,7 +486,10 @@ def listen_and_transcribe(
 
     # Defaults if state isn't provided (for standalone tests) — 800ms default pause tolerance (25 frames * 32ms)
     max_silence_frames = 25 if state is None else max(8, state.pause_tolerance_ms // 32)
-    MIN_SPEECH_FRAMES = 15   # Must accumulate at least 15 frames (~480ms) before endpointing is allowed
+    # WS mode requires more speech accumulation before endpointing because browser mic
+    # AudioWorklet chunks arrive with inherent WS buffering jitter (~100–200ms). Requiring
+    # 800ms (25 frames) prevents premature cutoff during mid-sentence pauses.
+    MIN_SPEECH_FRAMES = 25 if ws_audio_queue is not None else 15   # 800ms for web, 480ms for desktop
     total_frames_counter = 0
     MAX_RECORDING_FRAMES = 1875  # 60s hard timeout (1875 * 32ms = 60,000ms) — applies AFTER speech starts
     MAX_IDLE_WAIT_SEC = 90.0     # 90s hard timeout — applies BEFORE speech starts (waiting for first word)
@@ -557,9 +600,16 @@ def listen_and_transcribe(
 
             # 3b. Full-Duplex Barge-In Detection & Echo Guard
             # (rms already computed from raw vad_frame above)
+            #
+            # Echo guard duration — WebSocket mode gets 600ms (vs 300ms for desktop) because:
+            # browser AudioContext buffers ~150–200ms of audio that is already in-flight
+            # through the WS pipeline when Eva stops speaking. Without the longer guard,
+            # Eva's own trailing audio (buffered in transit) re-enters the VAD and triggers
+            # a false speech-start immediately after she finishes.
+            _echo_guard_duration = 0.60 if ws_audio_queue is not None else 0.30
 
             if state and state.is_agent_speaking.is_set():
-                _echo_guard_until = time.monotonic() + 0.30  # Arm 300ms post-speech guard window
+                _echo_guard_until = time.monotonic() + _echo_guard_duration  # Arm post-speech guard
                 if speech_prob > 0.65:
                     now = time.monotonic()
                     cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
@@ -784,7 +834,10 @@ def listen_and_transcribe(
         stop_producer.set()
         if state:
             state.is_candidate_speaking.clear()
-            state.pause_tolerance_ms = 800  # Reset back to default baseline (800ms)
+            # Reset pause tolerance back to baseline after each turn.
+            # Web sessions use 1200ms baseline (vs 800ms for desktop) to compensate
+            # for WebSocket buffering latency that otherwise causes early cutoffs.
+            state.pause_tolerance_ms = 1200 if ws_audio_queue is not None else 800
         if ui_callback:
             ui_callback({
                 "type": "audio_level",
@@ -806,7 +859,14 @@ def listen_and_transcribe(
     # Apply noise reduction ONCE on the full contiguous buffer (avoids 31Hz
     # windowing artifacts caused by per-chunk Hann window tapering).
     # Uses the noise profile captured during calibration for Wiener spectral gating.
-    if noise_reducer is not None:
+    #
+    # FIX-C: Skip noisereduce for WebSocket sessions.
+    # The browser already applies noiseSuppression + echoCancellation via getUserMedia.
+    # Running noisereduce on a 10s answer takes 500–1500ms of CPU — a significant
+    # latency spike BEFORE Whisper even starts. For desktop sessions where there is no
+    # browser-side processing, noise reduction is still valuable and remains enabled.
+    _is_ws_session = ws_audio_queue is not None  # Captured in outer scope
+    if noise_reducer is not None and not _is_ws_session:
         try:
             import noisereduce as nr
             audio_array = nr.reduce_noise(
@@ -816,8 +876,11 @@ def listen_and_transcribe(
                 stationary=True,
                 prop_decrease=0.85,
             ).astype(np.float32)
+            print("[STT] Noise reduction applied (desktop mode).", flush=True)
         except Exception:
             pass
+    elif _is_ws_session:
+        print("[STT] Noise reduction skipped (web mode — browser handles suppression).", flush=True)
 
     # Safety IIR high-pass filter (redundant with streaming DC blocker, but harmless).
     # y[n] = alpha * (y[n-1] + x[n] - x[n-1]), alpha=0.995 -> ~5Hz cutoff at 16kHz
@@ -839,6 +902,10 @@ def listen_and_transcribe(
         transcript_text = _cached_interim_transcript
     else:
         # Generate transcription using Faster-Whisper.
+        # FIX-D: hallucination_silence_threshold lowered from 2.0 → 0.5.
+        # The original 2.0s setting caused Whisper to internally buffer and analyze
+        # 2 extra seconds of trailing silence before returning any result, adding
+        # a consistent ~2s latency hit after every candidate utterance.
         segments, _ = whisper_model.transcribe(
             audio_array,
             language="en",
@@ -848,7 +915,7 @@ def listen_and_transcribe(
             temperature=0.0,
             condition_on_previous_text=False,
             no_speech_threshold=0.6,
-            hallucination_silence_threshold=2.0,
+            hallucination_silence_threshold=0.5,  # FIX-D: was 2.0 — saves ~2s per turn
             vad_filter=False,
             compression_ratio_threshold=2.4,
         )

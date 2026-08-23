@@ -153,7 +153,11 @@ def start_template_session(
             detail=f"Template data files are missing for '{request.template_id}'. Contact support.",
         ) from e
 
-    # ── 2. Determine Candidate Name & Personalize Artifacts ───────────────────
+    # ── 2. Generate a Unique Session ID ───────────────────────────────────────
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    session_id = f"tmpl_{request.template_id}_{ts}_{uuid.uuid4().hex[:6]}"
+
+    # ── 3. Determine Candidate Name & Personalize Artifacts ───────────────────
     candidate_name = (
         current_user.display_name.strip()
         if (current_user.display_name and current_user.display_name.strip())
@@ -176,7 +180,7 @@ def start_template_session(
     if isinstance(resume_analysis, dict):
         resume_analysis["candidate_name"] = candidate_name
 
-    # ── 3. Create Session row ─────────────────────────────────────────────────
+    # ── 4. Create Session row ─────────────────────────────────────────────────
     session_row = SessionModel(
         id=session_id,
         user_id=current_user.id,

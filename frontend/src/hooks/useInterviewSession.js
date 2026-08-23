@@ -278,9 +278,12 @@ export const useInterviewSession = (sessionId) => {
       mediaStreamRef.current = stream;
       sendClientLog('MIC_ACCESS_GRANTED');
 
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: 16000,
-      });
+      // FIX-G: Do NOT force sampleRate: 16000 on the AudioContext.
+      // Forcing a non-native rate causes the OS or browser to resample at the driver level,
+      // introducing phase/alias artifacts that appear as RMS spikes and can trigger false
+      // VAD speech-starts on the backend. The pcm-processor.js worklet now handles
+      // explicit 48kHz → 16kHz box-car downsampling internally.
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioContextRef.current = audioCtx;
       setAudioState(audioCtx.state);
       

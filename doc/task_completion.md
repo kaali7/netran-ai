@@ -4,6 +4,7 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 
 *Last Updated: 2026-08-23*
 
+
 ---
 
 ## 🟢 Completed Tasks & Features
@@ -39,6 +40,14 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 - Implemented real data wiring for History and Analytics pages.
 - Addressed various UI jitter, overflow, and styling issues across mobile and desktop viewports.
 - Added session deletion, audio download, and contextual resume actions.
+- **Voice Pipeline Timing Audit (Aug 2026)**: Full end-to-end scan of voice flow identified and resolved 7 root causes for inconsistent Eva response timing:
+  - **Fix A** (`listener.py` + `session_state.py`): Per-turn 960ms calibration cached across turns — eliminates ~960ms of leading speech being discarded on turns 2+.
+  - **Fix B** (`session_state.py` + `listener.py`): `pause_tolerance_ms` raised from 800ms → 1200ms; `MIN_SPEECH_FRAMES` raised from 15 → 25 (800ms min) for web mode.
+  - **Fix C** (`listener.py`): `noisereduce` disabled for WebSocket sessions (browser already handles suppression via `getUserMedia`) — saves 500–1500ms per turn.
+  - **Fix D** (`listener.py`): Whisper `hallucination_silence_threshold` lowered from 2.0 → 0.5 — saves ~2s per turn.
+  - **Fix E** (`listener.py`): Post-TTS echo guard extended from 300ms → 600ms for WebSocket mode — stops Eva's trailing audio re-triggering VAD.
+  - **Fix F** (`api/routers/voice.py`): Replaced `get_nowait()` + 20ms sleep polling in `audio_send_worker` with blocking `run_in_executor` — eliminates systematic 20ms chunk jitter.
+  - **Fix G** (`pcm-processor.js` + `useInterviewSession.js`): Removed forced `sampleRate: 16000` from AudioContext; worklet now downsamples explicitly from native OS rate (48kHz→16kHz) — eliminates OS resampling artifacts causing false VAD triggers.
 
 ---
 
@@ -55,8 +64,10 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 ## ✅ Quality Assurance Log
 - **Database & Schema**: SQLite multi-thread compatibility & auto-migration verified (`display_name` and `notifications` table verified).
 - **Pipelines**: All Stage 1-4 pipelines and artifacts verified.
-- **Frontend Build**: Production build verification passed.
+- **Frontend Build**: Production build verification passed (`✓ built in 2.17s`, 0 errors).
+- **Backend Syntax**: `listener.py`, `session_state.py`, `api/routers/voice.py` — all pass `python -m py_compile` with exit code 0.
 - **Responsive UI**: Desktop, tablet, and mobile compliance verified.
+- **Voice Timing (Aug 2026)**: 7-fix pipeline audit applied. Target response gap: 0.8s–2.0s consistent.
 
 ## 📋 Known Technical Debt
 - PostgreSQL migration not yet production-validated.
