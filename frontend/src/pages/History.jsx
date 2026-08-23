@@ -92,9 +92,39 @@ export const History = () => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [volumeSliderOpen, setVolumeSliderOpen] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
   const audioRef = useRef(null);
   const turnCardRefs = useRef([]);
+  const speedMenuRef = useRef(null);
+  const speedTimeoutRef = useRef(null);
+  const volumeRef = useRef(null);
+  const volumeTimeoutRef = useRef(null);
+
+  const handleVolumeMouseEnter = () => {
+    if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+    setVolumeSliderOpen(true);
+  };
+
+  const handleVolumeMouseLeave = () => {
+    if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+    volumeTimeoutRef.current = setTimeout(() => {
+      setVolumeSliderOpen(false);
+    }, 450);
+  };
+
+  const handleSpeedMouseEnter = () => {
+    if (speedTimeoutRef.current) clearTimeout(speedTimeoutRef.current);
+    setSpeedMenuOpen(true);
+  };
+
+  const handleSpeedMouseLeave = () => {
+    if (speedTimeoutRef.current) clearTimeout(speedTimeoutRef.current);
+    speedTimeoutRef.current = setTimeout(() => {
+      setSpeedMenuOpen(false);
+    }, 450);
+  };
 
   // Action Button Loading State
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -133,6 +163,14 @@ export const History = () => {
       }
       if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
         setIsDateDropdownOpen(false);
+      }
+      if (speedMenuRef.current && !speedMenuRef.current.contains(event.target)) {
+        if (speedTimeoutRef.current) clearTimeout(speedTimeoutRef.current);
+        setSpeedMenuOpen(false);
+      }
+      if (volumeRef.current && !volumeRef.current.contains(event.target)) {
+        if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+        setVolumeSliderOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -843,6 +881,40 @@ export const History = () => {
         }
         .history-tab-mobile-text {
           display: none;
+        }
+
+        /* Custom Vertical Volume Slider & Popovers */
+        .history-volume-vertical-track {
+          -webkit-appearance: slider-vertical;
+          writing-mode: bt-lr;
+          width: 8px;
+          height: 90px;
+          accent-color: #c084fc;
+          background: rgba(255, 255, 255, 0.12);
+          border-radius: 9999px;
+          cursor: pointer;
+          outline: none;
+        }
+        .history-dock-btn {
+          transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .history-dock-btn:hover {
+          transform: translateY(-1.5px);
+          background: rgba(139, 92, 246, 0.25) !important;
+          border-color: rgba(192, 132, 252, 0.45) !important;
+          color: #ffffff !important;
+          box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+        }
+        .history-dock-btn:active {
+          transform: translateY(0);
+        }
+        .history-speed-item-btn {
+          transition: all 140ms ease;
+        }
+        .history-speed-item-btn:hover {
+          background: rgba(255, 255, 255, 0.12) !important;
+          color: #ffffff !important;
+          transform: scale(1.04);
         }
       `}</style>
 
@@ -2370,26 +2442,23 @@ export const History = () => {
                           borderRadius: '16px',
                           background: isActive ? '#ffffff' : '#fafafa',
                           border: isActive ? '2px solid #65597b' : '1px solid #ede8f5',
-                          padding: '16px 18px',
+                          padding: '14px 16px',
                           boxShadow: isActive ? '0 8px 24px rgba(101, 89, 123, 0.1)' : 'none',
                           transition: 'all 200ms ease',
                           position: 'relative',
                         }}
                       >
-                        {/* Turn Header Bar */}
+                        {/* Turn Header Top Row: Turn badge + Difficulty badge on left, Duration + Play button on right */}
                         <div
                           className="history-audio-turn-head"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', flex: 1 }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', background: isActive ? '#65597b' : '#e5e7eb', color: isActive ? '#ffffff' : '#374151', padding: '2.5px 8px', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', background: isActive ? '#65597b' : '#e5e7eb', color: isActive ? '#ffffff' : '#374151', padding: '2.5px 8px', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                               Turn {tIdx + 1}
                             </span>
-                            <span style={{ fontSize: '12.5px', fontWeight: '700', color: '#374151' }}>
-                              {turn.topic || 'Domain Question'}
-                            </span>
                             {turn.difficulty && (
-                              <span style={{ fontSize: '10.5px', fontWeight: '600', padding: '1.5px 7px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '9999px', background: '#ede6f8', color: '#65597b', textTransform: 'lowercase' }}>
                                 {turn.difficulty}
                               </span>
                             )}
@@ -2434,6 +2503,13 @@ export const History = () => {
                               <span className="history-tab-desktop-text">{isActive && isPlayingAudio ? 'Pause' : 'Play'}</span>
                             </button>
                           </div>
+                        </div>
+
+                        {/* Turn Header Bottom Row: Topic Title */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1f2937', display: 'block', lineHeight: '1.3' }}>
+                            {turn.topic || 'Domain Question'}
+                          </span>
                         </div>
 
                         {/* EVA'S QUESTION CARD */}
@@ -2521,53 +2597,138 @@ export const History = () => {
                 </div>
 
                 {/* Controls Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  {/* Volume Control */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', position: 'relative' }}>
+                  {/* Left: Volume Control with Vertical Popover */}
+                  <div
+                    ref={volumeRef}
+                    onMouseEnter={handleVolumeMouseEnter}
+                    onMouseLeave={handleVolumeMouseLeave}
+                    style={{ position: 'relative' }}
+                  >
                     <button
+                      className="history-dock-btn"
                       onClick={() => {
-                        if (audioRef.current) {
-                          audioRef.current.muted = !isMuted;
-                          setIsMuted(!isMuted);
-                        }
+                        if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+                        setVolumeSliderOpen((prev) => !prev);
                       }}
-                      style={{ background: 'transparent', border: 'none', color: '#e6d6ff', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-                      title={isMuted ? 'Unmute' : 'Mute'}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '12px',
+                        background: isMuted ? 'rgba(239, 68, 68, 0.2)' : volumeSliderOpen ? 'rgba(139, 92, 246, 0.32)' : 'rgba(255, 255, 255, 0.08)',
+                        border: isMuted ? '1px solid rgba(239, 68, 68, 0.4)' : volumeSliderOpen ? '1px solid rgba(192, 132, 252, 0.5)' : '1px solid rgba(230, 214, 255, 0.18)',
+                        color: isMuted ? '#f87171' : '#f3e8ff',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                      title={isMuted ? 'Unmute Audio' : 'Volume Control'}
                     >
-                      {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                      {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                     </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      className="history-audio-volume-slider"
-                      value={isMuted ? 0 : volume}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        setVolume(v);
-                        if (audioRef.current) {
-                          audioRef.current.volume = v;
-                          audioRef.current.muted = v === 0;
-                          setIsMuted(v === 0);
-                        }
-                      }}
-                      style={{ width: '56px', accentColor: '#d6c7ee', cursor: 'pointer' }}
-                    />
+
+                    {/* Vertical Volume Popover Slider with Continuous Hover Bridge */}
+                    {volumeSliderOpen && (
+                      <div
+                        onMouseEnter={handleVolumeMouseEnter}
+                        onMouseLeave={handleVolumeMouseLeave}
+                        style={{
+                          position: 'absolute',
+                          bottom: '100%',
+                          left: 0,
+                          paddingBottom: '8px',
+                          zIndex: 100,
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: 'rgba(22, 17, 32, 0.96)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(192, 132, 252, 0.28)',
+                            borderRadius: '16px',
+                            padding: '10px 8px',
+                            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '8px',
+                            width: '48px',
+                          }}
+                        >
+                          {/* Volume Percentage Chip */}
+                          <span style={{ fontSize: '10px', fontWeight: '800', color: '#e9d5ff', background: 'rgba(139, 92, 246, 0.25)', border: '1px solid rgba(192, 132, 252, 0.3)', padding: '2px 5px', borderRadius: '6px', userSelect: 'none' }}>
+                            {isMuted ? '0%' : `${Math.round(volume * 100)}%`}
+                          </span>
+
+                          {/* Vertical Slider */}
+                          <div style={{ height: '94px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px' }}>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.02"
+                              className="history-volume-vertical-track"
+                              value={isMuted ? 0 : volume}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                setVolume(v);
+                                if (audioRef.current) {
+                                  audioRef.current.volume = v;
+                                  audioRef.current.muted = v === 0;
+                                  setIsMuted(v === 0);
+                                }
+                              }}
+                            />
+                          </div>
+
+                          {/* Quick Mute Toggle Icon */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (audioRef.current) {
+                                audioRef.current.muted = !isMuted;
+                                setIsMuted(!isMuted);
+                              }
+                            }}
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '8px',
+                              background: isMuted ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                              border: isMuted ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.12)',
+                              color: isMuted ? '#f87171' : '#c084fc',
+                              cursor: 'pointer',
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 150ms ease',
+                            }}
+                            title={isMuted ? 'Unmute' : 'Mute'}
+                          >
+                            {isMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Center Playback Steppers */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {/* Previous Turn */}
                     <button
-                      className="history-audio-nav-btn"
+                      className="history-dock-btn history-audio-nav-btn"
                       onClick={handlePrevTurn}
                       disabled={activeTurnIndex === 0}
                       title="Previous Question"
                       style={{
-                        padding: '5px 11px',
-                        borderRadius: '9999px',
-                        background: 'rgba(230, 214, 255, 0.12)',
+                        height: '36px',
+                        padding: '0 12px',
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.08)',
                         border: '1px solid rgba(230, 214, 255, 0.18)',
                         color: activeTurnIndex === 0 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
                         fontSize: '11.5px',
@@ -2575,8 +2736,8 @@ export const History = () => {
                         cursor: activeTurnIndex === 0 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        transition: 'all 150ms ease',
+                        gap: '4px',
+                        backdropFilter: 'blur(8px)',
                       }}
                     >
                       <ChevronLeft size={14} />
@@ -2588,34 +2749,35 @@ export const History = () => {
                       className="history-audio-playbtn"
                       onClick={toggleMasterPlayPause}
                       style={{
-                        width: '42px',
-                        height: '42px',
+                        width: '44px',
+                        height: '44px',
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #65597b 0%, #4d4162 100%)',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
                         color: '#ffffff',
-                        border: '1px solid rgba(230, 214, 255, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.28)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(101, 89, 123, 0.35)',
-                        transition: 'transform 150ms ease',
+                        boxShadow: '0 4px 18px rgba(139, 92, 246, 0.45)',
+                        transition: 'transform 150ms ease, box-shadow 150ms ease',
                       }}
                       title={isPlayingAudio ? 'Pause Master Audio' : 'Play Master Audio'}
                     >
-                      {isPlayingAudio ? <Pause size={17} fill="#ffffff" /> : <Play size={17} fill="#ffffff" style={{ marginLeft: '2px' }} />}
+                      {isPlayingAudio ? <Pause size={18} fill="#ffffff" /> : <Play size={18} fill="#ffffff" style={{ marginLeft: '2px' }} />}
                     </button>
 
                     {/* Next Turn */}
                     <button
-                      className="history-audio-nav-btn"
+                      className="history-dock-btn history-audio-nav-btn"
                       onClick={handleNextTurn}
                       disabled={activeTurnIndex >= getActiveTurnsList().length - 1}
                       title="Next Question"
                       style={{
-                        padding: '5px 11px',
-                        borderRadius: '9999px',
-                        background: 'rgba(230, 214, 255, 0.12)',
+                        height: '36px',
+                        padding: '0 12px',
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.08)',
                         border: '1px solid rgba(230, 214, 255, 0.18)',
                         color: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'rgba(230, 214, 255, 0.35)' : '#ffffff',
                         fontSize: '11.5px',
@@ -2623,8 +2785,8 @@ export const History = () => {
                         cursor: activeTurnIndex >= getActiveTurnsList().length - 1 ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        transition: 'all 150ms ease',
+                        gap: '4px',
+                        backdropFilter: 'blur(8px)',
                       }}
                     >
                       <span className="history-tab-desktop-text">Next</span>
@@ -2632,34 +2794,96 @@ export const History = () => {
                     </button>
                   </div>
 
-                  {/* Playback Speed Toggles */}
+                  {/* Right: Vertical Speed Popup Menu with Continuous Hover Bridge */}
                   <div
-                    className="history-audio-speed-group"
-                    style={{ display: 'flex', alignItems: 'center', gap: '2px', background: 'rgba(0, 0, 0, 0.18)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(230, 214, 255, 0.12)' }}
+                    ref={speedMenuRef}
+                    onMouseEnter={handleSpeedMouseEnter}
+                    onMouseLeave={handleSpeedMouseLeave}
+                    style={{ position: 'relative' }}
                   >
-                    {[1.0, 1.25, 1.5, 2.0].map((rate) => (
-                      <button
-                        key={rate}
-                        className="history-audio-speed-btn"
-                        onClick={() => {
-                          setPlaybackRate(rate);
-                          if (audioRef.current) audioRef.current.playbackRate = rate;
-                        }}
+                    <button
+                      className="history-dock-btn"
+                      onClick={() => {
+                        if (speedTimeoutRef.current) clearTimeout(speedTimeoutRef.current);
+                        setSpeedMenuOpen((prev) => !prev);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        height: '36px',
+                        padding: '0 12px',
+                        borderRadius: '12px',
+                        background: speedMenuOpen ? 'rgba(139, 92, 246, 0.32)' : 'rgba(255, 255, 255, 0.08)',
+                        border: speedMenuOpen ? '1px solid rgba(192, 132, 252, 0.5)' : '1px solid rgba(230, 214, 255, 0.18)',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                      title="Playback Speed"
+                    >
+                      <span>{playbackRate}x</span>
+                    </button>
+
+                    {speedMenuOpen && (
+                      <div
+                        onMouseEnter={handleSpeedMouseEnter}
+                        onMouseLeave={handleSpeedMouseLeave}
                         style={{
-                          padding: '2.5px 6px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          fontSize: '10.5px',
-                          fontWeight: '800',
-                          background: playbackRate === rate ? '#65597b' : 'transparent',
-                          color: playbackRate === rate ? '#ffffff' : '#cfc0e8',
-                          cursor: 'pointer',
-                          transition: 'all 150ms ease',
+                          position: 'absolute',
+                          bottom: '100%',
+                          right: 0,
+                          paddingBottom: '8px',
+                          zIndex: 100,
                         }}
                       >
-                        {rate}x
-                      </button>
-                    ))}
+                        <div
+                          style={{
+                            background: 'rgba(22, 17, 32, 0.96)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(192, 132, 252, 0.28)',
+                            borderRadius: '16px',
+                            padding: '6px',
+                            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                            minWidth: '68px',
+                          }}
+                        >
+                          <span style={{ fontSize: '9px', fontWeight: '800', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 4px', display: 'block', textAlign: 'center', marginBottom: '2px', userSelect: 'none' }}>
+                            Speed
+                          </span>
+                          {[1.0, 1.25, 1.5, 2.0].map((rate) => (
+                            <button
+                              key={rate}
+                              className="history-speed-item-btn"
+                              onClick={() => {
+                                setPlaybackRate(rate);
+                                if (audioRef.current) audioRef.current.playbackRate = rate;
+                                setSpeedMenuOpen(false);
+                              }}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '9px',
+                                border: 'none',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                textAlign: 'center',
+                                background: playbackRate === rate ? 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)' : 'transparent',
+                                color: playbackRate === rate ? '#ffffff' : '#d8b4fe',
+                                boxShadow: playbackRate === rate ? '0 2px 8px rgba(124, 58, 237, 0.45)' : 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {rate}x
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
