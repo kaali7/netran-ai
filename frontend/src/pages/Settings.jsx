@@ -3,6 +3,7 @@ import Navbar from '../components/layout/Navbar';
 import PageWrapper from '../components/layout/PageWrapper';
 import useAuth from '../hooks/useAuth';
 import useAuthStore from '../store/authStore';
+import authService from '../services/authService';
 import {
   User,
   Mail,
@@ -17,6 +18,7 @@ import {
   Key,
   Briefcase,
   Layers,
+  Loader2,
 } from 'lucide-react';
 
 export const Settings = () => {
@@ -24,7 +26,7 @@ export const Settings = () => {
   const updateUser = useAuthStore((state) => state.updateUser);
 
   const initialEmail = user?.email || 'candidate@netran.ai';
-  const initialName = user?.name || (user?.email ? user.email.split('@')[0] : 'Candidate');
+  const initialName = user?.display_name || user?.name || (user?.email ? user.email.split('@')[0] : 'Candidate');
 
   // Form State
   const [displayName, setDisplayName] = useState(initialName);
@@ -36,24 +38,39 @@ export const Settings = () => {
   const [autoPlayAudio, setAutoPlayAudio] = useState(true);
   const [noiseSuppression, setNoiseSuppression] = useState(true);
 
+  // Profile Save State
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   // Password Change State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
-  // Save Success State
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    updateUser({ name: displayName, email: initialEmail });
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+    setProfileError('');
+    setIsSavingProfile(true);
+
+    try {
+      const updatedUser = await authService.updateProfile({ display_name: displayName });
+      updateUser(updatedUser);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      const msg = err?.response?.data?.detail || 'Failed to update candidate profile.';
+      setProfileError(msg);
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess(false);
@@ -71,12 +88,24 @@ export const Settings = () => {
       return;
     }
 
-    // Success simulation
-    setPasswordSuccess(true);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setPasswordSuccess(false), 4000);
+    setIsChangingPassword(true);
+    try {
+      await authService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPasswordSuccess(false), 4000);
+    } catch (err) {
+      console.error('Failed to change password:', err);
+      const msg = err?.response?.data?.detail || 'Failed to change password.';
+      setPasswordError(msg);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -253,13 +282,40 @@ export const Settings = () => {
                 </div>
               </div>
 
+              {profileError && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '10px',
+                    color: '#991b1b',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {profileError}
+                </div>
+              )}
+
               <button
                 type="submit"
+                disabled={isSavingProfile}
                 className="btn btn-primary"
-                style={{ width: '100%', padding: '12px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                <Save size={16} />
-                <span>Save Candidate Profile</span>
+                {isSavingProfile ? (
+                  <>
+                    <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                    <span>Saving Profile…</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>Save Candidate Profile</span>
+                  </>
+                )}
               </button>
             </form>
 
@@ -392,11 +448,21 @@ export const Settings = () => {
 
               <button
                 type="submit"
+                disabled={isChangingPassword}
                 className="btn btn-ghost"
-                style={{ width: '100%', padding: '10px', fontSize: '13px' }}
+                style={{ width: '100%', padding: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                <Key size={15} />
-                <span>Update Password</span>
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} />
+                    <span>Updating Password…</span>
+                  </>
+                ) : (
+                  <>
+                    <Key size={15} />
+                    <span>Update Password</span>
+                  </>
+                )}
               </button>
             </form>
           </div>

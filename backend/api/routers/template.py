@@ -153,9 +153,28 @@ def start_template_session(
             detail=f"Template data files are missing for '{request.template_id}'. Contact support.",
         ) from e
 
-    # ── 2. Generate a unique session ID ───────────────────────────────────────
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    session_id = f"tmpl_{request.template_id}_{ts}_{uuid.uuid4().hex[:6]}"
+    # ── 2. Determine Candidate Name & Personalize Artifacts ───────────────────
+    candidate_name = (
+        current_user.display_name.strip()
+        if (current_user.display_name and current_user.display_name.strip())
+        else (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "Candidate")
+    )
+
+    if isinstance(behavior, dict):
+        behavior["candidate_name"] = candidate_name
+        behavior["session_id"] = session_id
+        behavior["target_role"] = template_meta["target_role"]
+        behavior["interviewer_system_prompt"] = (
+            f"You are Eva, an Executive Technical Bar Raiser at Netran AI conducting a structured technical interview "
+            f"for {candidate_name} for the {template_meta['target_role']} position. "
+            f"Keep your responses ultra-concise, conversational, and direct (MAXIMUM 25 WORDS per turn). "
+            f"Ask exactly one clear question at a time. Acknowledge candidate responses with brief vocal anchors "
+            f"like 'Got it', 'Makes sense', or 'Understood', then bridge smoothly to the next question. "
+            f"Maintain an encouraging yet precise, authoritative persona. Always end your response turn with a question tag ending with a question mark."
+        )
+
+    if isinstance(resume_analysis, dict):
+        resume_analysis["candidate_name"] = candidate_name
 
     # ── 3. Create Session row ─────────────────────────────────────────────────
     session_row = SessionModel(
@@ -183,7 +202,7 @@ def start_template_session(
             "tech_stack": template_meta["tech_stack"],
         },
         parsed_resume={
-            "candidate_name": "Candidate",
+            "candidate_name": candidate_name,
             "template_mode": True,
         },
     )

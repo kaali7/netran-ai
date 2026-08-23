@@ -36,6 +36,31 @@ export const authService = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+
+  /**
+   * Update current authenticated candidate user profile (e.g. display_name).
+   * @param {Object} profileData - { display_name }
+   * @returns {Promise<Object>} Updated User object
+   */
+  async updateProfile({ display_name }) {
+    const response = await api.patch('/auth/profile', {
+      display_name,
+    });
+    return response.data;
+  },
+
+  /**
+   * Change user password with current password verification.
+   * @param {Object} data - { current_password, new_password }
+   * @returns {Promise<Object>} Message response
+   */
+  async changePassword({ current_password, new_password }) {
+    const response = await api.post('/auth/change-password', {
+      current_password,
+      new_password,
+    });
+    return response.data;
+  },
 };
 
 export default authService;

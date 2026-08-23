@@ -44,6 +44,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     email = Column(String, unique=True, index=True, nullable=False)
+    display_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.CANDIDATE, nullable=False)
     created_at = Column(DateTime, default=utc_now, nullable=False)

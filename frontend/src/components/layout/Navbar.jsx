@@ -47,9 +47,11 @@ export const Navbar = ({ userName }) => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  // Determine display name from prop, user email, or fallback
+  // Determine display name from prop, user display_name, email, or fallback
   const displayName =
     userName ||
+    user?.display_name ||
+    user?.name ||
     (user?.email ? user.email.split('@')[0] : 'Candidate');
 
   const userEmail = user?.email || 'candidate@netran.ai';

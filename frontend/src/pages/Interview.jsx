@@ -24,7 +24,11 @@ export const Interview = () => {
   const location = useLocation();
   const { sessionId } = useParams();
   const { user } = useAuth();
-  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'C';
+  const userInitial = user?.display_name
+    ? user.display_name.trim().charAt(0).toUpperCase()
+    : user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'C';
 
   // Real WebSocket Session Hook
   const {
@@ -589,7 +593,7 @@ export const Interview = () => {
 
         {/* Right: Candidate Avatar Initial */}
         <div className="interview-header-right">
-          <div className="interview-user-avatar" title={`Signed in as ${user?.email || 'Candidate'}`}>
+          <div className="interview-user-avatar" title={`Signed in as ${user?.display_name || user?.email || 'Candidate'}`}>
             {userInitial}
           </div>
         </div>

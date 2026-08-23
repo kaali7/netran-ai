@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Mic, ChevronRight, Loader2, AlertCircle, Zap, Server, Palette, Bot } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, Mic, ChevronRight, Loader2, AlertCircle, Zap, Server, Palette, Bot, User, Edit3 } from 'lucide-react';
 import { fetchTemplates, startTemplateSession } from '../../services/templateService';
+import useAuth from '../../hooks/useAuth';
 
 /** Helper to render Lucide vector icon based on template ID */
 const renderTemplateIcon = (templateId, color) => {
@@ -19,11 +21,18 @@ const renderTemplateIcon = (templateId, color) => {
  * @param {function} onSessionReady - Called with session_id when session is created
  */
 const TemplatePicker = ({ isOpen, onClose, onSessionReady }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [startingId, setStartingId] = useState(null); // which template is spinning
   const [error, setError] = useState(null);
   const overlayRef = useRef(null);
+
+  const candidateName =
+    user?.display_name ||
+    user?.name ||
+    (user?.email ? user.email.split('@')[0].replace('.', ' ') : 'Candidate');
 
   // ── Load template list on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -132,7 +141,7 @@ const TemplatePicker = ({ isOpen, onClose, onSessionReady }) => {
         </button>
 
         {/* Header */}
-        <div style={{ marginBottom: '28px', paddingRight: '40px' }}>
+        <div style={{ marginBottom: '24px', paddingRight: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
             <div
               style={{
@@ -151,10 +160,51 @@ const TemplatePicker = ({ isOpen, onClose, onSessionReady }) => {
               Choose Your Interview Track
             </h2>
           </div>
-          <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
             Start a full 15-question mock interview instantly — no resume or JD upload needed.
             Pick the track that matches your target role.
           </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                background: 'rgba(101, 89, 123, 0.08)',
+                color: 'var(--primary)',
+                fontSize: '12px',
+                fontWeight: '600',
+              }}
+            >
+              <User size={13} />
+              <span>Interviewing as: <strong style={{ color: 'var(--on-surface)' }}>{candidateName}</strong></span>
+            </span>
+            <button
+              onClick={() => {
+                onClose();
+                navigate('/settings');
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: '6px',
+                textDecoration: 'underline',
+              }}
+            >
+              <Edit3 size={12} />
+              <span>Edit profile</span>
+            </button>
+          </div>
         </div>
 
         {/* Error Banner */}

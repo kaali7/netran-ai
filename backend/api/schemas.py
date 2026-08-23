@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
     """User signup request payload."""
     email: EmailStr
     password: str
+    display_name: Optional[str] = None
     role: Optional[UserRole] = UserRole.CANDIDATE
 
 
@@ -29,8 +30,25 @@ class UserResponse(BaseModel):
 
     id: str
     email: EmailStr
+    display_name: Optional[str] = None
     role: UserRole
     created_at: datetime
+
+
+class UserProfileUpdate(BaseModel):
+    """User profile update request payload."""
+    display_name: Optional[str] = None
+
+
+class PasswordChangeRequest(BaseModel):
+    """User password change request payload."""
+    current_password: str
+    new_password: str
+
+
+class MessageResponse(BaseModel):
+    """Generic message response."""
+    message: str
 
 
 class TokenResponse(BaseModel):
