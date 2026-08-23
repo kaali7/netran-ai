@@ -98,11 +98,14 @@ export const Dashboard = () => {
         {/* 2. Four Metric Stats Cards */}
         <StatsRow
           readinessPct={data.readinessScore}
-          streakDays={data.practiceStreakDays}
+          totalSessions={data.totalSessions ?? data.practiceStreakDays}
+          completedSessions={data.completedSessions}
           strongestSkills={data.strongestSkills}
           strongestSubtitle={data.strongestSkillsDetail}
+          strongestFullDetail={data.strongestSkillsFullDetail}
           needsFocusSkill={data.needsFocusSkill}
           needsFocusSubtitle={data.needsFocusDetail}
+          needsFocusFullDetail={data.needsFocusFullDetail}
           loading={loading}
         />
 

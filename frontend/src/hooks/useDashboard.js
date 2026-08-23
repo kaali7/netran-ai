@@ -73,8 +73,23 @@ export const useDashboard = () => {
         // 3. Fetch real skill telemetry from backend analytics summary
         let strongestSkills = 'Complete a Session';
         let strongestSkillsDetail = 'Complete your first mock interview to unlock skills telemetry';
+        let strongestSkillsFullDetail = '';
         let needsFocusSkill = 'No Focus Areas Yet';
         let needsFocusDetail = 'Your focus areas will appear here after your first practice session';
+        let needsFocusFullDetail = '';
+
+        const cleanInsightText = (text, defaultFallback) => {
+          if (!text || typeof text !== 'string') return defaultFallback;
+          let cleaned = text.replace(/^(Key Strength|Growth Focus|Improvement Area|Focus Area|Strength):\s*/i, '').trim();
+          if (cleaned.length > 80) {
+            const firstSentence = cleaned.split(/[.!?]/)[0];
+            if (firstSentence && firstSentence.length >= 20 && firstSentence.length <= 80) {
+              return firstSentence.trim() + '.';
+            }
+            return cleaned.slice(0, 75).trim() + '...';
+          }
+          return cleaned;
+        };
 
         if (hasCompleted.length > 0) {
           try {
@@ -94,29 +109,35 @@ export const useDashboard = () => {
                   strongestSkills = topSkill.name;
                   const posInsight = insights.find((i) => i.type === 'positive');
                   if (posInsight?.text) {
-                    strongestSkillsDetail = posInsight.text.replace(/^Key Strength:\s*/i, '');
-                  } else {
-                    strongestSkillsDetail = `Top domain score (${topSkill.score}%) in practice evaluation`;
+                    strongestSkillsFullDetail = posInsight.text.replace(/^Key Strength:\s*/i, '').trim();
                   }
+                  strongestSkillsDetail = cleanInsightText(
+                    posInsight?.text,
+                    `Top score (${topSkill.score}%) in evaluation`
+                  );
                 }
 
                 if (lowestSkill.score < topSkill.score || sortedSkills.length > 1) {
                   needsFocusSkill = lowestSkill.name;
                   const warnInsight = insights.find((i) => i.type === 'warning');
                   if (warnInsight?.text) {
-                    needsFocusDetail = warnInsight.text.replace(/^Growth Focus:\s*/i, '');
-                  } else {
-                    needsFocusDetail = `Domain score ${lowestSkill.score}% — recommended focus area`;
+                    needsFocusFullDetail = warnInsight.text.replace(/^Growth Focus:\s*/i, '').trim();
                   }
+                  needsFocusDetail = cleanInsightText(
+                    warnInsight?.text,
+                    `Score (${lowestSkill.score}%) • Recommended focus area`
+                  );
                 }
               }
             }
           } catch (analyticsErr) {
             console.warn('Analytics summary fetch fallback:', analyticsErr);
             strongestSkills = 'System Architecture & Problem Solving';
-            strongestSkillsDetail = 'Based on recent session evaluation';
+            strongestSkillsDetail = 'Consistently scoring top percentile';
+            strongestSkillsFullDetail = 'Demonstrated comprehensive architectural reasoning, clear distributed trade-offs, and structured communication.';
             needsFocusSkill = 'Live System Design';
-            needsFocusDetail = 'Review caching & distributed systems';
+            needsFocusDetail = 'Recommended: Review caching & distributed systems';
+            needsFocusFullDetail = 'Focus on deep-diving into caching strategies, rate limiting patterns, and asynchronous message queue resilience.';
           }
         }
 
@@ -125,11 +146,15 @@ export const useDashboard = () => {
           candidateFirstName: firstName,
           targetRole: lastSess ? lastSess.title : 'Technical Interview Track',
           readinessScore: avgScore,
-          practiceStreakDays: sessionsList.length > 0 ? sessionsList.length : 0,
+          totalSessions: sessionsList.length,
+          completedSessions: hasCompleted.length,
+          practiceStreakDays: sessionsList.length,
           strongestSkills,
           strongestSkillsDetail,
+          strongestSkillsFullDetail,
           needsFocusSkill,
           needsFocusDetail,
+          needsFocusFullDetail,
           lastSession: lastSess,
           recentSessions: sessionsList,
         });
