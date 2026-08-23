@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AvatarEva from '../components/interview/AvatarEva';
 import useInterviewSession from '../hooks/useInterviewSession';
@@ -17,6 +17,9 @@ import {
   FileText,
   AlertCircle,
   XCircle,
+  MessageSquare,
+  User,
+  X,
 } from 'lucide-react';
 
 export const Interview = () => {
@@ -44,6 +47,7 @@ export const Interview = () => {
     micVolume,
     vadState,
     audioState,
+    transcript,
     pauseInterview,
     resumeInterview,
     restartInterview,
@@ -56,6 +60,15 @@ export const Interview = () => {
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [questionSecondsElapsed, setQuestionSecondsElapsed] = useState(0);
   const [showRestartModal, setShowRestartModal] = useState(false);
+  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
+  const transcriptEndRef = useRef(null);
+
+  // Auto-scroll transcript to bottom when updated
+  useEffect(() => {
+    if (showTranscriptModal && transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcript, showTranscriptModal]);
 
   // Auto-navigate when session naturally ends
   useEffect(() => {
@@ -905,6 +918,25 @@ export const Interview = () => {
       {/* Floating Bottom Control Bar */}
       <footer className="interview-footer">
         <div className="interview-controls-pill animate-entrance animate-delay-1">
+          {/* Live Transcript Toggle */}
+          <button
+            onClick={() => setShowTranscriptModal(true)}
+            title="Open Live Interview Transcript"
+            className="interview-ctrl-btn"
+            style={{ color: '#4b5563' }}
+          >
+            <div
+              className="interview-ctrl-icon"
+              style={{
+                background: '#ede6f8',
+                color: 'var(--primary, #65597b)',
+              }}
+            >
+              <MessageSquare size={15} />
+            </div>
+            <span className="interview-ctrl-label">Transcript</span>
+          </button>
+
           {/* Restart Interview Button */}
           <button
             onClick={() => setShowRestartModal(true)}
@@ -1056,6 +1088,206 @@ export const Interview = () => {
                 }}
               >
                 Restart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Interview Dialogue Transcript Modal */}
+      {showTranscriptModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.55)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setShowTranscriptModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              maxWidth: '620px',
+              width: '100%',
+              maxHeight: '82vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              overflow: 'hidden',
+            }}
+            className="animate-entrance"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid #f0f1f3',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#faf9fc',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: '#ede6f8',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MessageSquare size={18} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '800', margin: 0, color: '#111827' }}>
+                      Live Dialogue Transcript
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        background: '#ede6f8',
+                        color: 'var(--primary)',
+                      }}
+                    >
+                      {transcript.length} turns
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: '2px 0 0 0' }}>
+                    Real-time speech-to-text dialogue turns stream
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTranscriptModal(false)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#6b7280',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body: Transcript Messages */}
+            <div
+              style={{
+                padding: '20px 24px',
+                overflowY: 'auto',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}
+            >
+              {transcript.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 16px', color: '#9ca3af' }}>
+                  <MessageSquare size={32} style={{ margin: '0 auto 10px auto', opacity: 0.5 }} />
+                  <p style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>No dialogue turns yet.</p>
+                  <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>
+                    Conversation turns will stream here as you and Eva speak.
+                  </p>
+                </div>
+              ) : (
+                transcript.map((item) => {
+                  const isEva = item.speaker === 'eva';
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isEva ? 'flex-start' : 'flex-end',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginBottom: '4px',
+                          fontSize: '11px',
+                          color: '#6b7280',
+                          fontWeight: '600',
+                        }}
+                      >
+                        {isEva ? (
+                          <>
+                            <span style={{ color: 'var(--primary)', fontWeight: '700' }}>Eva (Interviewer)</span>
+                            {item.topic && <span>• {item.topic}</span>}
+                            <span>• {item.time}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>{item.time}</span>
+                            <span>•</span>
+                            <span style={{ color: '#0891b2', fontWeight: '700' }}>You (Candidate)</span>
+                          </>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          maxWidth: '85%',
+                          padding: '12px 16px',
+                          borderRadius: isEva ? '18px 18px 18px 4px' : '18px 18px 4px 18px',
+                          background: isEva ? '#f3edf7' : '#ecfeff',
+                          border: isEva ? '1px solid #e9d8fd' : '1px solid #cffafe',
+                          color: '#1f2937',
+                          fontSize: '13.5px',
+                          lineHeight: '1.5',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        {item.text}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={transcriptEndRef} />
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '12px 24px',
+                background: '#faf9fc',
+                borderTop: '1px solid #f0f1f3',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                onClick={() => setShowTranscriptModal(false)}
+                className="btn btn-primary"
+                style={{ padding: '8px 20px', fontSize: '13px' }}
+              >
+                Done
               </button>
             </div>
           </div>

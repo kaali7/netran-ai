@@ -35,7 +35,7 @@ frontend/                      # React 18 + Vite 5 Web Client
 │   │   └── interview/         # AvatarEva.jsx
 │   ├── hooks/                 # useDashboard.js, useAuth.js, useInterviewSession.js, useSetup.js, useReports.js
 │   ├── pages/                 # Dashboard.jsx, Setup.jsx, Analytics.jsx, History.jsx, Settings.jsx, Interview.jsx, Processing.jsx, Report.jsx, Login.jsx
-│   ├── services/              # api.js, authService.js, sessionService.js, templateService.js, reportService.js, analyticsService.js, historyService.js
+│   ├── services/              # api.js, authService.js, sessionService.js, templateService.js, reportService.js, analyticsService.js, historyService.js, notificationsService.js
 │   ├── store/                 # authStore.js (Zustand JWT auth store)
 │   ├── styles/                # index.css (tokens & custom scrollbar), glass.css (glassmorphism), animations.css
 │   ├── utils/                 # constants.js
@@ -59,13 +59,13 @@ backend/
 │   ├── main.py                # FastAPI entry point, CORS middleware, app initialization
 │   ├── config.py              # Environment variables loader (JWT secret, DB URL, keys)
 │   ├── db.py                  # SQLAlchemy engine, session maker, DB initialization
-│   ├── models.py              # SQLAlchemy DB table schemas (Users, Sessions, Artifacts)
-│   ├── schemas.py             # Pydantic v2 schemas (Auth, Sessions, Health)
+│   ├── models.py              # SQLAlchemy DB table schemas (Users, Sessions, Artifacts, Notifications)
+│   ├── schemas.py             # Pydantic v2 schemas (Auth, Sessions, Health, Notifications)
 │   ├── security.py            # Bcrypt hashing & JWT encode/decode logic
 │   ├── dependencies.py        # Dependency injection (get_db, get_current_user, get_ws_user)
 │   └── routers/
 │       ├── __init__.py        # Routers package initializer
-│       ├── auth.py            # Authentication (/signup, /login, /me)
+│       ├── auth.py            # Authentication (/signup, /login, /me, /profile, /change-password)
 │       ├── ingest.py          # Document parsing stub (/ingest/resume, /ingest/jd)
 │       ├── setup.py           # Stage 1 & 2 analysis trigger & candidate sessions listing (/setup/analyze, /setup/sessions)
 │       ├── questions.py       # Stage 2 question preview stub (/questions/{session_id})
@@ -73,7 +73,8 @@ backend/
 │       ├── reports.py         # Stage 4 evaluation stub (/reports/{session_id})
 │       ├── template.py        # Template Mock Interview endpoints (/template/list, /template/start)
 │       ├── analytics.py       # Candidate performance analytics endpoints (/analytics/summary)
-│       └── history.py         # Candidate history archives, questions & profile analysis (/history/sessions, /history/detail/{id})
+│       ├── history.py         # Candidate history archives, questions & profile analysis (/history/sessions, /history/detail/{id})
+│       └── notifications.py   # Candidate alerts & system notification endpoints (/notifications)
 ├── data/                      # Local SQLite database, session storage & sample templates
 │   └── sample_interviews/    # Pre-built interview templates (backend/, frontend/, fullstack/)
 ├── sessions/                  # Global active interview session artifacts ( sess_<timestamp>/ )

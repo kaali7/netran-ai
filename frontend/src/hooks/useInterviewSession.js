@@ -16,6 +16,7 @@ export const useInterviewSession = (sessionId) => {
   const [micVolume, setMicVolume] = useState(0);
   const [vadState, setVadState] = useState('Mic: Offline');
   const [audioState, setAudioState] = useState('suspended');
+  const [transcript, setTranscript] = useState([]);
   const [error, setError] = useState(null);
 
   const wsRef = useRef(null);
@@ -104,7 +105,24 @@ export const useInterviewSession = (sessionId) => {
             interruptPlayback();
             setIsSpeaking(false);
           } else if (msg.event === 'SPEAKING_QUESTION') {
-            if (msg.question_text) setCurrentQuestion(msg.question_text);
+            if (msg.question_text) {
+              setCurrentQuestion(msg.question_text);
+              setTranscript((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.speaker === 'eva' && last.text === msg.question_text) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `eva_q_${msg.turn_id || prev.length + 1}_${Date.now()}`,
+                    speaker: 'eva',
+                    text: msg.question_text,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    turnId: msg.turn_id || (prev.length + 1),
+                    topic: msg.topic || 'Interview Question',
+                  },
+                ];
+              });
+            }
             if (msg.turn_id !== undefined) setQuestionIndex(msg.turn_id > 0 ? msg.turn_id - 1 : 0);
           } else if (msg.event === 'LISTENING_CANDIDATE') {
             if (speakingDebounceTimerRef.current) {
@@ -124,11 +142,60 @@ export const useInterviewSession = (sessionId) => {
             if (msg.question_text) {
               pendingQuestionRef.current = msg.question_text;
             }
+            if (msg.candidate_transcript) {
+              setTranscript((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.speaker === 'candidate' && last.text === msg.candidate_transcript) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `cand_${msg.turn_id || prev.length + 1}_${Date.now()}`,
+                    speaker: 'candidate',
+                    text: msg.candidate_transcript,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    turnId: msg.turn_id || (prev.length + 1),
+                  },
+                ];
+              });
+            }
+            if (msg.eva_response) {
+              setTranscript((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.speaker === 'eva' && last.text === msg.eva_response) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `eva_r_${msg.turn_id || prev.length + 1}_${Date.now()}`,
+                    speaker: 'eva',
+                    text: msg.eva_response,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    turnId: msg.turn_id || (prev.length + 1),
+                    branch: msg.branch_taken,
+                  },
+                ];
+              });
+            }
           } else if (msg.event === 'TURN_COMPLETE') {
             if (speakingDebounceTimerRef.current) {
               clearTimeout(speakingDebounceTimerRef.current);
             }
             setIsSpeaking(false);
+            if (msg.candidate_transcript) {
+              setTranscript((prev) => {
+                const last = prev[prev.length - 1];
+                if (last && last.speaker === 'candidate' && last.text === msg.candidate_transcript) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: `cand_${msg.turn_id || prev.length + 1}_${Date.now()}`,
+                    speaker: 'candidate',
+                    text: msg.candidate_transcript,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    turnId: msg.turn_id || (prev.length + 1),
+                  },
+                ];
+              });
+            }
           } else if (msg.event === 'QUESTION_COMPLETE' || msg.event === 'QUESTION_UPDATE') {
             if (msg.text) setCurrentQuestion(msg.text);
             if (msg.question_text) setCurrentQuestion(msg.question_text);
@@ -147,6 +214,7 @@ export const useInterviewSession = (sessionId) => {
             setIsPaused(false);
             isPausedRef.current = false;
             setQuestionIndex(0);
+            setTranscript([]);
             if (speakingDebounceTimerRef.current) {
               clearTimeout(speakingDebounceTimerRef.current);
             }
@@ -458,6 +526,7 @@ export const useInterviewSession = (sessionId) => {
     micVolume,
     vadState,
     audioState,
+    transcript,
     pauseInterview,
     resumeInterview,
     restartInterview,

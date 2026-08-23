@@ -1,7 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles, LayoutDashboard, BarChart2, CheckCircle2, Clock, Check, Menu, X } from 'lucide-react';
+import { Bell, Settings, User, Layers, History, Target, LogOut, ChevronDown, Sparkles, LayoutDashboard, BarChart2, CheckCircle2, Clock, Check, Menu, X, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
+import notificationsService from '../../services/notificationsService';
+
+/** Helper to format relative time for notification timestamps */
+const formatRelativeTime = (isoString) => {
+  if (!isoString) return 'Recently';
+  try {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffSecs = Math.floor((now - date) / 1000);
+    if (diffSecs < 60) return 'Just now';
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch (e) {
+    return 'Recently';
+  }
+};
 
 export const Navbar = ({ userName }) => {
   const navigate = useNavigate();
@@ -10,41 +30,59 @@ export const Navbar = ({ userName }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
   const menuRef = useRef(null);
   const notifRef = useRef(null);
 
+  const loadNotifications = useCallback(async () => {
+    try {
+      setLoadingNotifs(true);
+      const data = await notificationsService.getNotifications();
+      if (data && Array.isArray(data.notifications)) {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unread_count || 0);
+      }
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, []);
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Multimodal Evaluation Report Ready',
-      message: 'Your latest mock interview evaluation and audio telemetry report is ready.',
-      time: '10m ago',
-      read: false,
-      type: 'report',
-    },
-    {
-      id: 2,
-      title: 'Practice Track Initialized',
-      message: 'Eva Stage 2 Question Tree generated for your Senior Fullstack track.',
-      time: '1h ago',
-      read: false,
-      type: 'setup',
-    },
-    {
-      id: 3,
-      title: 'Welcome to Netran AI',
-      message: 'Your candidate profile is active. Launch a practice mock to start.',
-      time: '1d ago',
-      read: true,
-      type: 'welcome',
-    },
-  ]);
+  useEffect(() => {
+    if (user) {
+      loadNotifications();
+    }
+  }, [user, loadNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationsService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleNotificationClick = async (notif) => {
+    if (!notif.read) {
+      try {
+        await notificationsService.markAsRead(notif.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('Failed to mark notification read:', err);
+      }
+    }
+    if (notif.link) {
+      setIsNotifOpen(false);
+      navigate(notif.link);
+    }
   };
 
   // Determine display name from prop, user display_name, email, or fallback
@@ -272,27 +310,78 @@ export const Navbar = ({ userName }) => {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '12px',
-                          background: n.read ? '#ffffff' : '#f8f5fc',
-                          border: n.read ? '1px solid #f0f1f3' : '1px solid #e9d8fd',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '4px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>{n.title}</span>
-                          <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '500' }}>{n.time}</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>{n.message}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '320px', overflowY: 'auto' }}>
+                    {loadingNotifs && notifications.length === 0 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', color: '#9ca3af', gap: '8px' }}>
+                        <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        <span style={{ fontSize: '12px' }}>Loading alerts…</span>
                       </div>
-                    ))}
+                    ) : notifications.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--on-surface-variant)', fontSize: '13px' }}>
+                        No notifications yet.
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => handleNotificationClick(n)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            background: n.read ? '#ffffff' : '#f8f5fc',
+                            border: n.read ? '1px solid #f0f1f3' : '1px solid #e9d8fd',
+                            display: 'flex',
+                            gap: '10px',
+                            cursor: n.link ? 'pointer' : 'default',
+                            transition: 'all 150ms ease',
+                          }}
+                          onMouseOver={(e) => {
+                            if (n.link) e.currentTarget.style.background = n.read ? '#f9fafb' : '#f1eafd';
+                          }}
+                          onMouseOut={(e) => {
+                            if (n.link) e.currentTarget.style.background = n.read ? '#ffffff' : '#f8f5fc';
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '8px',
+                              background: n.type === 'report' ? '#e0f2fe' : n.type === 'setup' ? '#ede6f8' : n.type === 'welcome' ? '#dcfce7' : '#f3f4f6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          >
+                            {n.type === 'report' ? (
+                              <FileText size={14} color="#0284c7" />
+                            ) : n.type === 'setup' ? (
+                              <Sparkles size={14} color="#65597b" />
+                            ) : n.type === 'welcome' ? (
+                              <CheckCircle2 size={14} color="#15803d" />
+                            ) : (
+                              <Bell size={14} color="#65597b" />
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '2px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {n.title}
+                              </span>
+                              <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '500', flexShrink: 0 }}>
+                                {formatRelativeTime(n.created_at || n.time)}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>{n.message}</p>
+                          </div>
+                          {n.link && (
+                            <ExternalLink size={12} color="#9ca3af" style={{ flexShrink: 0, alignSelf: 'center' }} />
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

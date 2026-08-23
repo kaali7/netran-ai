@@ -6,7 +6,7 @@ Defines Users, Sessions, and SessionArtifacts tables.
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, JSON
+from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from api.db import Base
 
@@ -51,6 +51,25 @@ class User(Base):
 
     # Relationships
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+
+
+class Notification(Base):
+    """User notification entity."""
+
+    __tablename__ = "notifications"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    type = Column(String, default="system", nullable=False)  # "report", "setup", "welcome", "system"
+    link = Column(String, nullable=True)  # e.g. "/report/sess_..."
+    read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="notifications")
 
 
 class Session(Base):

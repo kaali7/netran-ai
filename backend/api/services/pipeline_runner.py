@@ -10,7 +10,7 @@ import os
 
 from api.config import settings, BASE_DIR
 from api.db import SessionLocal
-from api.models import Session, SessionArtifact, SessionStatus
+from api.models import Session, SessionArtifact, SessionStatus, Notification
 
 try:
     from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
@@ -163,6 +163,19 @@ def run_stage1_and_stage2(
 
         session_row.status = SessionStatus.READY
         session_row.progress_message = "Pipeline complete! Interview ready."
+
+        # Create notification for candidate
+        track_name = rubric_dict.get("role_title") or "Practice Track"
+        notif = Notification(
+            user_id=session_row.user_id,
+            title="Practice Track Initialized",
+            message=f"Eva Stage 2 Question Tree generated for your {track_name}.",
+            type="setup",
+            link="/history",
+            read=False,
+        )
+        db.add(notif)
+
         db.commit()
 
         if exec_log:
@@ -238,6 +251,18 @@ def run_stage4(session_id: str):
         artifact.evaluation_report = final_report.model_dump()
         session_row.status = SessionStatus.COMPLETED
         session_row.progress_message = "Evaluation complete! Report ready."
+
+        # Create evaluation report ready notification for candidate
+        report_notif = Notification(
+            user_id=session_row.user_id,
+            title="Multimodal Evaluation Report Ready",
+            message="Your latest mock interview evaluation and audio telemetry report is ready.",
+            type="report",
+            link=f"/report/{session_id}",
+            read=False,
+        )
+        db.add(report_notif)
+
         db.commit()
 
         if exec_log:

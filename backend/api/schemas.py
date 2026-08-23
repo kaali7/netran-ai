@@ -345,6 +345,33 @@ class SessionDeleteResponse(BaseModel):
     message: str = "Session deleted successfully"
 
 
+# --- Notification Schemas ---
+
+class NotificationItem(BaseModel):
+    """Single candidate notification item."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    message: str
+    type: str = "system"
+    link: Optional[str] = None
+    read: bool = False
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    """Notification list response with unread count."""
+    notifications: list[NotificationItem]
+    unread_count: int
+
+
+class NotificationMarkReadResponse(BaseModel):
+    """Response for marking notification(s) as read."""
+    message: str
+    unread_count: int
+
+
 # --- Common Schemas ---
 
 class HealthResponse(BaseModel):

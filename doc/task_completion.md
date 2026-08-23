@@ -12,6 +12,7 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 
 ### Core Systems & Pipelines
 - **Backend & Auth**: FastAPI Gateway, JWT Auth, SQLite ORM, Ingestion Engine (Resume/JD), Profile (`display_name`) persistence & verification, password change with bcrypt.
+- **Notifications System**: DB-backed `Notification` ORM table, REST API (`/api/v1/notifications`), auto-triggers on Stage 2 setup initialization & Stage 4 post-session evaluation completion.
 - **Stage 1 (Web Intelligence)**: Tavily deep web research synthesis.
 - **Stage 2 (Question Tree)**: Dynamic interview tree generation & Eva interviewer behavior prompt engine.
 - **Stage 3 (Live Voice Engine)**: Full-duplex WebSocket stream, Silero VAD, Faster-Whisper STT, Kokoro TTS.
@@ -19,14 +20,20 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 
 ### Frontend Components & Pages
 - **Pages**: Dashboard, Setup, Interview Room, Processing Screen, Report Scorecard, Auth/Login, History, Analytics, Settings.
+- **Navbar Real-Time Notifications**: Live DB alerts with unread badge counter, dynamic type icons, formatted relative timestamps, mark all as read, and direct report link navigation.
+- **Live Interview Transcript Panel**: Real-time turn-by-turn chat stream displaying Eva questions and transcribed candidate responses with auto-scrolling dialogue bubbles.
+- **Enhanced Eva Speaking Avatar**: Acoustic glowing pulse ring animation synchronized with Web Audio playback and voice synthesis states.
 - **Settings & Profile Management**: Real DB-backed profile editing (`PATCH /api/v1/auth/profile`) and credential updates (`POST /api/v1/auth/change-password`).
-- **Template Mock Interviews**: Instant mock interviews with dynamic candidate profile name personalization across interviewer behavior system prompts, resume analysis, and template picker.
+- **Template Mock Interviews (Rule 15 Compliant)**: Replaced raw emojis with string identifiers (`server`, `palette`, `bot`), Lucide vector icons, and dynamic candidate profile name personalization.
 - **Web Audio Engine**: Browser mic to 16kHz PCM for WebSocket streaming.
 - **UI/UX Refinements**: Mobile responsiveness, glassmorphic themes, interactive audio players, dashboard KPI telemetry, and error boundaries.
 
 ### Resolved Bugs & Enhancements
 - **Bug B1 & B3 / Feature NF1**: Added `display_name` to DB model, schemas, and `PATCH /auth/profile`. Wired to Settings and Navbar.
 - **Bug B2 / Feature NF2**: Implemented `POST /auth/change-password` with bcrypt verification and connected to Settings.
+- **Bug B6 / Feature NF6**: Built full DB-backed notifications system and wired to Navbar bell.
+- **Bug B7 / Feature NF5**: Replaced template catalog emojis with string identifiers (Rule 15 compliance).
+- **Feature NF7 & NF8**: Added Live Interview Transcript modal and Eva speaking pulse animation.
 - Fixed WebSocket audio streaming, VAD sync, and React Strict Mode double-connect issues.
 - Fixed TTS latency, audio playback overlapping, and mic permission handling.
 - Implemented real data wiring for History and Analytics pages.
@@ -39,12 +46,6 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 
 *Active bugs and planned features that require attention.*
 
-### Medium Priority (UI & Notifications)
-- **Bug B6 / Feature NF6**: Navbar notifications are hardcoded. Implement real DB-backed notifications system.
-- **Bug B7 / Feature NF5**: Template catalog uses raw emoji (Rule 15 violation). Replace with string identifiers and render SVG icons.
-- **Feature NF7**: Live Transcript Display in Interview Room via `EVA_RESPONDING_BRANCH` events.
-- **Feature NF8**: Tie `SPEAKING_QUESTION` events precisely to Eva pulse animation for better sync.
-
 ### Low Priority (Architecture & Admin)
 - **Feature NF9**: Admin Evaluation Panel (RBAC-protected dashboard for all candidate sessions).
 - **Feature NF10**: PostgreSQL Migration Validation (Swap SQLite for PostgreSQL/Supabase).
@@ -52,7 +53,7 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 ---
 
 ## ✅ Quality Assurance Log
-- **Database & Schema**: SQLite multi-thread compatibility & auto-migration verified (`display_name` column auto-migration added).
+- **Database & Schema**: SQLite multi-thread compatibility & auto-migration verified (`display_name` and `notifications` table verified).
 - **Pipelines**: All Stage 1-4 pipelines and artifacts verified.
 - **Frontend Build**: Production build verification passed.
 - **Responsive UI**: Desktop, tablet, and mobile compliance verified.
@@ -60,5 +61,3 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 ## 📋 Known Technical Debt
 - PostgreSQL migration not yet production-validated.
 - Admin evaluation endpoints missing.
-- Notifications are not real-time.
-- Template catalog needs icon string identifiers instead of emojis.

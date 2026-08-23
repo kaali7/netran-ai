@@ -3,7 +3,7 @@ import React from 'react';
 export const AvatarEva = ({ isSpeaking = true, className = '', style = {} }) => {
   return (
     <div
-      className={`avatar-eva-container ${className}`}
+      className={`avatar-eva-container ${isSpeaking ? 'avatar-eva-speaking' : ''} ${className}`}
       style={{
         position: 'relative',
         width: '100%',
@@ -25,7 +25,23 @@ export const AvatarEva = ({ isSpeaking = true, className = '', style = {} }) => 
           50% { transform: scaleY(1.3) translateY(0px); }
         }
 
+        /* Speaking Glow Pulse Ripple */
+        @keyframes evaSpeakingPulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(101, 89, 123, 0.45), 0 8px 32px rgba(101, 89, 123, 0.15);
+          }
+          70% {
+            box-shadow: 0 0 0 14px rgba(101, 89, 123, 0), 0 12px 36px rgba(101, 89, 123, 0.25);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(101, 89, 123, 0), 0 8px 32px rgba(101, 89, 123, 0.15);
+          }
+        }
 
+        .avatar-eva-speaking {
+          animation: evaSpeakingPulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+          border-color: rgba(101, 89, 123, 0.5) !important;
+        }
 
         /* Organic Breathing Motion */
         @keyframes torsoBreathe {
@@ -43,8 +59,6 @@ export const AvatarEva = ({ isSpeaking = true, className = '', style = {} }) => 
           transform-origin: 275px 225px;
           animation: talkMouth 0.35s ease-in-out infinite alternate;
         }
-
-
 
         .anim-torso {
           transform-origin: bottom center;
