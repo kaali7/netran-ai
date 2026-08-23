@@ -9,6 +9,7 @@ This document details the architecture, design tokens, component hierarchy, dire
 * **Theme Name**: Serene Learning (Modern Glassmorphism)
 * **Design Personality**: Empathetic, calm, intellectually stimulating digital sanctuary.
 * **Typography**: **Manrope** (Google Fonts)
+* **Icon Standard**: 100% Vector Icon Libraries (`lucide-react`) per Rule 15. Raw text emojis are strictly prohibited in structural UI.
 * **Corner Radius**: 
   - Cards / Containers: `16px` (1rem)
   - Modals / Large Wrappers: `24px` (1.5rem)
@@ -41,12 +42,12 @@ This document details the architecture, design tokens, component hierarchy, dire
 frontend/
 ├── public/
 │   ├── favicon.svg
-│   └── logo.svg
+│   └── pcm-processor.js        # AudioWorklet downsampling 48kHz native audio to 16kHz PCM
 ├── src/
-│   ├── assets/                 # SVGs, icons, illustrations
+│   ├── assets/                 # SVGs, vector illustrations
 │   ├── components/
 │   │   ├── layout/
-│   │   │   ├── Navbar.jsx      # Top nav with brand logo, links, avatar & settings
+│   │   │   ├── Navbar.jsx      # Top nav with brand logo, routes, notifications tray & profile menu
 │   │   │   └── PageWrapper.jsx # Max-width fluid container with gradient aura
 │   │   ├── ui/                 # Atomic design tokens & reusable widgets
 │   │   │   ├── Badge.jsx       # Status pill chips (Completed, In-Progress, Focus)
@@ -54,43 +55,52 @@ frontend/
 │   │   │   ├── Card.jsx        # Glassmorphic card surface with frosted blur
 │   │   │   ├── ProgressBar.jsx # Smooth animated CSS progress bar
 │   │   │   └── StatCard.jsx    # Metric card with label, prominent number & trend
-│   │   └── dashboard/
-│   │       ├── LaunchPractice.jsx   # Quick start buttons (15-Q Mock & Custom JD)
-│   │       ├── LastSessionCard.jsx  # Highlight of recent interview with score & CTA
-│   │       ├── SessionsTable.jsx    # Historical practice sessions & feedback list
-│   │       ├── StatsRow.jsx         # 4-card metric row (Readiness, Streak, Skills)
-│   │       ├── TemplatePicker.jsx   # Glassmorphic pre-built interview template modal
-│   │       └── WelcomeBanner.jsx    # Candidate greeting + Readiness pill score
+│   │   ├── dashboard/
+│   │   │   ├── LaunchPractice.jsx   # Quick start buttons (15-Q Mock & Custom JD)
+│   │   │   ├── LastSessionCard.jsx  # Highlight of recent interview with score & CTA
+│   │   │   ├── SessionsTable.jsx    # Historical practice sessions & feedback list
+│   │   │   ├── StatsRow.jsx         # 4-card metric row (Readiness, Streak, Skills)
+│   │   │   ├── TemplatePicker.jsx   # Personalized pre-built template interview modal
+│   │   │   └── WelcomeBanner.jsx    # Candidate greeting + Readiness pill score
 │   │   └── interview/
-│   │       └── AvatarEva.jsx        # Animated female vector AI interviewer persona (Eva)
+│   │       └── AvatarEva.jsx        # Animated vector AI interviewer with speaking pulse wave
 │   ├── hooks/
 │   │   ├── useAuth.js          # Authentication state & JWT bearer token context
 │   │   ├── useDashboard.js     # Orchestrates mock & live API telemetry
-│   │   └── useReports.js       # Fetches Stage 4 multimodal reports
+│   │   ├── useInterviewSession.js # Full-duplex WebSocket audio & live transcript accumulator
+│   │   ├── useReports.js       # Fetches Stage 4 multimodal reports
+│   │   └── useSetup.js         # Handles resume/JD ingestion and pipeline status polling
 │   ├── pages/
-│   │   ├── Dashboard.jsx       # 🚀 Phase 1 Core Candidate Home Surface
-│   │   ├── Setup.jsx           # Phase 2A Practice track setup & upload form
-│   │   ├── Interview.jsx       # Phase 2B Live voice conversation room & AvatarEva
-│   │   ├── Report.jsx          # Phase 2C Multimodal evaluation dashboard
-│   │   └── Login.jsx           # 🚀 Phase 2D Candidate authentication & signup
+│   │   ├── Dashboard.jsx       # Candidate home hub & quick launchpad
+│   │   ├── Setup.jsx           # Practice track configuration & document upload
+│   │   ├── Interview.jsx       # Live voice interview room, controls & live transcript modal
+│   │   ├── Processing.jsx      # Post-session evaluation progress animation screen
+│   │   ├── Report.jsx          # Multimodal evaluation report & telemetry scorecard
+│   │   ├── Login.jsx           # Candidate authentication & registration
+│   │   ├── History.jsx         # Session archives, question logs, and filterable table
+│   │   ├── Analytics.jsx       # Competency radar, readiness progression, and performance charts
+│   │   └── Settings.jsx        # Candidate profile (display_name) and password management
 │   ├── services/
 │   │   ├── api.js              # Central Axios instance with Bearer interceptors
-│   │   ├── authService.js      # Login, Signup, /me endpoints
-│   │   ├── sessionService.js   # Session initiation & report fetching
-│   │   └── templateService.js  # Pre-built interview templates (/template/list, /template/start)
+│   │   ├── authService.js      # Login, Signup, /me, updateProfile, changePassword
+│   │   ├── sessionService.js   # Ingestion, session creation & status polling
+│   │   ├── templateService.js  # Pre-built interview templates (/template/list, /template/start)
+│   │   ├── reportService.js    # Multimodal report generation & retrieval
+│   │   ├── analyticsService.js # Performance aggregates & radar telemetry
+│   │   ├── historyService.js   # Historical session archives & detail views
+│   │   └── notificationsService.js # DB-backed candidate notifications & read state sync
 │   ├── store/
-│   │   └── authStore.js        # State management (Zustand)
+│   │   └── authStore.js        # Global authentication store (Zustand)
 │   ├── styles/
-│   │   ├── animations.css      # Smooth keyframes, entrance & hover transitions
+│   │   ├── animations.css      # Keyframes, entrance effects, speaking pulse waves
 │   │   ├── glass.css           # Frosted glass, gradients & translucent layers
 │   │   └── index.css           # CSS custom properties, Manrope font, resets
 │   ├── utils/
 │   │   ├── constants.js        # Default mock metrics & navigation routes
-│   │   └── formatters.js       # Date, percentage, and text sanitizers
+│   │   └── formatters.js       # Relative time, percentage, and text formatters
 │   ├── App.jsx                 # Master application shell
 │   ├── main.jsx                # React root bootstrap
-│   └── router.jsx              # React Router v6 route configuration
-├── .env.example                # VITE_API_URL=http://localhost:8000
+│   └── router.jsx              # React Router v6 route configuration with auth guards
 ├── index.html                  # HTML5 base with Manrope Google Fonts & Meta tags
 ├── package.json                # Project dependencies (React 18, Vite, Lucide, Axios)
 └── vite.config.js              # Vite config with backend proxy (/api -> :8000)
@@ -100,25 +110,25 @@ frontend/
 
 ## 🔄 3. Backend API Gateway Integration Map
 
-| Frontend Component | HTTP / WS Action | Backend Endpoint | Data Delivered |
+| Frontend Component / Page | HTTP / WS Action | Backend Endpoint | Data Delivered |
 |---|---|---|---|
-| `WelcomeBanner` & `Navbar` | `GET` | `/api/v1/auth/me` | Candidate name, email, profile role |
-| `StatsRow` & `LastSessionCard` | `GET` | `/api/v1/setup/sessions` | Real candidate readiness score, total session count |
-| `SessionsTable` | `GET` | `/api/v1/setup/sessions` | Historical candidate practice sessions & scores |
-| `TemplatePicker` | `GET` / `POST` | `/api/v1/template/list`<br>`/api/v1/template/start` | Pre-built templates list & instant READY session creation |
-| `LaunchPractice` | `POST` | `/api/v1/setup/analyze` | Initiates Stage 1 & 2 custom interview prep |
-
-*Note: For instant local testing without a running backend, a dual-mode fallback provider serves rich mock data matching the reference designs.*
+| `Navbar` | `GET` / `POST` / `PATCH` | `/api/v1/notifications` | Unread notifications, mark read, relative time |
+| `Settings` | `PATCH` / `POST` | `/api/v1/auth/profile`<br>`/api/v1/auth/change-password` | Updates candidate display name & password |
+| `Interview` Room | `WS` | `/api/v1/voice/stream/{id}` | Bidirectional 16kHz PCM audio & turn transcript |
+| `TemplatePicker` | `GET` / `POST` | `/api/v1/template/list`<br>`/api/v1/template/start` | Pre-built templates list & personalized mock launch |
+| `History` Page | `GET` | `/api/v1/history/sessions`<br>`/api/v1/history/detail/{id}` | Session archives, transcripts, and question trees |
+| `Analytics` Page | `GET` | `/api/v1/analytics/summary` | Readiness trends, skill radar, and pacing metrics |
+| `Report` Scorecard | `GET` | `/api/v1/reports/{id}` | Multimodal scores, audio waveform, and feedback |
+| `Setup` Page | `POST` | `/api/v1/ingest/resume`<br>`/api/v1/setup/analyze` | Document parsing & Stage 1-2 pipeline triggers |
 
 ---
 
-## 🎬 4. Animation & Interaction Specifications (from `animate` skill)
+## 🎬 4. Key Interactive Components
 
-1. **Card Entrances**:
-   - Predetermined mounting entrance using GPU-accelerated `opacity` and `transform: translateY(8px)`.
-   - Respects `@media (prefers-reduced-motion: reduce)`.
-2. **Hover & Interactive Feedback**:
-   - Duration: `150ms - 200ms` with `cubic-bezier(0.16, 1, 0.3, 1)`.
-   - Subtle scale `1.015x` and soft shadow lift (`0 14px 32px rgba(101, 89, 123, 0.08)`).
-3. **Progress Bar**:
-   - Smooth width transition `width 800ms cubic-bezier(0.16, 1, 0.3, 1)` on initial render.
+1. **Live Interview Dialogue Transcript Panel**:
+   - Built into `Interview.jsx` with real-time dialogue accumulation from WebSocket turn events.
+   - Distinct left/right bubbles for Eva (with topic tags) and candidate, with automatic smooth scroll.
+2. **Synchronized Eva Speaking Avatar**:
+   - `AvatarEva.jsx` features talking mouth morphing, natural breathing, and dynamic acoustic glowing ripple pulses synced to `isSpeaking`.
+3. **Audio Streaming Architecture**:
+   - `pcm-processor.js` runs in an `AudioWorklet` to downsample native browser audio to 16-bit 16kHz PCM chunks for Silero VAD without driver artifacts.

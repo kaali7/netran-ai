@@ -40,6 +40,7 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 - Implemented real data wiring for History and Analytics pages.
 - Addressed various UI jitter, overflow, and styling issues across mobile and desktop viewports.
 - Added session deletion, audio download, and contextual resume actions.
+- **Documentation Sync (Aug 2026)**: Scanned full codebase and synchronized all core documentation files (`current.md`, `backend_plan.md`, `frontend_structure.md`, `tech_stack.md`, `folder_strucuture.md`, `rule.md`) to reflect Tri-Mode Execution Architecture (Web, GUI, CLI) and database refinements.
 - **Voice Pipeline Timing Audit (Aug 2026)**: Full end-to-end scan of voice flow identified and resolved 7 root causes for inconsistent Eva response timing:
   - **Fix A** (`listener.py` + `session_state.py`): Per-turn 960ms calibration cached across turns — eliminates ~960ms of leading speech being discarded on turns 2+.
   - **Fix B** (`session_state.py` + `listener.py`): `pause_tolerance_ms` raised from 800ms → 1200ms; `MIN_SPEECH_FRAMES` raised from 15 → 25 (800ms min) for web mode.

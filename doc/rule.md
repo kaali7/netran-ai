@@ -59,7 +59,7 @@ Before modifying any source code in a model stage:
 ## 📌 Rule 6: Git Commits Executed Only Upon User Request (with Pre-Commit Documentation Audit)
 * Run tests/verifications to ensure zero syntax or runtime errors after editing code.
 * Only execute `git commit` when the USER explicitly requests/instructs to commit the changes (e.g., "commit changes", "commit current stage").
-* **Pre-Commit Documentation Check**: When the user requests to commit, FIRST check if any documentation files (e.g., `model/<stage_folder>/doc/current.md`, `doc/folder_strucuture.md`, `doc/tech_stack.md`, `doc/rule.md`) need to be updated for recent code/schema/architecture changes. If any documentation updates are pending, update those files FIRST before running `git commit`.
+* **Pre-Commit Documentation Check**: When the user requests to commit, FIRST check if any documentation files (e.g., `doc/current.md`, `doc/backend_plan.md`, `doc/frontend_structure.md`, `doc/folder_strucuture.md`, `doc/tech_stack.md`, `doc/rule.md`, `doc/task_completion.md`) need to be updated for recent code/schema/architecture changes. If any documentation updates are pending, update those files FIRST before running `git commit`.
 * **Mandatory Task Completion Logging**: Whenever the user explicitly instructs to "commit the current stage" or "commit changes", you MUST update the `doc/task_completion.md` file to log a verification and sync record of the tasks you just completed BEFORE executing the `git commit`.
 * When committing upon user request, use standard Conventional Commit messages:
   - `feat(...)`: New features or UI components
@@ -71,18 +71,19 @@ Before modifying any source code in a model stage:
 
 ## 📌 Rule 7: Immediate Documentation & Task Completion Synchronization
 * Whenever code paths, function signatures, input/output schemas, or test directories are altered:
-  - Immediately update `model/<stage_folder>/doc/current.md`.
+  - Immediately update `doc/current.md` and related architecture plans (`doc/backend_plan.md`, `doc/frontend_structure.md`).
   - Immediately update `doc/folder_strucuture.md`.
   - Never leave documentation outdated relative to actual code implementation.
 * **Mandatory Task Completion Update**: Whenever any coding task, bug fix, or feature is completed, you MUST edit and update `doc/task_completion.md` to reflect the latest completed deliverables, verification logs, and active status matrix.
 
 ---
 
-## 📌 Rule 8: Dual-Mode Execution Support (GUI + CLI) & Launcher Synchronization
-* Every stage model in `model/` must maintain two execution entry points:
-  1. 🖥️ **Kivy Desktop GUI Client (`front.py`)**: Modern glassmorphic desktop interface for interactive user execution across all stages (`research_model`, `question_model`, `voice_to_voice_model`, `reports_model`, `workflow`).
-  2. 💻 **Headless CLI Test Harness (`test_pipeline.py`)**: Command-line interface for automated testing and preset verification.
-* **Mandatory Launcher Synchronization (`run.bat`)**: Whenever stage execution entry points (GUI/CLI), model scripts, diagnostic utilities, or data cleaning handlers are created or altered, `run.bat` MUST be updated immediately to keep launcher menu options in exact sync with the codebase.
+## 📌 Rule 8: Tri-Mode Execution Architecture (Web + GUI + CLI) & Launcher Synchronization
+* The system supports three primary execution interfaces:
+  1. 🌐 **Web Application (FastAPI + React 18 SPA)**: The primary production interface. Full-stack execution via `backend/api/main.py` gateway and `frontend/` React client.
+  2. 🖥️ **Legacy Desktop GUI Client (`front.py`)**: Maintained in `model/workflow/` for isolated desktop execution and visual testing.
+  3. 💻 **Headless CLI Test Harness (`test_pipeline.py`)**: Command-line interface for automated testing and preset verification across individual stages.
+* **Mandatory Launcher Synchronization (`run.bat`)**: Whenever stage execution entry points (Web/GUI/CLI), model scripts, diagnostic utilities, or data cleaning handlers are created or altered, `run.bat` MUST be updated immediately to keep launcher menu options in exact sync with the codebase.
 
 ---
 

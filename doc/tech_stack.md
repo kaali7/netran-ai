@@ -8,10 +8,10 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       Next.js Web Frontend Client                           │
-│             (React 18/19, Tailwind CSS, Web Audio Worklet API)              │
+│                    React 18 + Vite 5 Web Client (SPA)                       │
+│        (Manrope Font, Vanilla CSS Tokens, Lucide Icons, AudioWorklet)       │
 └──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTP REST (JSON) / WebSockets (Binary PCM)
+                                       │ HTTP REST (JSON) / WebSockets (16kHz PCM)
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        FastAPI Web API Gateway                              │
@@ -20,157 +20,110 @@ This document defines the complete technology stack powering **Netran AI**, an a
        │               │               │               │               │
        ▼               ▼               ▼               ▼               ▼
 ┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐┌──────────────┐
-│ Auth & User  ││  Ingestion   ││ Stage 1 & 2  ││   Stage 3:   ││   Stage 4:   │
-│ Management   ││ Engine (Resume││ Research &   ││ Live Voice   ││ Evaluation   │
-│ (Bcrypt/JWT) ││ & JD Parsing)││ Question Tree││  (Local GPU) ││  (Multimodal)│
+│ Auth, Profile││  Ingestion   ││ Stage 1 & 2  ││   Stage 3:   ││   Stage 4:   │
+│ & Notification││ Engine (Resume││ Research &   ││ Live Voice   ││ Multimodal   │
+│ (Bcrypt/JWT) ││ & JD Parsing)││ Question Tree││  (Local GPU) ││ Evaluation   │
 └──────────────┘└──────────────┘└──────────────┘└──────────────┘└──────────────┘
-
 ```
 
 ---
 
 ## ⚡ 1. Backend Service & API Layer
 
-* **API Web Framework**: **FastAPI**
-* Asynchronous Python web framework built on **Starlette** and **ASGI** (`uvicorn`).
-* Interactive, auto-generated OpenAPI (Swagger UI) documentation served at `/docs`.
-* Asynchronous background execution (`fastapi.BackgroundTasks` / `asyncio.to_thread`) for long-running AI pipeline tasks.
-* Real-time, full-duplex streaming communication over **WebSockets** (`/api/v1/voice/stream/{session_id}`).
-* Middleware suite incorporating `CORSMiddleware` (configuring Next.js cross-origin access) and request timing telemetry.
-
+* **API Web Framework**: **FastAPI (0.115+)**
+  * Asynchronous Python web framework built on **Starlette** and **ASGI** (`uvicorn`).
+  * OpenAPI documentation automatically generated at `/docs`.
+  * Asynchronous background execution (`fastapi.BackgroundTasks`) for Stage 1, 2, and 4 pipelines.
+  * Real-time, full-duplex streaming communication over **WebSockets** (`/api/v1/voice/stream/{session_id}`).
+  * `CORSMiddleware` with configurable origin whitelist via `API_CORS_ORIGINS`.
 
 * **Ingestion & Data Normalization Endpoints**:
-* **Resume Upload (`POST /api/v1/ingest/resume`)**: Accepts `multipart/form-data` uploads (`.pdf`, `.docx`, `.txt`, `.tex`), extracts raw text, processes it through Gemini JSON extraction, and outputs a structured `CandidateProfile` schema.
-* **JD Text Ingestion (`POST /api/v1/ingest/jd`)**: Accepts pasted raw JD text, extracts core requirements, seniority, and tech stack, outputting a standardized `ParsedJD` schema.
+  * **Resume Upload (`POST /api/v1/ingest/resume`)**: Accepts `multipart/form-data` uploads (`.pdf`, `.docx`, `.txt`), parses via `pypdf`/`python-docx`, and extracts structured schemas via Gemini.
+  * **JD Text Ingestion (`POST /api/v1/ingest/jd`)**: Accepts pasted raw JD text, extracting core competencies and seniority levels.
 
+* **Authentication, Profile & Security**: **OAuth2 + JWT**
+  * Password hashing and verification using `passlib[bcrypt]`.
+  * Candidate profile management (`PATCH /api/v1/auth/profile`) for display names.
+  * Secure password change with verification (`POST /api/v1/auth/change-password`).
+  * Query-parameter authentication support (`?token=...`) for native browser WebSocket handshakes.
 
-* **Authentication & Authorization**: **OAuth2 + JWT (Production Standard)**
-* Password hashing and verification using `passlib[bcrypt]` / `argon2`.
-* Stateful session management and token handling with `python-jose` / `PyJWT`.
-* Role-Based Access Control (RBAC) separating `candidate` endpoints from `admin` evaluation views.
-* Query-parameter authentication support (`?token=...`) for native browser WebSocket handshakes.
+* **Notifications Subsystem**:
+  * Persistent `Notification` ORM model storing title, message, category, link, and read status.
+  * Automated event triggers during Stage 2 initialization and Stage 4 evaluation report completion.
+  * REST endpoints for listing, reading, and clearing alerts (`/api/v1/notifications`).
 
-
-* **Data Persistence & Smart Caching Engine**: **SQLAlchemy / SQLModel + SQLite 3**
-* Persistent storage for user credentials, interview sessions, parsed JSON schemas, and stage output artifacts.
-* **Session Artifacts Storage (`session_artifacts` table):** Native `JSON` columns storing `parsed_resume`, `parsed_jd`, `jd_detail` (deep web intelligence), `interview_behavior` (Eva persona rules), `question_tree`, `transcript`, and `evaluation_report` (`sessions/<session_id>/recording.wav` is the only binary file saved on disk).
-* **Input-Hash Deduplication (Smart SQLite Caching):** Uses SHA-256 fingerprinting (`Resume + JD`) to prevent redundant Gemini/LLM calls if a candidate re-submits or re-opens a session.
-* **Zero-Code Cloud Migration:** 100% compatible with PostgreSQL / Supabase by swapping the `DATABASE_URL` connection string in `.env`.
-
-
-* **Data Validation & Serialization**: **Pydantic v2**
-* Runtime schema enforcement (`BaseModel`) for all REST payloads, ingestion schemas, WebSocket event frames, and LLM structured JSON generation.
-
-
-* **Server Execution**: **Uvicorn**
-* High-performance ASGI web server worker.
-
-
+* **Data Persistence & Smart Caching**: **SQLAlchemy + SQLite 3**
+  * Storage for users, sessions, artifacts, and notifications with native JSON column support.
+  * Input-hash deduplication (SHA-256 fingerprinting) skipping redundant pipeline executions.
+  * Zero-code cloud migration path to PostgreSQL / Supabase via `DATABASE_URL`.
 
 ---
 
 ## 🧠 2. Artificial Intelligence & LLM Stack
 
 * **Primary Cloud Intelligence**: **Google Gemini API (`google-genai` SDK)**
-* **Model**: `gemini-3.6-flash`
-* **Ingestion Engine**: Converts raw unstructured resume text and pasted JD text into standardized, strongly-typed JSON objects (`CandidateProfile` & `ParsedJD`).
-* **Stage 1 (JD Research & Intelligence Engine)**: Conducts deep structural breakdown of JDs and Tavily web search synthesis to produce **`jd_detail`** (role context, market intelligence, company background).
-* **Stage 2 (Question & Prompt Engine)**: Synthesizes candidate match matrices, constructs the 15-question tree, and embeds **`interview_behavior`** (Eva's tone, system prompts, strictness level, and dynamic `whisper_domain_vocabulary`).
-* **Stage 4 (Reports Engine)**: 3-branch multimodal evaluation (Audio, Technical Transcript, Combined) with exponential backoff rate-limit handling.
-
+  * **Model**: `gemini-3.6-flash`
+  * **Ingestion**: Converts unstructured text into typed schemas (`CandidateProfile` & `ParsedJD`).
+  * **Stage 1 (Research)**: Synthesizes web intelligence into structured rubrics (`InterviewRubric`).
+  * **Stage 2 (Question Tree)**: Builds 15-question trees and Eva interviewer behavior prompts.
+  * **Stage 4 (Evaluation)**: 3-branch multimodal evaluation (Audio, Technical, Combined).
 
 * **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
-* Low-latency streaming response generation during live conversations, dynamically steered using `interview_behavior` and `jd_detail` loaded directly from SQLite.
-
+  * Low-latency response generation during live interviews, steered by `interviewer_behavior.json`.
 
 * **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
-* Hybrid conversational turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 3B probe) resolving candidate pauses, hesitation checks, and thoughts, aligned with `OLLAMA_MODEL` to eliminate memory swapping overhead.
+  * Hybrid turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 3B probe) resolving candidate pauses.
 
+* **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 `small` int8)**
+  * Real-time transcription loaded offline (`HF_HUB_OFFLINE=1`), boosted with domain vocabulary.
+  * Tuned with `hallucination_silence_threshold=0.5` to eliminate trailing silence latency.
 
-* **Speech-to-Text (STT)**: **Faster-Whisper (CTranslate2 / OpenAI Whisper `small` int8)**
-* Real-time streaming transcription loaded offline (`HF_HUB_OFFLINE=1`), dynamically boosted with candidate-specific `whisper_domain_vocabulary` extracted from Stage 2 `interview_behavior`.
+* **Speaker Verification**: **SpeechBrain ECAPA-TDNN**
+  * Auto-enrolls candidate voice print (first utterance >= 2s) and verifies identity (threshold 0.55).
 
-
-* **Candidate Speaker Verification (Offline Speaker Verifier)**: **SpeechBrain ECAPA-TDNN (`speechbrain/spkrec-ecapa-voxceleb`)**
-* 192-dim speaker embedding encoder for candidate identity auto-enrollment (from first ICEBREAKER utterance >= 2s) and cosine-similarity verification (rejects foreign speech/background voices before STT).
-
-
-* **Voice Activity Detection (VAD) & Audio DSP**: **Silero VAD (v3 ONNX Runtime)**
-* Speech start/stop detection with **inline dynamic noise floor calibration** (samples ambient room noise directly from active producer queue during the first 960ms of `listen_and_transcribe()` to eliminate PortAudio stream lockups on Windows).
-* Adaptive noise floor gates (`start_rms = 2.5x ambient_floor`, `continue_rms = 1.8x ambient_floor`) and high-pass IIR filtering (`alpha=0.995`) to remove DC drift before feeding 16kHz PCM audio to Whisper.
-
+* **Voice Activity Detection (VAD) & DSP**: **Silero VAD (v3 ONNX)**
+  * Ambient noise floor calibration cached across turns.
+  * 1200ms pause tolerance in web mode, 600ms post-TTS echo guard, and IIR DC blocking.
 
 * **Text-to-Speech (TTS)**: **Kokoro-82M (PyTorch / KPipeline)**
-* High-fidelity neural speech synthesis loaded offline, outputting audio chunks to the persistent streaming buffer under 250ms TTFA (Time-To-First-Audio).
-
-
+  * Neural speech synthesis with sub-250ms Time-To-First-Audio (TTFA).
 
 ---
 
 ## 🎨 3. Presentation Layer & Browser Audio Transport
 
 * **Web Application Client**: **React 18 + Vite 5 (SPA)**
-* Modern web UI built with the Serene Learning Modern Glassmorphism design system (Manrope typography, lavender-mint palette, CSS custom properties) for dashboard telemetry, session history, setup wizards, live voice calls, and post-interview analytics.
-
+  * Serene Learning Modern Glassmorphism design system (Manrope typography, custom CSS tokens).
+  * 100% Vector Icon Standard (`lucide-react`) adhering strictly to Rule 15.
+  * 9 comprehensive page surfaces: Dashboard, Setup, Interview Room, Processing, Report Scorecard, History, Analytics, Settings, Login.
 
 * **Browser Audio Engine**: **Web Audio API & AudioWorklet**
-* Converts raw browser microphone streams (Opus/WebM) into uniform **16kHz 16-bit Mono PCM bytes** on the client side before streaming across the WebSocket.
-* Handles **Barge-In / Interruption Events**: Instantly clears the local Web Audio playback queue when the backend sends an `INTERRUPT` signal.
-
+  * `pcm-processor.js` worklet downsamples native browser audio (48kHz) to 16kHz 16-bit Mono PCM.
+  * Handles barge-in interruption events by immediately flushing local audio buffers.
 
 * **Legacy Desktop Client**: **Kivy 2.3 GUI**
-* Standalone Python desktop UI (maintained for local testing).
-
-
+  * Standalone desktop test client maintained in `model/workflow/`.
 
 ---
 
 ## 🌐 4. Web Intelligence & Scraping Engine
 
 * **Search API**: **Tavily Search API**
-* Domain-restricted market intelligence extraction.
-
-
+  * Domain-restricted market intelligence extraction for company context and tech rubrics.
 * **HTTP Client**: **httpx**
-* Asynchronous HTTP requests with connection pooling.
-
-
+  * Asynchronous HTTP requests with connection pooling.
 * **HTML Parsing**: **BeautifulSoup4 / lxml**
-* Web content extraction from developer portals (LinkedIn, GitHub, StackOverflow, LeetCode, Medium).
-
-
+  * Web content extraction from verified technical domains.
 
 ---
 
-## 📄 5. Document Ingestion & Parsing Engine
+## 🛠️ 5. Development, DevOps & Security Tooling
 
-* **Multi-Format Resume Ingestion**:
-* **PDF Files (`.pdf`)**: Text and structure extraction via `pypdf`.
-* **Word Documents (`.docx`)**: Paragraph and table text extraction via `python-docx`.
-* **Plain Text & LaTeX (`.txt`, `.tex`)**: Direct string decoding and clean regex sanitization.
-
-
-* **LLM Schema Structuring**:
-* Parsed raw text from any format is fed into Gemini via Pydantic schema enforcement to extract candidate name, contact, technical skills array, work history, projects, and education into a standard JSON payload.
-
-
-* **Job Description Conversion**:
-* Converts pasted raw text into structured JSON containing role scope, required skills, optional skills, and experience level for downstream Stage 1 & 2 engines.
-
-
-
----
-
-## 🛠️ 6. Development, DevOps & Security Tooling
-
-* **Runtime Environment**: Python 3.12+ (`.venv`)
-* **Interactive Batch Script**: `run.bat` (Windows automated launcher for running the FastAPI web server, CLI test harnesses, and quality audits)
+* **Runtime Environment**: Python 3.12+ (`.venv`) & Node.js 18+
+* **Master Batch Launcher**: `run.bat` (Windows automated launcher for servers, diagnostic tests, DB reset, and cleanups).
 * **Code Quality & Security Suite**:
-* **Ruff**: Ultra-fast Linter and Code Formatter.
-* **Pylint & Mypy**: Static analyzer and strict type checker enforcing Python 3.10+ type safety.
-* **Bandit**: Automated security audit scanner identifying AST vulnerability patterns (e.g., hardcoded credentials, unsafe queries).
-* **Radon**: Cyclomatic Complexity (`cc`) and Maintainability Index (`mi`) telemetry analyzer.
-* **Audit Script**: `scan_code_quality.py` (Master quality scanner).
-
-
+  * **Ruff & Pylint**: Linting and style enforcement.
+  * **Bandit**: AST security vulnerability analysis.
+  * **Radon**: Cyclomatic complexity and maintainability index telemetry.
+  * **Audit Script**: `scan_code_quality.py`.
 * **Version Control**: Git & GitHub

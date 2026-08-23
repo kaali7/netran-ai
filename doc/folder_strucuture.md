@@ -22,7 +22,8 @@ doc/                           # Master System Documentation (Root Level)
 ├── frontend_structure.md      # Frontend architecture, components & design tokens
 ├── rule.md                    # Mandatory system rules & developer directives
 ├── task_completion.md         # Task completion tracker & deliverables matrix
-└── tech_stack.md              # Technical stack specifications
+├── tech_stack.md              # Technical stack specifications
+└── web_voice.md               # Web voice timing & latency audit specification
 
 frontend/                      # React 18 + Vite 5 Web Client
 ├── public/                    # Static brand assets (favicon.svg)
