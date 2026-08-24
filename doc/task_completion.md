@@ -49,6 +49,13 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
   - **Fix E** (`listener.py`): Post-TTS echo guard extended from 300ms → 600ms for WebSocket mode — stops Eva's trailing audio re-triggering VAD.
   - **Fix F** (`api/routers/voice.py`): Replaced `get_nowait()` + 20ms sleep polling in `audio_send_worker` with blocking `run_in_executor` — eliminates systematic 20ms chunk jitter.
   - **Fix G** (`pcm-processor.js` + `useInterviewSession.js`): Removed forced `sampleRate: 16000` from AudioContext; worklet now downsamples explicitly from native OS rate (48kHz→16kHz) — eliminates OS resampling artifacts causing false VAD triggers.
+- **Cross-Origin Resource Sharing (CORS) & LAN Support (Aug 2026)**:
+  - Configured `CORSMiddleware` in `api/main.py` with `allow_origin_regex` to support seamless cross-origin requests from any LAN IP (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`), localhost ports (`5173`, `5174`, `3000`), and configurable `API_CORS_ORIGINS`.
+  - Added full credentials support (`allow_credentials=True`) for authorization tokens and cookie handshakes across mobile and local network testing.
+- **Multi-Hardware Audio & Voice Engine Optimization (Aug 2026)**:
+  - Enhanced `listener.py` to always open audio input streams at the physical device's native rate (e.g. 44.1kHz / 48kHz) and perform real-time downsampling, resolving MME driver silent-channel saturation.
+  - Dynamically scaled Faster-Whisper CPU threads to available cores (`os.cpu_count() - 2`, up to 8 threads), cutting STT processing latency.
+  - Added `NOISE_FLOOR_OVERRIDE` and adaptive `_continue_rms_gate` headroom (2.8x for web sessions) to handle noisy hardware environments.
 
 ---
 

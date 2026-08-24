@@ -95,7 +95,12 @@ vad_session = ort.InferenceSession(VAD_MODEL_PATH, ort_opts)
 
 # Loads from local offline snapshot path directly
 print(f"Loading Faster-Whisper model ({WHISPER_MODEL})...", flush=True)
-whisper_model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=4)
+# Use as many CPU threads as available (minus 2 for OS/audio overhead).
+# Hardcoded cpu_threads=4 caused 18s+ Whisper latency on 10-core CPUs.
+# Dynamic thread count cuts STT processing time proportionally.
+_cpu_threads = max(4, min(8, (os.cpu_count() or 4) - 2))
+print(f"[Whisper] Using {_cpu_threads} CPU threads (cpu_count={os.cpu_count()})", flush=True)
+whisper_model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=_cpu_threads)
 print("Models loaded successfully!", flush=True)
 
 # Auto-select the best available physical microphone at startup.
@@ -279,46 +284,38 @@ def listen_and_transcribe(
     else:
         for attempt in range(3):
             try:
-                # Attempt Method B: native OS resampling (works beautifully on MME/DirectSound)
+                # Always open at the device's NATIVE sample rate.
+                # Previous code tried 16kHz first (Method B) — on Realtek MME drivers this
+                # request succeeds without PortAudioError but delivers silent/aliased audio,
+                # causing Silero VAD to output prob=0.0005 on every frame (the VAD silent
+                # symptom). The 44100Hz → 16kHz downsampling below (audioop.ratecv or
+                # boxcar reshape) is the correct path — it's reliable across all Realtek
+                # MME, DirectSound, and WASAPI drivers on all hardware.
+                device_info = (
+                    sd.query_devices(MIC_DEVICE)
+                    if MIC_DEVICE is not None
+                    else sd.query_devices(sd.default.device[0])
+                )
+                native_rate = int(device_info.get("default_samplerate", 16000))
+                if native_rate <= 0:
+                    native_rate = 16000
+                CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
+
                 stream = sd.InputStream(
-                    samplerate=RATE,
+                    samplerate=native_rate,
                     channels=CHANNELS,
                     dtype='float32',
-                    blocksize=CHUNK,
+                    blocksize=CHUNK_NATIVE,
                     device=MIC_DEVICE,
                 )
-                native_rate = RATE
-                CHUNK_NATIVE = CHUNK
                 break
-            except sd.PortAudioError:
-                try:
-                    # Fallback Method A: WASAPI strictly requires native rate
-                    device_info = sd.query_devices(MIC_DEVICE) if MIC_DEVICE is not None else sd.query_devices(sd.default.device[0])
-                    native_rate = int(device_info.get("default_samplerate", 16000))
-                    if native_rate <= 0:
-                        native_rate = 16000
-                    CHUNK_NATIVE = int(CHUNK * native_rate / RATE)
-                    
-                    stream = sd.InputStream(
-                        samplerate=native_rate,
-                        channels=CHANNELS,
-                        dtype='float32',
-                        blocksize=CHUNK_NATIVE,
-                        device=MIC_DEVICE,
-                    )
-                    break
-                except Exception as e:
-                    if attempt < 2:
-                        print(f"[VAD] Mic locked, retrying... ({e})")
-                        time.sleep(0.3)
-                    else:
-                        raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
             except Exception as e:
                 if attempt < 2:
                     print(f"[VAD] Mic locked, retrying... ({e})")
                     time.sleep(0.3)
                 else:
                     raise RuntimeError(f"Could not open microphone after 3 attempts: {e}")
+
 
         stream.start()
         print(
@@ -445,8 +442,12 @@ def listen_and_transcribe(
 
         # --- Write calibration results to SessionState cache ---
         if state is not None:
-            _start_gate_computed = max(ambient_floor * 2.5, 0.012)
-            _continue_gate_computed = max(ambient_floor * 1.8, 0.010)
+            # FIX-2: Reduced multipliers (1.8x and 1.2x) because 2.5x/2.8x created gates
+            # higher than actual human speech on laptops with low dynamic range microphones
+            # (e.g. noise=0.014, speech_p50=0.011, speech_max=0.060).
+            _start_gate_computed = max(ambient_floor * 1.8, 0.012)
+            _continue_gate_computed = max(ambient_floor * 1.2, 0.010)
+            
             state.cached_ambient_floor = ambient_floor
             state.cached_start_rms_gate = _start_gate_computed
             state.cached_continue_rms_gate = _continue_gate_computed
@@ -463,8 +464,8 @@ def listen_and_transcribe(
         _start_rms_gate    = state.cached_start_rms_gate
         _continue_rms_gate = state.cached_continue_rms_gate
     else:
-        _start_rms_gate    = max(ambient_floor * 2.5, 0.012)
-        _continue_rms_gate = max(ambient_floor * 1.8, 0.010)
+        _start_rms_gate    = max(ambient_floor * 1.8, 0.012)
+        _continue_rms_gate = max(ambient_floor * 1.2, 0.010)
 
     print(
         f"[Calibration] Gates → start_rms={_start_rms_gate:.5f}  "
@@ -698,10 +699,16 @@ def listen_and_transcribe(
                 # --- Adaptive Speech CONTINUATION Gate (RMS primary) ---
                 # Silence counter climbs when BOTH VAD and RMS confirm silence.
                 # Either VAD prob > 0.20 OR rms above continue gate resets the counter.
+                # FIX-3: Silence counting is gated behind MIN_SPEECH_FRAMES to prevent
+                # accidental early endpointing when the candidate just started speaking.
+                # Without this guard, a very short pause in the first word of a response
+                # (common with nervous speakers or slow-start audio hardware) could cause
+                # the silence counter to fire before the minimum speech duration is met.
                 if speech_prob > 0.20 or rms > _continue_rms_gate:
                     silence_frames_counter = 0
-                else:
+                elif total_frames_counter >= MIN_SPEECH_FRAMES:
                     silence_frames_counter += 1
+                # else: still accumulating minimum speech — don't count silence yet
 
             if ui_callback:
                 ui_callback({

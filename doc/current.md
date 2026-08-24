@@ -90,11 +90,17 @@ Netran AI is a production-grade, multimodal AI technical interviewer platform. T
 
 ### 2. Voice Pipeline Timing & Optimization (Aug 2026 Audit)
 - **Calibration Cache**: Pre-turn 960ms ambient noise calibration cached across turns to eliminate discarded leading speech.
+- **Multi-Hardware Native Rate Handshake**: Voice engine forces physical mic hardware to open at native OS rate (e.g., 44.1kHz or 48kHz) and performs real-time AudioOp downsampling to 16kHz, preventing MME driver silent-channel saturation that breaks Silero VAD on external laptops.
+- **Dynamic Threading**: Faster-Whisper CPU threads scale dynamically to `os.cpu_count() - 2` to minimize STT latency on high-core CPUs.
+- **Strict Mode Double-Connect Guard**: Global `ACTIVE_WS_CONNECTIONS` lock deduplicates React Strict Mode WS race conditions that previously spawned concurrent conflicting voice engines.
 - **Web Pause Tolerance**: Adjusted to 1200ms with 800ms minimum speech frames for conversational naturalness.
 - **Whisper Latency Tuning**: `hallucination_silence_threshold` set to 0.5s, eliminating ~2s of trailing silence analysis.
 - **Zero Wiener Filter Latency**: `noisereduce` bypassed for WebSocket sessions since browser `getUserMedia` handles noise suppression.
 - **Post-TTS Echo Guard**: 600ms guard protects against browser audio playback tail reflections.
 - **Native AudioContext**: Browser AudioContext captures native 48kHz audio; `pcm-processor.js` handles explicit downsampling to 16kHz PCM.
+
+### 3. API Gateway & Network Integration
+- **Universal LAN CORS**: Fully configured `CORSMiddleware` with `allow_origin_regex` to support cross-origin authenticated testing on mobile devices, local LAN IPs (`192.168.x.x`, `10.x.x.x`), and standard localhost ports (`5173`, `3000`).
 
 ---
 

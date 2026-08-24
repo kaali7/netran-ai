@@ -26,6 +26,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["Voice Interview"])
 
+# Global tracker to prevent React Strict Mode from spawning concurrent engines for the same session
+ACTIVE_WS_CONNECTIONS: dict[str, threading.Event] = {}
+
+
 
 @router.get("/status/{session_id}", response_model=VoiceSessionStatusResponse)
 def check_voice_session_status(
@@ -205,7 +209,16 @@ async def voice_interview_stream(
 
     # Prepare threading primitives
     ws_queue = asyncio.Queue()
+    
+    # Bug 1 Fix: React Strict Mode double-connect deduplication
+    if session_id in ACTIVE_WS_CONNECTIONS:
+        logger.warning(f"Multiple WS connections detected for session {session_id}. Terminating previous connection.")
+        ACTIVE_WS_CONNECTIONS[session_id].set()
+        await asyncio.sleep(0.5)  # Allow previous engine thread time to gracefully terminate
+        
     stop_event = threading.Event()
+    ACTIVE_WS_CONNECTIONS[session_id] = stop_event
+    
     import queue
     audio_queue = queue.Queue()
     audio_out_queue = queue.Queue()
@@ -372,6 +385,10 @@ async def voice_interview_stream(
         recv_task.cancel()
         if not stop_event.is_set():
             stop_event.set()
+            
+        if ACTIVE_WS_CONNECTIONS.get(session_id) is stop_event:
+            del ACTIVE_WS_CONNECTIONS[session_id]
+            
         try:
             await websocket.close()
             if exec_logger:
