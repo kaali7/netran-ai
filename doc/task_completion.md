@@ -62,6 +62,8 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
   - **Pre-Roll Echo Gating & Adaptive Calibration** (`listener.py`): Pre-speech buffer is cleared during non-listening states to prevent Eva acoustic reflections from prepending to speech; dynamic calibration refines `cached_start_rms_gate` per microphone sensitivity.
   - **TurnManager State Lock & Short Answer Filter Fix**: Resolved conversational deadlocks where empty/rejected transcripts left `TurnManager` in `THINKING` state, and expanded `is_valid_transcript` whitelist to correctly accept natural single-word answers ("fine", "good", "ready", "yes", "okay").
   - **Adaptive Calibration Scope & `import re` Fix**: Fixed `UnboundLocalError: ambient_floor` and `NameError: re` in `listener.py` that caused the voice engine to terminate prematurely into Stage 4 evaluation after the candidate's first answer.
+  - **VAD Energy Gating & Intent Refinement**: Enforced minimum RMS energy gate (`max(_start_rms_gate * 0.70, 0.006)`) on strong VAD paths in `listener.py` to prevent phantom speech triggers from ambient room murmurs, and refined `stop_pattern` in `question_manager.py` to prevent casual words from prematurely concluding interviews.
+  - **Comprehensive Master & Frontend READMEs**: Authored full visual documentation for root project (`README.md`) and frontend (`frontend/README.md`), integrating demonstration video (`doc/img/demo_video.mp4`) and visual screenshot galleries (`dashboard`, `interview room`, `multimodal evaluation`, `report scorecard`, `analytics`, `history`).
 
 ---
 

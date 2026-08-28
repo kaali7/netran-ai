@@ -88,10 +88,13 @@ class QuestionManager:
 
         # 0. Candidate explicitly requesting to stop the interview or expressing severe nervousness
         stop_pattern = re.compile(
-            r"\b(quit|terminate|bye|goodbye|cancel\s+interview|stop\s+(the|this)?\s*interview|end\s+(the|this)?\s*interview|can\s+we\s+stop|can\s+stop|i\s+want\s+to\s+stop|i\s+need\s+to\s+stop|let'?s\s+stop|feel\s+nervous|too\s+nervous|very\s+nervous|extremely\s+nervous|having\s+anxiety|leave\s+interview|finish\s+early)\b", 
+            r"\b(quit\s+(the\s+)?interview|cancel\s+interview|stop\s+(the|this)?\s*interview|end\s+(the|this)?\s*interview|can\s+we\s+stop|can\s+we\s+end|i\s+want\s+to\s+stop|i\s+want\s+to\s+quit|i\s+need\s+to\s+stop|let'?s\s+stop\s+the\s+interview|leave\s+interview|finish\s+early|terminate\s+interview)\b", 
             re.IGNORECASE
         )
         if stop_pattern.search(clean):
+            return "END_INTERVIEW_REQUEST"
+
+        if clean in {"bye", "goodbye", "bye bye", "bye.", "goodbye."} and self.is_on_last_question():
             return "END_INTERVIEW_REQUEST"
 
         # 1. Candidate Meta-Intent Override (Explicit Skip / Pass)

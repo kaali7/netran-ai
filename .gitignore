@@ -50,6 +50,9 @@ backend/data/*.sqlite3
 *.mp3
 *.ogg
 *.pcm
+*.mp4
+*.mkv
+*.mov
 *.log
 _interview_log.txt
 benchmark_log.csv

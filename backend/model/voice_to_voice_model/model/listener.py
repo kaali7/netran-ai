@@ -717,11 +717,11 @@ def listen_and_transcribe(
             if not has_spoken:
                 # --- Adaptive Speech START Gate (hybrid VAD + RMS) ---
                 # Primary path  : VAD prob >= 0.30 AND rms > _start_rms_gate  (debounce configurable)
-                # Strong path   : VAD prob >= 0.50 alone (confident speech, no RMS needed)
+                # Strong path   : VAD prob >= 0.60 AND rms >= max(_start_rms_gate * 0.70, 0.006) (prevents faint background whisper triggers)
                 # RMS fallback  : rms > _start_rms_gate for 4 consecutive frames (~128ms)
                 vad_triggered = (
                     (speech_prob >= 0.30 and rms >= _start_rms_gate)
-                    or speech_prob >= 0.50
+                    or (speech_prob >= 0.60 and rms >= max(_start_rms_gate * 0.70, 0.006))
                 )
                 rms_triggered = rms >= _start_rms_gate
 
