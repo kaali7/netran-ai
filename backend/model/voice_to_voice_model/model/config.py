@@ -62,6 +62,9 @@ class Stage3Config:
     sv_model: str = field(default_factory=lambda: os.getenv(
         "SV_MODEL", "speechbrain/spkrec-ecapa-voxceleb"
     ))
+    echo_guard_ms: int = field(default_factory=lambda: int(os.getenv("ECHO_GUARD_MS", "150")))
+    speech_start_debounce: int = field(default_factory=lambda: int(os.getenv("SPEECH_START_DEBOUNCE", "2")))
+    vad_barge_in_threshold: float = field(default_factory=lambda: float(os.getenv("VAD_BARGE_IN_THRESHOLD", "0.65")))
 
     @classmethod
     def from_env(cls) -> "Stage3Config":
@@ -76,6 +79,9 @@ MAX_QUESTIONS = 15
 SV_ENABLED = os.getenv("SV_ENABLED", "1") == "1"
 SV_THRESHOLD = float(os.getenv("SV_THRESHOLD", "0.55"))
 SV_MODEL = os.getenv("SV_MODEL", "speechbrain/spkrec-ecapa-voxceleb")
+ECHO_GUARD_MS = int(os.getenv("ECHO_GUARD_MS", "150"))
+SPEECH_START_DEBOUNCE = int(os.getenv("SPEECH_START_DEBOUNCE", "2"))
+VAD_BARGE_IN_THRESHOLD = float(os.getenv("VAD_BARGE_IN_THRESHOLD", "0.65"))
 
 
 

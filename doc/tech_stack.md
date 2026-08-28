@@ -82,8 +82,13 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * Auto-enrolls candidate voice print (first utterance >= 2s) and verifies identity (threshold 0.55).
 
 * **Voice Activity Detection (VAD) & DSP**: **Silero VAD (v3 ONNX)**
-  * Ambient noise floor calibration cached across turns.
-  * 1200ms pause tolerance in web mode, 600ms post-TTS echo guard, and IIR DC blocking.
+  * Ambient noise floor calibration cached across turns with dynamic speech level adaptation.
+  * 1200ms pause tolerance in web mode, dynamic post-playback echo guard, and streaming IIR DC blocking.
+
+* **Conversation Turn Manager & Playback Sync**: **TurnManager State Machine**
+  * Decouples raw VAD probabilities from conversational state transitions (`READY`, `EVA_SPEAKING`, `PLAYBACK_ACTIVE`, `ECHO_GUARD`, `LISTENING`, `CANDIDATE_SPEAKING`, `THINKING`).
+  * Event-driven client synchronization (`playback_started` / `playback_finished` events from browser Web Audio API).
+  * Real-time latency breakdown telemetry and cross-device audio diagnostics.
 
 * **Text-to-Speech (TTS)**: **Kokoro-82M (PyTorch / KPipeline)**
   * Neural speech synthesis with sub-250ms Time-To-First-Audio (TTFA).

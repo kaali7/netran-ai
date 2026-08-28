@@ -24,6 +24,7 @@ import threading
 import time
 import os
 import sys
+import re
 import warnings
 import collections
 from pathlib import Path
@@ -50,7 +51,14 @@ from faster_whisper import WhisperModel
 
 try:
     from .benchmark import Benchmark
-    from .config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
+    from .config import (
+        WHISPER_MODEL,
+        MIC_DEVICE_INDEX,
+        auto_select_mic_device,
+        VAD_BARGE_IN_THRESHOLD,
+        SPEECH_START_DEBOUNCE,
+        ECHO_GUARD_MS,
+    )
     from .session_state import SessionState
     from .turn_classifier import check_thought_completion
     try:
@@ -64,6 +72,9 @@ except ImportError:
             WHISPER_MODEL,
             MIC_DEVICE_INDEX,
             auto_select_mic_device,
+            VAD_BARGE_IN_THRESHOLD,
+            SPEECH_START_DEBOUNCE,
+            ECHO_GUARD_MS,
         )
         from model.voice_to_voice_model.model.session_state import SessionState
         from model.voice_to_voice_model.model.turn_classifier import (
@@ -75,7 +86,14 @@ except ImportError:
             SpeakerVerifier = None
     except ImportError:
         from benchmark import Benchmark
-        from config import WHISPER_MODEL, MIC_DEVICE_INDEX, auto_select_mic_device
+        from config import (
+            WHISPER_MODEL,
+            MIC_DEVICE_INDEX,
+            auto_select_mic_device,
+            VAD_BARGE_IN_THRESHOLD,
+            SPEECH_START_DEBOUNCE,
+            ECHO_GUARD_MS,
+        )
         from session_state import SessionState
         from turn_classifier import check_thought_completion
         try:
@@ -113,22 +131,39 @@ WHISPER_HALLUCINATION_PATTERNS = {
     "you", "thank you very much.", "bye.", "so", "am", "oh.", "next.",
     "thanks.", "bye bye.", "see you next time.", "please subscribe.",
     "like and subscribe.", "thank you for watching.", "oh", "next",
-    "uh", "um", "ah", "ah.", "huh", "huh.", "okay.", "okay", "yes.", "no."
+    "uh", "um", "ah", "ah.", "huh", "huh."
 }
 
 def is_valid_transcript(text: str) -> bool:
     """Filters empty strings, single filler letters, and Whisper silent hallucinations."""
+    if not text:
+        return False
     clean = text.strip().lower()
-    if not clean or clean in WHISPER_HALLUCINATION_PATTERNS:
+    if not clean:
+        return False
+
+    clean_no_punct = re.sub(r"[^\w\s]", "", clean).strip()
+    if not clean_no_punct:
+        return False
+
+    if clean in WHISPER_HALLUCINATION_PATTERNS or clean_no_punct in WHISPER_HALLUCINATION_PATTERNS:
         return False
     
     # Filter out pure underscore/punctuation hallucinations caused by heavy static
     if all(char in "_ .-" for char in clean):
         return False
         
-    words = clean.split()
-    if len(words) < 2 and clean not in {"yes", "no", "sure", "ok", "correct", "yeah", "nope", "fastapi", "python"}:
-        return False
+    words = clean_no_punct.split()
+    valid_single_words = {
+        "yes", "no", "sure", "ok", "okay", "correct", "yeah", "yep", "nope",
+        "fine", "good", "great", "ready", "hello", "hi", "hey", "well",
+        "fastapi", "python", "javascript", "react", "sql", "aws", "docker"
+    }
+    if len(words) < 2 and words[0] not in valid_single_words:
+        # Filter out 1-2 char noise letters (e.g. 'a', 'i') or pure single stop words
+        if len(words[0]) <= 2 or words[0] in {"the", "and", "but", "or", "so", "am", "is", "it"}:
+            return False
+            
     return True
 
 
@@ -226,12 +261,15 @@ def listen_and_transcribe(
     whisper_prompt="",
     speaker_verifier=None,
     ws_audio_queue=None,
+    turn_manager=None,
 ):
     """
     Opens the microphone, uses Silero VAD (or Push-To-Talk mode) to detect speech start and end,
-    respects the echo gate via SessionState, transcribes the speech using Faster-Whisper,
+    respects TurnManager conversational state / echo gate, transcribes speech using Faster-Whisper,
     and optionally streams raw frames to continuous mic writer.
     """
+    if turn_manager is None and state is not None and getattr(state, "turn_manager", None) is not None:
+        turn_manager = state.turn_manager
     # Audio hardware recording constraints
     CHANNELS = 1
     RATE = 16000     # 16kHz for VAD and Whisper
@@ -599,52 +637,76 @@ def listen_and_transcribe(
             speech_prob = out[0, 0]
 
 
-            # 3b. Full-Duplex Barge-In Detection & Echo Guard
-            # (rms already computed from raw vad_frame above)
-            #
-            # Echo guard duration — WebSocket mode gets 600ms (vs 300ms for desktop) because:
-            # browser AudioContext buffers ~150–200ms of audio that is already in-flight
-            # through the WS pipeline when Eva stops speaking. Without the longer guard,
-            # Eva's own trailing audio (buffered in transit) re-enters the VAD and triggers
-            # a false speech-start immediately after she finishes.
-            _echo_guard_duration = 0.60 if ws_audio_queue is not None else 0.30
+            # 3b. TurnManager State Gating & Full-Duplex Barge-In Detection
+            if turn_manager is not None:
+                allowed_to_speak = turn_manager.is_candidate_allowed_to_speak()
+                barge_in_allowed = turn_manager.is_barge_in_allowed()
 
-            if state and state.is_agent_speaking.is_set():
-                _echo_guard_until = time.monotonic() + _echo_guard_duration  # Arm post-speech guard
-                if speech_prob > 0.65:
-                    now = time.monotonic()
-                    cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
-                    last_t = getattr(state, 'last_interrupt_time', 0.0)
-                    if now - last_t > cooldown:
-                        print("⚡ [Barge-In] Candidate interrupted Eva! Halting audio output.", flush=True)
-                        state.interrupt_event.set()
-                        state.last_interrupt_time = now
-                        try:
-                            from .speaker import force_stop_all
-                        except ImportError:
+                if not allowed_to_speak:
+                    if barge_in_allowed and speech_prob > VAD_BARGE_IN_THRESHOLD:
+                        now = time.monotonic()
+                        cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3) if state else 0.3
+                        last_t = getattr(state, 'last_interrupt_time', 0.0) if state else 0.0
+                        if now - last_t > cooldown:
+                            print("⚡ [Barge-In] Candidate interrupted Eva during playback! Halting audio output.", flush=True)
+                            turn_manager.on_barge_in()
+                            if state:
+                                state.interrupt_event.set()
+                                state.last_interrupt_time = now
+                                state.is_agent_speaking.clear()
                             try:
-                                from model.voice_to_voice_model.model.speaker import (
-                                    force_stop_all,
-                                )
+                                from .speaker import force_stop_all
                             except ImportError:
-                                from speaker import force_stop_all
-                        force_stop_all()
-                        state.is_agent_speaking.clear()
-                        _echo_guard_until = 0.0  # Cancel guard when candidate barged in
-                else:
-                    silence_frames_counter = 0
-                    continue
+                                try:
+                                    from model.voice_to_voice_model.model.speaker import force_stop_all
+                                except ImportError:
+                                    from speaker import force_stop_all
+                            force_stop_all()
+                            has_spoken = True
+                            audio_buffer.append(vad_frame.copy())
+                            silence_frames_counter = 0
+                    else:
+                        # Clear pre-speech ring buffer so Eva's acoustic playback is NOT prepended to speech
+                        pre_speech_buffer.clear()
+                        silence_frames_counter = 0
+                        continue
+            else:
+                # Desktop / Fallback legacy echo guard path
+                _echo_guard_duration = 0.60 if ws_audio_queue is not None else 0.30
+                if state and state.is_agent_speaking.is_set():
+                    _echo_guard_until = time.monotonic() + _echo_guard_duration
+                    if speech_prob > VAD_BARGE_IN_THRESHOLD:
+                        now = time.monotonic()
+                        cooldown = getattr(state, 'interrupt_cooldown_sec', 0.3)
+                        last_t = getattr(state, 'last_interrupt_time', 0.0)
+                        if now - last_t > cooldown:
+                            print("⚡ [Barge-In] Candidate interrupted Eva! Halting audio output.", flush=True)
+                            state.interrupt_event.set()
+                            state.last_interrupt_time = now
+                            try:
+                                from .speaker import force_stop_all
+                            except ImportError:
+                                try:
+                                    from model.voice_to_voice_model.model.speaker import force_stop_all
+                                except ImportError:
+                                    from speaker import force_stop_all
+                            force_stop_all()
+                            state.is_agent_speaking.clear()
+                            _echo_guard_until = 0.0
+                    else:
+                        silence_frames_counter = 0
+                        pre_speech_buffer.clear()
+                        continue
 
-            # Post-TTS Echo Guard: suppress VAD triggers during post-speech room acoustic decay
-            if time.monotonic() < _echo_guard_until:
-                continue
+                # Post-TTS Echo Guard fallback
+                if time.monotonic() < _echo_guard_until:
+                    pre_speech_buffer.clear()
+                    continue
 
             # 4. Speech Start/End Decision Logic
             _diag_frame_counter += 1
 
-
             # Periodic VAD diagnostic: print live VAD prob + RMS every ~2s (60 frames * 32ms)
-            # This helps calibrate thresholds when speech is not being detected.
             if _diag_frame_counter % 60 == 0 and not has_spoken:
                 print(
                     f"[VAD Diag] prob={speech_prob:.3f}  rms={rms:.4f}  "
@@ -653,9 +715,8 @@ def listen_and_transcribe(
                 )
 
             if not has_spoken:
-
                 # --- Adaptive Speech START Gate (hybrid VAD + RMS) ---
-                # Primary path  : VAD prob >= 0.30 AND rms > _start_rms_gate  (debounce 2 frames ~64ms)
+                # Primary path  : VAD prob >= 0.30 AND rms > _start_rms_gate  (debounce configurable)
                 # Strong path   : VAD prob >= 0.50 alone (confident speech, no RMS needed)
                 # RMS fallback  : rms > _start_rms_gate for 4 consecutive frames (~128ms)
                 vad_triggered = (
@@ -667,28 +728,34 @@ def listen_and_transcribe(
                 if vad_triggered:
                     speech_start_candidate_frames += 1
                     rms_start_candidate_frames = 0
-                    if speech_start_candidate_frames >= 2:   # ~64ms debounce
+                    if speech_start_candidate_frames >= SPEECH_START_DEBOUNCE:
                         print(
                             f"[Speech Detected! VAD] prob={speech_prob:.2f}, RMS={rms:.4f}, "
                             f"gate={_start_rms_gate:.4f}",
                             flush=True
                         )
                         has_spoken = True
+                        if turn_manager:
+                            turn_manager.on_speech_start()
                         audio_buffer.extend(pre_speech_buffer)
+                        pre_speech_buffer.clear()
                         if state:
                             state.is_candidate_speaking.set()
                         silence_frames_counter = 0
                 elif rms_triggered:
                     rms_start_candidate_frames += 1
                     speech_start_candidate_frames = 0
-                    if rms_start_candidate_frames >= 4:   # ~128ms debounce
+                    if rms_start_candidate_frames >= max(4, SPEECH_START_DEBOUNCE * 2):
                         print(
                             f"[Speech Detected! RMS-only] prob={speech_prob:.2f}, RMS={rms:.4f}, "
                             f"gate={_start_rms_gate:.4f} (VAD unreliable — using RMS fallback)",
                             flush=True
                         )
                         has_spoken = True
+                        if turn_manager:
+                            turn_manager.on_speech_start()
                         audio_buffer.extend(pre_speech_buffer)
+                        pre_speech_buffer.clear()
                         if state:
                             state.is_candidate_speaking.set()
                         silence_frames_counter = 0
@@ -696,14 +763,11 @@ def listen_and_transcribe(
                     speech_start_candidate_frames = 0
                     rms_start_candidate_frames = 0
             else:
+                # Track ongoing speech RMS for adaptive cross-laptop sensitivity tuning
+                if turn_manager:
+                    turn_manager.record_speech_rms(rms)
+
                 # --- Adaptive Speech CONTINUATION Gate (RMS primary) ---
-                # Silence counter climbs when BOTH VAD and RMS confirm silence.
-                # Either VAD prob > 0.20 OR rms above continue gate resets the counter.
-                # FIX-3: Silence counting is gated behind MIN_SPEECH_FRAMES to prevent
-                # accidental early endpointing when the candidate just started speaking.
-                # Without this guard, a very short pause in the first word of a response
-                # (common with nervous speakers or slow-start audio hardware) could cause
-                # the silence counter to fire before the minimum speech duration is met.
                 if speech_prob > 0.20 or rms > _continue_rms_gate:
                     silence_frames_counter = 0
                 elif total_frames_counter >= MIN_SPEECH_FRAMES:
@@ -937,6 +1001,18 @@ def listen_and_transcribe(
     if not is_valid_transcript(transcript_text):
         print(f"[STT] Rejected likely hallucination: '{transcript_text}'", flush=True)
         return ""
+
+    # Dynamic speech level adaptation: update start_rms_gate based on actual observed speech
+    if turn_manager and state:
+        try:
+            estimated_speech = turn_manager.get_estimated_speech_level()
+            if estimated_speech is not None:
+                floor = getattr(state, "cached_ambient_floor", 0.008) or 0.008
+                new_start_gate = max(floor * 1.5, min(floor * 2.2, estimated_speech * 0.45))
+                state.cached_start_rms_gate = new_start_gate
+                print(f"[Adaptive Calibration] Refined start_rms_gate -> {new_start_gate:.5f} (speech p25={estimated_speech:.5f})", flush=True)
+        except Exception as err:
+            print(f"[Adaptive Calibration Note] {err}", flush=True)
 
     return transcript_text
 

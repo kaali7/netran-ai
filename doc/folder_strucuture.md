@@ -148,6 +148,7 @@ backend/
     │       ├── test_pipeline.py # Standalone Headless CLI test harness for Stage 3
 
     │       ├── turn_classifier.py # Case 3 Hybrid Turn Classifier (Tier 1 Regex + Tier 2 Ollama OLLAMA_MODEL, qwen2.5:3b by default)
+    │       ├── turn_manager.py # Level 2 Explicit ConversationState machine & playback sync manager
     │       ├── voice_engine.py # Stage 3 adapter with dynamic system prompt injection (WorkflowVoiceEngine)
     │       └── _interview_log.txt # Consolidated session logging file
     │

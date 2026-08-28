@@ -132,7 +132,38 @@ A full pipeline audit identified 7 root causes for inconsistent Eva response tim
 | Turn 2+: ~960ms calibration discards leading speech | Turn 2+: 0ms overhead, full speech captured from frame 1 |
 | Whisper adds ~2s silence buffer per turn | Whisper adds ~0.5s silence buffer per turn |
 | noisereduce adds 500–1500ms per long answer | noisereduce skipped for web (browser handles it) |
-| echo guard: 300ms (insufficient for browser buffering) | echo guard: 600ms for web mode |
+| echo guard: 300ms (insufficient for browser buffering) | echo guard: Event-driven via `playback_finished` + 150ms guard |
 | audio send: up to 20ms jitter per chunk | audio send: immediate on data-ready |
-| **Typical delay: 3–5s + variable** | **Target delay: 0.8–2.0s consistent** |
+| **Typical delay: 3–5s + variable** | **Target delay: 0.8–1.5s consistent** |
+
+---
+
+## 6. Level 2 Playback Synchronization Protocol (TurnManager & Client Events)
+
+### The Architectural Evolution
+In prototype implementations, the backend used a static 600ms post-TTS echo guard timer. While this worked on development machines, it failed across different laptops due to hardware driver buffering differences, variable network transit jitter, or CPU scheduling variations.
+
+The Level 2 architecture establishes an explicit bidirectional contract:
+
+```text
+Backend (voice_engine)                     Frontend (useInterviewSession)
+      │                                                │
+      ├─────── TTS Audio Chunks Streamed ─────────────►│
+      │                                                │
+      │   (source.start called)                        ├─► "playback_started" (turn_id)
+      │◄─────── JSON: playback_started ────────────────┤
+      │ [State: PLAYBACK_ACTIVE]                       │
+      │                                                │
+      │   (all audio buffers drain from Web Audio API) ├─► "playback_finished" (turn_id)
+      │◄─────── JSON: playback_finished ───────────────┤
+      │ [State: ECHO_GUARD -> LISTENING]               │
+      │                                                │
+      │ (VAD active; candidate speaks)                 │
+      │◄─────── Binary Mic PCM Chunks ─────────────────┤
+```
+
+### Event Specifications
+1. **`playback_started`**: Sent when the first scheduled `AudioBufferSourceNode` begins outputting sound.
+2. **`playback_finished`**: Sent after the last queued `AudioBufferSourceNode` invokes `onended` (debounced by 180ms).
+3. **`DEVICE_INFO`**: Sent once upon microphone stream acquisition, reporting native sample rate, track settings, and platform string.
 

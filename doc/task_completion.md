@@ -56,6 +56,12 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
   - Enhanced `listener.py` to always open audio input streams at the physical device's native rate (e.g. 44.1kHz / 48kHz) and perform real-time downsampling, resolving MME driver silent-channel saturation.
   - Dynamically scaled Faster-Whisper CPU threads to available cores (`os.cpu_count() - 2`, up to 8 threads), cutting STT processing latency.
   - Added `NOISE_FLOOR_OVERRIDE` and adaptive `_continue_rms_gate` headroom (2.8x for web sessions) to handle noisy hardware environments.
+- **Level 2 TurnManager & Playback Synchronization Architecture (Aug 2026)**:
+  - **TurnManager State Machine** (`model/voice_to_voice_model/model/turn_manager.py`): Explicit `ConversationState` machine decoupling raw VAD probabilities from state transitions (`READY`, `EVA_SPEAKING`, `PLAYBACK_ACTIVE`, `ECHO_GUARD`, `LISTENING`, `CANDIDATE_SPEAKING`, `THINKING`).
+  - **Browser Playback Synchronization** (`useInterviewSession.js` & `voice.py`): Replaced static 600ms backend guess timer with real Web Audio API `playback_started` and `playback_finished` WebSocket events, ensuring zero false VAD triggers across any laptop.
+  - **Pre-Roll Echo Gating & Adaptive Calibration** (`listener.py`): Pre-speech buffer is cleared during non-listening states to prevent Eva acoustic reflections from prepending to speech; dynamic calibration refines `cached_start_rms_gate` per microphone sensitivity.
+  - **TurnManager State Lock & Short Answer Filter Fix**: Resolved conversational deadlocks where empty/rejected transcripts left `TurnManager` in `THINKING` state, and expanded `is_valid_transcript` whitelist to correctly accept natural single-word answers ("fine", "good", "ready", "yes", "okay").
+  - **Adaptive Calibration Scope & `import re` Fix**: Fixed `UnboundLocalError: ambient_floor` and `NameError: re` in `listener.py` that caused the voice engine to terminate prematurely into Stage 4 evaluation after the candidate's first answer.
 
 ---
 

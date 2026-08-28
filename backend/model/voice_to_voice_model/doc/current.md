@@ -241,3 +241,28 @@ front.py: Next turn begins
 | **TTFT** | Prompt sent to LLM first token output | < 400 ms | Operational (~200–350 ms) |
 | **TTFA** | User silence to speaker first audio chunk | < 400 ms | Operational (~250–350 ms) |
 | **Barge-In Reaction** | Candidate speech to audio stop | < 60 ms | **~21ms hardware + ~42ms sub-chunk = ~63ms max** |
+
+---
+
+## 🎯 Level 2 TurnManager & Playback Synchronization Architecture
+
+To eliminate cross-laptop timing variations and false VAD triggers caused by fixed echo guard timers:
+
+1. **Explicit Conversation State Machine (`turn_manager.py`)**:
+   - `READY` ➔ `EVA_SPEAKING` (TTS generation & streaming)
+   - `EVA_SPEAKING` ➔ `PLAYBACK_ACTIVE` (Browser playing audio)
+   - `PLAYBACK_ACTIVE` ➔ `ECHO_GUARD` (Frontend sends `playback_finished`)
+   - `ECHO_GUARD` ➔ `LISTENING` (150ms acoustic decay guard clears, microphone & VAD enabled)
+   - `LISTENING` ➔ `CANDIDATE_SPEAKING` (Speech confirmed with `SPEECH_START_DEBOUNCE`)
+   - `CANDIDATE_SPEAKING` ➔ `THINKING` (Speech endpoint detected, STT/LLM inference)
+
+2. **Frontend Playback Protocol (`useInterviewSession.js`)**:
+   - Browser tracks active Web Audio API audio source nodes.
+   - Emits `playback_started` when first TTS chunk starts.
+   - Emits `playback_finished` when audio buffers drain.
+   - Gathers device metadata (`DEVICE_INFO`) on startup for cross-machine telemetry.
+
+3. **Pre-Roll Ring Buffer & Adaptive Gate**:
+   - Ring buffer is cleared during non-listening states to prevent Eva's echo frames from prepending to candidate speech.
+   - Speech RMS statistics refine `cached_start_rms_gate` across turns to adapt to any candidate's microphone sensitivity.
+

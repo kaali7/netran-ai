@@ -25,6 +25,7 @@ try:
     from .speaker import preload_models as preload_speaker
     from .speaker import speak_text
     from .execution_logger import ExecutionLogger
+    from .turn_manager import TurnManager, ConversationState
     try:
         from .speaker_verifier import SpeakerVerifier
     except ImportError:
@@ -46,10 +47,27 @@ except ImportError:
         )
         from model.voice_to_voice_model.model.speaker import speak_text
         from model.voice_to_voice_model.model.execution_logger import ExecutionLogger
+        from model.voice_to_voice_model.model.turn_manager import TurnManager, ConversationState
         try:
             from model.voice_to_voice_model.model.speaker_verifier import SpeakerVerifier
         except ImportError:
             SpeakerVerifier = None
+    except ImportError:
+        import brain
+        from config import SV_ENABLED
+        from listener import ContinuousMicWriter, listen_and_transcribe
+        from question_manager import QuestionManager
+        from schemas import InterviewQuestionInput
+        from session_logger import SessionLogger
+        from session_state import SessionState
+        from speaker import preload_models as preload_speaker
+        from speaker import speak_text
+        from execution_logger import ExecutionLogger
+        try:
+            from turn_manager import TurnManager, ConversationState
+        except ImportError:
+            TurnManager = None
+            ConversationState = None
     except ImportError:
         import brain
         from config import SV_ENABLED
@@ -120,7 +138,8 @@ class WorkflowVoiceEngine:
         status_callback: Callable[[int, str, str, str], None] | None = None,
         max_turns: int = 15,
         ws_audio_queue: Any = None,
-        ws_audio_out_queue: Any = None
+        ws_audio_out_queue: Any = None,
+        turn_manager: Any = None
     ):
         """
         Executes the voice-to-voice interview loop turn-by-turn.
@@ -141,6 +160,18 @@ class WorkflowVoiceEngine:
         session_log = SessionLogger(session_id=self.session_id, session_dir=self.session_dir)
         exec_logger = ExecutionLogger(session_id=self.session_id, session_dir=self.session_dir)
         exec_logger.log_event("BACKEND_ENGINE", "ENGINE_START", {"max_turns": max_turns})
+
+        # Initialize TurnManager state machine if not injected from API layer
+        if turn_manager is None and TurnManager is not None:
+            turn_manager = TurnManager(
+                session_id=self.session_id,
+                is_web_mode=(ws_audio_queue is not None),
+                exec_logger=exec_logger
+            )
+        elif turn_manager is not None:
+            turn_manager.set_exec_logger(exec_logger)
+
+        self.session_state.turn_manager = turn_manager
         
         mic_writer = ContinuousMicWriter(filepath=self.wav_path)
         mic_writer.start()
@@ -153,7 +184,9 @@ class WorkflowVoiceEngine:
             logger.error(f"Failed to init speaker: {e}")
             self.speaker = None
 
-        def speak_text(text: str):
+        def speak_text(text: str, t_id: int = 0):
+            if turn_manager:
+                turn_manager.on_tts_start(t_id)
             if self.speaker:
                 self.speaker.interrupt_event.clear()
                 self.session_state.interrupt_event.clear()
@@ -164,6 +197,8 @@ class WorkflowVoiceEngine:
             else:
                 from .speaker import speak_text as fallback_speak
                 fallback_speak(text, "af_bella")
+            if turn_manager:
+                turn_manager.on_tts_end(t_id)
         
         conversation_history: list[dict[str, str]] = []
         
@@ -201,7 +236,7 @@ class WorkflowVoiceEngine:
                 if status_callback:
                     status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
                     
-                speak_text(initial_greeting)
+                speak_text(initial_greeting, 0)
                 conversation_history.append({"role": "assistant", "content": initial_greeting})
 
             _dead_mic_retries = 0
@@ -250,7 +285,7 @@ class WorkflowVoiceEngine:
                         if status_callback:
                             status_callback(0, "SPEAKING_QUESTION", initial_greeting, "")
                             
-                        speak_text(initial_greeting)
+                        speak_text(initial_greeting, 0)
                         conversation_history.append({"role": "assistant", "content": initial_greeting})
                     continue
 
@@ -259,6 +294,10 @@ class WorkflowVoiceEngine:
                 topic = curr_q.topic if curr_q else "Interview"
                 
                 logger.info(f"--- TURN {turn_idx}: [{topic}] ---")
+
+                # Wait for previous turn's audio playback to finish in browser + echo guard to expire
+                if turn_manager:
+                    turn_manager.wait_for_listening_ready()
                 
                 if status_callback:
                     status_callback(turn_idx, "LISTENING_CANDIDATE", "", "")
@@ -279,8 +318,12 @@ class WorkflowVoiceEngine:
                     ws_audio_queue=ws_audio_queue,
                     ui_callback=vad_callback,
                     mic_writer=mic_writer,
-                    speaker_verifier=self.speaker_verifier
+                    speaker_verifier=self.speaker_verifier,
+                    turn_manager=turn_manager
                 )
+                
+                if turn_manager:
+                    turn_manager.on_speech_end()
                 
                 if isinstance(transcription_result, dict):
                     candidate_transcript = transcription_result.get("text", "").strip()
@@ -305,6 +348,9 @@ class WorkflowVoiceEngine:
                 
                 if not candidate_transcript:
                     _dead_mic_retries += 1
+                    logger.info(f"Empty or rejected candidate transcript on turn {turn_idx} (retry {_dead_mic_retries}/3). Re-enabling listener.")
+                    if turn_manager:
+                        turn_manager.reset_to_listening()
                     if _dead_mic_retries >= 3:
                         logger.warning("Empty transcript 3 times. Stopping.")
                         self.stop_event.set()
@@ -364,7 +410,7 @@ class WorkflowVoiceEngine:
                     exec_logger.log_event("BACKEND_ENGINE", "TTS_START", {"turn_id": turn_idx})
                 
                 if not self.stop_event.is_set():
-                    speak_text(eva_response)
+                    speak_text(eva_response, turn_idx)
                     
                 if exec_logger:
                     exec_logger.log_event("BACKEND_ENGINE", "TTS_COMPLETE", {"turn_id": turn_idx})

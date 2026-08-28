@@ -44,6 +44,8 @@ class SessionState:
     ptt_active: threading.Event = field(default_factory=threading.Event)
     last_vocal_anchor: str = ""      # Tracks last anchor to enforce anti-repetition rotation
     speaker_verifier: object | None = None   # SpeakerVerifier instance (None if disabled)
+    turn_manager: object | None = None       # TurnManager instance (explicit state machine)
+    enable_thought_classifier: bool = False  # Enable thought completion check for web if desired
     input_mode: str = "VAD"          # "VAD" (default) or "PTT"
 
     # FIX-A: Noise floor calibration cache — shared across all listen_and_transcribe() turns.

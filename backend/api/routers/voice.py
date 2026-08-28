@@ -23,6 +23,14 @@ try:
 except ImportError:
     ExecutionLogger = None
 
+try:
+    from model.voice_to_voice_model.model.turn_manager import TurnManager
+except ImportError:
+    try:
+        from voice_to_voice_model.model.turn_manager import TurnManager
+    except ImportError:
+        TurnManager = None
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/voice", tags=["Voice Interview"])
 
@@ -207,8 +215,9 @@ async def voice_interview_stream(
         exec_logger = ExecutionLogger(session_id=session_id, session_dir=session_dir)
         exec_logger.log_event("BACKEND_API", "WS_CONNECTED", {"total_questions": total_questions})
 
-    # Prepare threading primitives
+    # Prepare threading primitives & TurnManager
     ws_queue = asyncio.Queue()
+    turn_manager = TurnManager(session_id=session_id, is_web_mode=True, exec_logger=exec_logger) if TurnManager else None
     
     # Bug 1 Fix: React Strict Mode double-connect deduplication
     if session_id in ACTIVE_WS_CONNECTIONS:
@@ -260,6 +269,14 @@ async def voice_interview_stream(
                     if action == "client_log":
                         if exec_logger:
                             exec_logger.log_event("FRONTEND", data.get("event_type", "UNKNOWN"), data.get("details", {}))
+                    elif action == "playback_event":
+                        event_type = data.get("type")
+                        turn_id = data.get("turn_id", 0)
+                        if turn_manager:
+                            if event_type == "playback_started":
+                                turn_manager.on_playback_started(turn_id)
+                            elif event_type == "playback_finished":
+                                turn_manager.on_playback_finished(turn_id)
                     elif action == "pause":
                         logger.info(f"Client requested pause for session {session_id}")
                         if exec_logger:
@@ -327,7 +344,7 @@ async def voice_interview_stream(
         except (WebSocketDisconnect, RuntimeError, asyncio.CancelledError):
             pass
 
-    engine_holder = {}
+    engine_holder = {"turn_manager": turn_manager}
     send_task = asyncio.create_task(send_worker())
     audio_send_task = asyncio.create_task(audio_send_worker())
     recv_task = asyncio.create_task(recv_worker())
@@ -344,7 +361,8 @@ async def voice_interview_stream(
             total_questions,
             audio_queue,
             audio_out_queue,
-            engine_holder
+            engine_holder,
+            turn_manager
         )
         
         # Interview finished or stopped

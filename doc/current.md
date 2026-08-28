@@ -89,6 +89,8 @@ Netran AI is a production-grade, multimodal AI technical interviewer platform. T
 - **Pre-Built Mock Interview Catalog**: Instant practice interviews with customized candidate name personalization across system prompts and resume analyses (100% Rule 15 icon compliant).
 
 ### 2. Voice Pipeline Timing & Optimization (Aug 2026 Audit)
+- **Level 2 TurnManager & Playback Synchronization**: Explicit `ConversationState` machine (`READY`, `EVA_SPEAKING`, `PLAYBACK_ACTIVE`, `ECHO_GUARD`, `LISTENING`, `CANDIDATE_SPEAKING`, `THINKING`) driven by client `playback_started` and `playback_finished` events from browser Web Audio API, replacing fixed timer guesses with deterministic lifecycle sync.
+- **Adaptive Speech Gate & Pre-Roll Filter**: Dynamic calibration calculates candidate speech statistics across turns to tune `cached_start_rms_gate` per microphone, while clearing the pre-roll buffer during Eva playback to prevent echo pollution.
 - **Calibration Cache**: Pre-turn 960ms ambient noise calibration cached across turns to eliminate discarded leading speech.
 - **Multi-Hardware Native Rate Handshake**: Voice engine forces physical mic hardware to open at native OS rate (e.g., 44.1kHz or 48kHz) and performs real-time AudioOp downsampling to 16kHz, preventing MME driver silent-channel saturation that breaks Silero VAD on external laptops.
 - **Dynamic Threading**: Faster-Whisper CPU threads scale dynamically to `os.cpu_count() - 2` to minimize STT latency on high-core CPUs.
@@ -96,7 +98,6 @@ Netran AI is a production-grade, multimodal AI technical interviewer platform. T
 - **Web Pause Tolerance**: Adjusted to 1200ms with 800ms minimum speech frames for conversational naturalness.
 - **Whisper Latency Tuning**: `hallucination_silence_threshold` set to 0.5s, eliminating ~2s of trailing silence analysis.
 - **Zero Wiener Filter Latency**: `noisereduce` bypassed for WebSocket sessions since browser `getUserMedia` handles noise suppression.
-- **Post-TTS Echo Guard**: 600ms guard protects against browser audio playback tail reflections.
 - **Native AudioContext**: Browser AudioContext captures native 48kHz audio; `pcm-processor.js` handles explicit downsampling to 16kHz PCM.
 
 ### 3. API Gateway & Network Integration

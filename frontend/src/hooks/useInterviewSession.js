@@ -28,11 +28,13 @@ export const useInterviewSession = (sessionId) => {
   const analyserRef = useRef(null);
   const volumeIntervalRef = useRef(null);
   
-  // TTS Playback state
+  // TTS Playback state & Turn Tracking
   const nextStartTimeRef = useRef(0);
   const sourceNodesQueueRef = useRef([]);
   const speakingDebounceTimerRef = useRef(null);
   const pendingQuestionRef = useRef(null);
+  const currentTurnIdRef = useRef(0);
+  const isPlayingAudioRef = useRef(false);
 
   const sendClientLog = useCallback((eventType, details = {}) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -105,6 +107,10 @@ export const useInterviewSession = (sessionId) => {
             interruptPlayback();
             setIsSpeaking(false);
           } else if (msg.event === 'SPEAKING_QUESTION') {
+            if (msg.turn_id !== undefined) {
+              currentTurnIdRef.current = msg.turn_id;
+              setQuestionIndex(msg.turn_id > 0 ? msg.turn_id - 1 : 0);
+            }
             if (msg.question_text) {
               setCurrentQuestion(msg.question_text);
               setTranscript((prev) => {
@@ -123,7 +129,6 @@ export const useInterviewSession = (sessionId) => {
                 ];
               });
             }
-            if (msg.turn_id !== undefined) setQuestionIndex(msg.turn_id > 0 ? msg.turn_id - 1 : 0);
           } else if (msg.event === 'LISTENING_CANDIDATE') {
             if (speakingDebounceTimerRef.current) {
               clearTimeout(speakingDebounceTimerRef.current);
@@ -139,6 +144,9 @@ export const useInterviewSession = (sessionId) => {
             setMicVolume(Math.min(100, Math.round(displayVal * 100)));
             if (vadData.state) setVadState(vadData.state);
           } else if (msg.event === 'EVA_RESPONDING_BRANCH') {
+            if (msg.turn_id !== undefined) {
+              currentTurnIdRef.current = msg.turn_id;
+            }
             if (msg.question_text) {
               pendingQuestionRef.current = msg.question_text;
             }
@@ -222,6 +230,15 @@ export const useInterviewSession = (sessionId) => {
           } else if (msg.event === 'INTERVIEW_COMPLETE' || msg.event === 'SESSION_DONE') {
             setIsSessionDone(true);
             stopSession();
+          } else if (msg.event === 'TTS_START') {
+            if (msg.turn_id !== undefined) {
+              currentTurnIdRef.current = msg.turn_id;
+            }
+          } else if (msg.event === 'TTS_END') {
+            // TTS generation ended on backend; playback continues until audio buffers drain
+            if (msg.turn_id !== undefined) {
+              currentTurnIdRef.current = msg.turn_id;
+            }
           } else if (msg.event === 'AI_START_SPEAKING') {
             setIsSpeaking(true);
           } else if (msg.event === 'AI_STOP_SPEAKING') {
@@ -277,6 +294,19 @@ export const useInterviewSession = (sessionId) => {
       });
       mediaStreamRef.current = stream;
       sendClientLog('MIC_ACCESS_GRANTED');
+
+      // Device info telemetry for cross-laptop diagnostics
+      const track = stream.getAudioTracks()[0];
+      const settings = track && typeof track.getSettings === 'function' ? track.getSettings() : {};
+      sendClientLog('DEVICE_INFO', {
+        device_label: track ? track.label : 'unknown',
+        channel_count: settings.channelCount || 1,
+        sample_rate: settings.sampleRate || 'native',
+        echo_cancellation: settings.echoCancellation ?? true,
+        noise_suppression: settings.noiseSuppression ?? true,
+        platform: navigator.platform || 'unknown',
+        user_agent: navigator.userAgent || 'unknown'
+      });
 
       // FIX-G: Do NOT force sampleRate: 16000 on the AudioContext.
       // Forcing a non-native rate causes the OS or browser to resample at the driver level,
@@ -381,6 +411,23 @@ export const useInterviewSession = (sessionId) => {
     source.start(startTime);
     nextStartTimeRef.current = startTime + audioBuffer.duration;
 
+    // Notify backend that audio playback has actively started (if not already playing)
+    if (!isPlayingAudioRef.current) {
+      isPlayingAudioRef.current = true;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify({
+            action: 'playback_event',
+            type: 'playback_started',
+            turn_id: currentTurnIdRef.current || 0,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          // Ignore WS transient errors
+        }
+      }
+    }
+
     sourceNodesQueueRef.current.push(source);
     source.onended = () => {
       sourceNodesQueueRef.current = sourceNodesQueueRef.current.filter(n => n !== source);
@@ -391,6 +438,22 @@ export const useInterviewSession = (sessionId) => {
         speakingDebounceTimerRef.current = setTimeout(() => {
           if (sourceNodesQueueRef.current.length === 0) {
             setIsSpeaking(false);
+            if (isPlayingAudioRef.current) {
+              isPlayingAudioRef.current = false;
+              // Notify backend that audio playback has completely finished
+              if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                try {
+                  wsRef.current.send(JSON.stringify({
+                    action: 'playback_event',
+                    type: 'playback_finished',
+                    turn_id: currentTurnIdRef.current || 0,
+                    timestamp: Date.now()
+                  }));
+                } catch (e) {
+                  // Ignore WS transient errors
+                }
+              }
+            }
           }
         }, 180);
       }
@@ -413,6 +476,22 @@ export const useInterviewSession = (sessionId) => {
       nextStartTimeRef.current = audioContextRef.current.currentTime;
     }
     setIsSpeaking(false);
+    if (isPlayingAudioRef.current) {
+      isPlayingAudioRef.current = false;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify({
+            action: 'playback_event',
+            type: 'playback_finished',
+            turn_id: currentTurnIdRef.current || 0,
+            barge_in: true,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          // Ignore WS transient errors
+        }
+      }
+    }
   };
 
   const pauseInterview = useCallback(() => {
