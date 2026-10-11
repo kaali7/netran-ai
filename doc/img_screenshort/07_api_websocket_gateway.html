@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>API Gateway — WebSocket Full-Duplex Streaming Router</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Serene Learning White Theme Design Tokens (DESIGN.md) */
+  :root {
+    --surface: #ffffff;
+    --background: #f8f9fa;
+    --on-surface: #191c1d;
+    --on-surface-variant: #49454d;
+    --outline: #7a757e;
+    --outline-variant: #cbc4ce;
+    --primary: #65597b;           /* Lavender */
+    --primary-container: #e6d6ff; /* Soft Light Lavender */
+    --on-primary-container: #4d4162;
+    --secondary: #426651;         /* Sage / Mint Green */
+    --secondary-container: #c3ecd2;
+    --on-secondary-container: #2a4e3a;
+    --tertiary: #6d5a59;          /* Warm Rose / Terracotta */
+    --tertiary-container: #f1d7d5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(circle at 10% 10%, rgba(230, 214, 255, 0.4) 0%, transparent 45%),
+                radial-gradient(circle at 90% 20%, rgba(195, 236, 210, 0.35) 0%, transparent 45%),
+                #f8f9fa;
+    font-family: 'Fira Code', Consolas, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* Pure White Card Window Container */
+  .card-wrap {
+    width: 920px;
+    background: #ffffff;
+    border: 1.5px solid rgba(101, 89, 123, 0.18);
+    border-radius: 18px;
+    box-shadow: 
+      0 18px 45px -8px rgba(101, 89, 123, 0.10),
+      0 4px 16px rgba(0, 0, 0, 0.04),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 1);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Top Gentle Lavender Accent Line */
+  .card-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 6%; right: 6%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(101, 89, 123, 0.45), transparent);
+  }
+
+  /* Window Chrome Header (Soft Frosted Gray-White) */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 22px;
+    border-bottom: 1px solid rgba(101, 89, 123, 0.12);
+    background: #f4f5f6;
+  }
+
+  .dots-group {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  /* Window Dots using Serene Learning Accents */
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .dot-1 { background-color: #e07a75; box-shadow: 0 0 4px rgba(224, 122, 117, 0.4); } /* Terracotta / Rose */
+  .dot-2 { background-color: #65597b; box-shadow: 0 0 4px rgba(101, 89, 123, 0.4); }  /* Primary: Lavender */
+  .dot-3 { background-color: #426651; box-shadow: 0 0 4px rgba(66, 102, 81, 0.4); }   /* Secondary: Mint */
+
+  .title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .badge {
+    font-family: 'Manrope', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: #e6d6ff; /* primary-container */
+    border: 1px solid rgba(101, 89, 123, 0.25);
+    color: #4d4162;      /* on-primary-container */
+    text-transform: uppercase;
+  }
+
+  .file-name {
+    font-size: 12px;
+    color: #49454d; /* on-surface-variant */
+    font-weight: 500;
+  }
+
+  .netran-pill {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    color: #65597b; /* primary */
+    letter-spacing: 0.06em;
+  }
+
+  /* Full-Width Code Body */
+  .body {
+    padding: 20px 24px 22px 20px;
+    background: #ffffff;
+  }
+
+  .code-pane {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .line {
+    display: flex;
+    align-items: center;
+    font-size: 13.5px;
+    line-height: 23px;
+    padding: 0 8px;
+    border-radius: 4px;
+  }
+
+  .line.hl {
+    background: rgba(230, 214, 255, 0.45); /* Soft lavender highlight */
+    border-left: 3px solid #65597b;
+  }
+
+  .num {
+    color: #9a959f; /* outline neutral */
+    font-size: 12px;
+    width: 32px;
+    flex-shrink: 0;
+    user-select: none;
+    text-align: right;
+    margin-right: 20px;
+  }
+
+  .code {
+    color: #191c1d; /* on-surface */
+    white-space: pre;
+    font-family: 'Fira Code', Consolas, monospace;
+  }
+
+  /* Serene Learning High-Contrast Light Syntax Highlighting */
+  .kwd { color: #5f3f9e; font-weight: 600; } /* Deep Lavender */
+  .cls { color: #235c3b; font-weight: 600; } /* Forest Mint */
+  .fn  { color: #375382; font-weight: 500; } /* Slate Blue */
+  .str { color: #206d44; }                   /* Sage Mint */
+  .typ { color: #5f3f9e; }                   /* Lavender */
+  .cmt { color: #7a757e; font-style: italic; } /* Outline Slate Neutral */
+</style>
+</head>
+<body>
+<div class="card-wrap">
+  <div class="header">
+    <div class="dots-group">
+      <div class="dot dot-1"></div>
+      <div class="dot dot-2"></div>
+      <div class="dot dot-3"></div>
+    </div>
+    <div class="title-group">
+      <span class="badge">GATEWAY: FASTAPI WS</span>
+      <span class="file-name">backend/api/routers/voice.py</span>
+    </div>
+    <div class="netran-pill">NETRAN AI</div>
+  </div>
+  <div class="body">
+    <div class="code-pane">
+      
+        <div class="line">
+          <span class="num">01</span>
+          <span class="code"><span class="kwd">async def</span> <span class="fn">recv_worker</span>():</span>
+        </div>
+        <div class="line">
+          <span class="num">02</span>
+          <span class="code">    <span class="kwd">while True</span>:</span>
+        </div>
+        <div class="line">
+          <span class="num">03</span>
+          <span class="code">        message = <span class="kwd">await</span> websocket.receive()</span>
+        </div>
+        <div class="line hl">
+          <span class="num">04</span>
+          <span class="code">        <span class="kwd">if</span> <span class="str">"bytes"</span> <span class="kwd">in</span> message:</span>
+        </div>
+        <div class="line">
+          <span class="num">05</span>
+          <span class="code">            <span class="cmt"># Raw 16kHz PCM audio chunk from browser Worklet</span></span>
+        </div>
+        <div class="line hl">
+          <span class="num">06</span>
+          <span class="code">            audio_queue.put(message[<span class="str">"bytes"</span>])</span>
+        </div>
+        <div class="line">
+          <span class="num">07</span>
+          <span class="code">        <span class="kwd">elif</span> <span class="str">"text"</span> <span class="kwd">in</span> message:</span>
+        </div>
+        <div class="line">
+          <span class="num">08</span>
+          <span class="code">            data = json.loads(message[<span class="str">"text"</span>])</span>
+        </div>
+        <div class="line hl">
+          <span class="num">09</span>
+          <span class="code">            <span class="kwd">if</span> data.get(<span class="str">"action"</span>) == <span class="str">"playback_event"</span>:</span>
+        </div>
+        <div class="line">
+          <span class="num">10</span>
+          <span class="code">                evt = data.get(<span class="str">"type"</span>)</span>
+        </div>
+        <div class="line">
+          <span class="num">11</span>
+          <span class="code">                turn = data.get(<span class="str">"turn_id"</span>, 0)</span>
+        </div>
+        <div class="line">
+          <span class="num">12</span>
+          <span class="code">                <span class="kwd">if</span> evt == <span class="str">"playback_started"</span>:</span>
+        </div>
+        <div class="line hl">
+          <span class="num">13</span>
+          <span class="code">                    turn_manager.on_playback_started(turn)</span>
+        </div>
+        <div class="line">
+          <span class="num">14</span>
+          <span class="code">                <span class="kwd">elif</span> evt == <span class="str">"playback_finished"</span>:</span>
+        </div>
+        <div class="line hl">
+          <span class="num">15</span>
+          <span class="code">                    turn_manager.on_playback_finished(turn)</span>
+        </div>
+        <div class="line">
+          <span class="num">16</span>
+          <span class="code">            <span class="kwd">elif</span> data.get(<span class="str">"action"</span>) == <span class="str">"pause"</span>:</span>
+        </div>
+        <div class="line">
+          <span class="num">17</span>
+          <span class="code">                engine.pause()</span>
+        </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

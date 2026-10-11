@@ -137,7 +137,32 @@ cp .env.example .env
 
 ---
 
-### 3. Frontend Installation & Setup
+### 3. Voice AI Models Setup (Speaking & Listening Time)
+
+To guarantee sub-400ms low-latency full-duplex voice performance without runtime download delays during live interviews, pre-download the neural models for speaking (TTS), listening (STT), voice activity detection (VAD), and local reasoning:
+
+```bash
+# 1. Download Silero VAD, Faster-Whisper, Kokoro TTS, & SpeechBrain weights (Automated)
+python -m model.voice_to_voice_model.model.download_vad
+# Or select Option 16 in run.bat
+
+# 2. Pull local Ollama reasoning model for Eva's conversational brain
+ollama pull qwen2.5:3b
+```
+
+#### 📦 Pre-Downloaded Models Summary:
+
+| Model | Purpose / Phase | Source / Hugging Face ID | Size | Execution Mode |
+| :--- | :--- | :--- | :--- | :--- |
+| **Kokoro-82M** | Eva Neural Speech Synthesis (Speaking) | `hexgrad/Kokoro-82M` | ~82 MB | Local PyTorch / KPipeline (Preheated on server startup) |
+| **Faster-Whisper** | Candidate Speech-to-Text (Listening) | `Systran/faster-whisper-small` | ~460 MB | Local CTranslate2 int8 (`HF_HUB_OFFLINE=1`) |
+| **Silero VAD v3** | Voice Activity Detection & Gating | `silero_vad.onnx` | ~2.3 MB | Local ONNX Runtime |
+| **Qwen 2.5 (3B)** | Conversational Reasoning & Turn-Taking | `ollama run qwen2.5:3b` | ~1.9 GB | Local Ollama streaming daemon |
+| **ECAPA-TDNN** | Candidate Voice Print Verification | `speechbrain/spkrec-ecapa-voxceleb` | ~80 MB | Local SpeechBrain embedding extractor |
+
+---
+
+### 4. Frontend Installation & Setup
 
 ```bash
 # 1. Navigate to frontend directory
@@ -153,7 +178,7 @@ npm run dev
 
 ---
 
-### 4. Interactive Master Suite Launcher (`run.bat`)
+### 5. Interactive Master Suite Launcher (`run.bat`)
 
 On Windows, execute `run.bat` from the root directory for an all-in-one interactive operational launcher:
 
