@@ -31,13 +31,14 @@ class SessionState:
     # Updated by listener.py on each successful barge-in trigger.
     last_interrupt_time: float = 0.0
 
-    # FIX-B: Raised from 800ms → 1200ms for web interview sessions.
+    # FIX-B: Raised to 1800ms for web interview sessions.
     # WebSocket audio delivery introduces ~100–200ms of buffering latency through the
-    # recv_worker → audio_queue → ws_stream_producer → listener chain. With the old
-    # 800ms gate, effective VAD silence tolerance was only ~600ms, causing premature
-    # cutoffs mid-sentence. 1200ms ensures a full 1.0s+ of real silence before endpointing.
+    # recv_worker → audio_queue → ws_stream_producer → listener chain. Furthermore, when
+    # candidates wear headphones, the absence of room reverberation drops RMS to absolute zero
+    # immediately upon brief natural thinking pauses. 1800ms (1.8s) provides natural human
+    # conversational breathing room, preventing premature cutoffs mid-sentence.
     # Desktop/CLI sessions (no ws_audio_queue) reset to 800ms in listener.py finally block.
-    pause_tolerance_ms: int = 1200     # Default — Web-safe (1200ms / 1.2s)
+    pause_tolerance_ms: int = 1800     # Default — Web-safe (1800ms / 1.8s)
     tts_speed: float = 1.00          # Dynamic Kokoro TTS synthesis speed factor
     current_tone: str = "direct"     # Master emotional tone attribute for turn synthesis
     selected_voice: str = "af_bella" # Selected Kokoro TTS voice preset

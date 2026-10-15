@@ -483,8 +483,9 @@ def listen_and_transcribe(
             # FIX-2: Reduced multipliers (1.8x and 1.2x) because 2.5x/2.8x created gates
             # higher than actual human speech on laptops with low dynamic range microphones
             # (e.g. noise=0.014, speech_p50=0.011, speech_max=0.060).
-            _start_gate_computed = max(ambient_floor * 1.8, 0.012)
-            _continue_gate_computed = max(ambient_floor * 1.2, 0.010)
+            _start_gate_computed = min(max(ambient_floor * 1.8, 0.012), 0.035)
+            # Headset / quiet headphone mic fix: lower floor from 0.010 -> 0.003 so soft speech or trailing syllables don't trigger silence
+            _continue_gate_computed = min(max(ambient_floor * 1.15, 0.003), 0.020)
             
             state.cached_ambient_floor = ambient_floor
             state.cached_start_rms_gate = _start_gate_computed
@@ -502,8 +503,8 @@ def listen_and_transcribe(
         _start_rms_gate    = state.cached_start_rms_gate
         _continue_rms_gate = state.cached_continue_rms_gate
     else:
-        _start_rms_gate    = max(ambient_floor * 1.8, 0.012)
-        _continue_rms_gate = max(ambient_floor * 1.2, 0.010)
+        _start_rms_gate    = min(max(ambient_floor * 1.8, 0.012), 0.035)
+        _continue_rms_gate = min(max(ambient_floor * 1.15, 0.003), 0.020)
 
     print(
         f"[Calibration] Gates → start_rms={_start_rms_gate:.5f}  "
@@ -717,10 +718,12 @@ def listen_and_transcribe(
             if not has_spoken:
                 # --- Adaptive Speech START Gate (hybrid VAD + RMS) ---
                 # Primary path  : VAD prob >= 0.30 AND rms > _start_rms_gate  (debounce configurable)
+                # Confident VAD : VAD prob >= 0.50 AND rms >= max(ambient_floor * 1.1, 0.003) (handles soft speech / laptop mics)
                 # Strong path   : VAD prob >= 0.60 AND rms >= max(_start_rms_gate * 0.70, 0.006) (prevents faint background whisper triggers)
                 # RMS fallback  : rms > _start_rms_gate for 4 consecutive frames (~128ms)
                 vad_triggered = (
                     (speech_prob >= 0.30 and rms >= _start_rms_gate)
+                    or (speech_prob >= 0.50 and rms >= max(ambient_floor * 1.1, 0.003))
                     or (speech_prob >= 0.60 and rms >= max(_start_rms_gate * 0.70, 0.006))
                 )
                 rms_triggered = rms >= _start_rms_gate
@@ -768,7 +771,7 @@ def listen_and_transcribe(
                     turn_manager.record_speech_rms(rms)
 
                 # --- Adaptive Speech CONTINUATION Gate (RMS primary) ---
-                if speech_prob > 0.20 or rms > _continue_rms_gate:
+                if speech_prob > 0.15 or rms > _continue_rms_gate:
                     silence_frames_counter = 0
                 elif total_frames_counter >= MIN_SPEECH_FRAMES:
                     silence_frames_counter += 1
@@ -906,9 +909,9 @@ def listen_and_transcribe(
         if state:
             state.is_candidate_speaking.clear()
             # Reset pause tolerance back to baseline after each turn.
-            # Web sessions use 1200ms baseline (vs 800ms for desktop) to compensate
-            # for WebSocket buffering latency that otherwise causes early cutoffs.
-            state.pause_tolerance_ms = 1200 if ws_audio_queue is not None else 800
+            # Web sessions use 1800ms baseline (vs 800ms for desktop) to compensate
+            # for WebSocket buffering latency and provide natural breathing room on headphones.
+            state.pause_tolerance_ms = 1800 if ws_audio_queue is not None else 800
         if ui_callback:
             ui_callback({
                 "type": "audio_level",
@@ -1008,7 +1011,7 @@ def listen_and_transcribe(
             estimated_speech = turn_manager.get_estimated_speech_level()
             if estimated_speech is not None:
                 floor = getattr(state, "cached_ambient_floor", 0.008) or 0.008
-                new_start_gate = max(floor * 1.5, min(floor * 2.2, estimated_speech * 0.45))
+                new_start_gate = min(max(floor * 1.5, min(floor * 2.2, estimated_speech * 0.45)), 0.035)
                 state.cached_start_rms_gate = new_start_gate
                 print(f"[Adaptive Calibration] Refined start_rms_gate -> {new_start_gate:.5f} (speech p25={estimated_speech:.5f})", flush=True)
         except Exception as err:

@@ -70,6 +70,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 * **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
   * Low-latency response generation during live interviews, steered by `interviewer_behavior.json`.
+  * Persistent `keep_alive="30m"` VRAM caching and automated 4-minute FastAPI background heartbeat to eliminate cold-reload latency spikes.
 
 * **Turn-Taking Classifier (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
   * Hybrid turn-taking classifier (Tier 1 Regex + Tier 2 Qwen 3B probe) resolving candidate pauses.
@@ -83,7 +84,7 @@ This document defines the complete technology stack powering **Netran AI**, an a
 
 * **Voice Activity Detection (VAD) & DSP**: **Silero VAD (v3 ONNX)**
   * Ambient noise floor calibration cached across turns with dynamic speech level adaptation.
-  * 1200ms pause tolerance in web mode, dynamic post-playback echo guard, and streaming IIR DC blocking.
+  * 1800ms pause tolerance in web mode (optimized for headphones & natural pauses), dynamic post-playback echo guard, and streaming IIR DC blocking.
 
 * **Conversation Turn Manager & Playback Sync**: **TurnManager State Machine**
   * Decouples raw VAD probabilities from conversational state transitions (`READY`, `EVA_SPEAKING`, `PLAYBACK_ACTIVE`, `ECHO_GUARD`, `LISTENING`, `CANDIDATE_SPEAKING`, `THINKING`).

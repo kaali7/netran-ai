@@ -266,3 +266,21 @@ To eliminate cross-laptop timing variations and false VAD triggers caused by fix
    - Ring buffer is cleared during non-listening states to prevent Eva's echo frames from prepending to candidate speech.
    - Speech RMS statistics refine `cached_start_rms_gate` across turns to adapt to any candidate's microphone sensitivity.
 
+4. **Daemon Auto-Start & Speech Gate Ceiling Resilience (Oct 2026)**:
+   - `brain.py` dynamically checks Ollama daemon liveness via `is_ollama_alive()` and auto-spawns `ollama serve` via `ensure_ollama_running()` to prevent fallback apology loops (`"I apologize, let's move forward to the next question."`).
+   - Capped `_start_rms_gate` ceiling to `0.035` and added confident VAD speech start detection (`speech_prob >= 0.50 and rms >= max(ambient_floor * 1.1, 0.003)`), preventing calibration spikes from locking out soft speech or quiet laptop microphones.
+
+5. **Ollama VRAM Keep-Alive & Low-Latency Heartbeat (TTFA Sub-Second Optimization)**:
+   - `brain.py` passes `keep_alive="30m"` directly in `ollama.chat()`, preventing Ollama's default 5-minute timeout from unceremoniously dumping `qwen2.5:3b` from VRAM and causing ~24-second cold-reload latency spikes on subsequent turns.
+   - Refined `num_predict` cap from 380 to 200 tokens (accommodating Eva's target 15-25 word responses with safe headroom) to eliminate redundant model compute budgets.
+   - Added `keepalive_ping()` in `brain.py` and connected it to an asynchronous `_ollama_keepalive_loop()` background task in FastAPI (`main.py` lifespan). The heartbeat pings Ollama every 4 minutes during idle intervals, guaranteeing instant TTFA and sub-400ms TTFT across consecutive interviews without server restarts.
+
+6. **Headphone VAD Pause Tolerance & Speech Continuation Sensitivity (Oct 2026)**:
+   - **Root Cause of Premature Cutoff with Headphones**: When wearing headphones, ear cups isolate audio and eliminate room acoustic decay/reflections entirely. When a speaker pauses mid-sentence to think or breathe, audio energy instantly plummets to near-zero (`RMS < 0.002`). The previous baseline pause tolerance of `1200ms` (~37 frames) coupled with an aggressive continuation floor (`_continue_rms_gate` clamped at `0.010` and `speech_prob > 0.20`) caused the VAD silence counter to trip during brief natural pauses (~1.0s), prematurely cutting off candidates mid-sentence.
+   - **Increased Web Pause Tolerance**: Raised web baseline `pause_tolerance_ms` from `1200ms` to `1800ms` (56 frames * 32ms) in `session_state.py` and `listener.py`, providing natural conversational breathing room and thinking pauses.
+   - **Lowered Continuation RMS Gate Floor**: Reduced `_continue_gate_computed` lower clamp from `0.010` down to `0.003` (`min(max(ambient_floor * 1.15, 0.003), 0.020)`), preventing soft conversational speech, quiet trailing syllables, and calm voice registers on headset microphones from being mistakenly categorized as silence.
+   - **Relaxed Continuation Probability**: Adjusted continuation threshold to `speech_prob > 0.15 or rms > _continue_rms_gate` (from 0.20), maintaining steady speech continuity throughout continuous spoken sentences.
+
+
+
+

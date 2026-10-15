@@ -88,6 +88,13 @@ goto menu
 
 :run_fastapi_server
 echo.
+echo [CHECK] Ensuring Ollama LLM daemon is active...
+powershell -NoProfile -Command "try { $r = [System.Net.WebRequest]::Create('http://127.0.0.1:11434/api/tags'); $r.Timeout = 800; $res = $r.GetResponse(); $res.Close(); exit 0 } catch { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+    echo [OLLAMA] Ollama daemon is offline. Starting 'ollama serve' in background...
+    start /b ollama serve >nul 2>&1
+    timeout /t 3 /nobreak >nul
+)
 echo [FASTAPI] Launching Netran AI Web API Gateway Server (http://localhost:8000)...
 .venv\Scripts\python.exe -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 pause
@@ -159,6 +166,13 @@ goto menu
 
 :run_voice_model
 echo.
+echo [CHECK] Ensuring Ollama LLM daemon is active...
+powershell -NoProfile -Command "try { $r = [System.Net.WebRequest]::Create('http://127.0.0.1:11434/api/tags'); $r.Timeout = 800; $res = $r.GetResponse(); $res.Close(); exit 0 } catch { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+    echo [OLLAMA] Ollama daemon is offline. Starting 'ollama serve' in background...
+    start /b ollama serve >nul 2>&1
+    timeout /t 3 /nobreak >nul
+)
 echo [LAUNCHING] Stage 3: Live Voice-to-Voice Streaming Loop...
 echo  1. Kivy Desktop GUI Client (front.py)
 echo  2. Headless CLI Test Harness (test_pipeline.py)

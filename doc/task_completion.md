@@ -52,6 +52,25 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 - **Cross-Origin Resource Sharing (CORS) & LAN Support (Aug 2026)**:
   - Configured `CORSMiddleware` in `api/main.py` with `allow_origin_regex` to support seamless cross-origin requests from any LAN IP (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`), localhost ports (`5173`, `5174`, `3000`), and configurable `API_CORS_ORIGINS`.
   - Added full credentials support (`allow_credentials=True`) for authorization tokens and cookie handshakes across mobile and local network testing.
+- **Ollama Local LLM Brain Daemon Resilience & Auto-Start (Oct 2026)**:
+  - Fixed issue where Eva repeatedly apologized ("I apologize, let's move forward to the next question.") and skipped questions after turn processing: resolved root cause where Ollama daemon was offline (`127.0.0.1:11434`), causing LLM chat retries to exhaust after ~7.6s and hit the fallback apology.
+  - Implemented `is_ollama_alive()` and `ensure_ollama_running()` in `brain.py` to automatically detect offline daemon and launch `ollama serve` in the background with zero terminal popups (`CREATE_NO_WINDOW`).
+  - Added `preload_brain()` to FastAPI startup `lifespan` in `backend/api/main.py` alongside Kokoro TTS preload, ensuring Qwen2.5:3B is pre-warmed in GPU VRAM prior to the first candidate turn.
+  - Added Ollama status verification in `run.bat` (`:run_fastapi_server` and `:run_voice_model`).
+- **Voice Turn Latency & TTFA Optimization (Oct 2026)**:
+  - Identified root cause of excessive 33-second turn lag (TTFA) as Ollama's default 5-minute keep-alive expiring between sessions, which forced a ~24-second cold-load of `qwen2.5:3b` into VRAM during candidate turns.
+  - Set `keep_alive="30m"` directly in `ollama.chat()` in `backend/model/voice_to_voice_model/model/brain.py` to maintain the LLM persistently warm in GPU VRAM across consecutive turns.
+  - Tuned `num_predict` cap from 380 to 200 tokens (accommodating Eva's target 15-25 word concise spoken turns with comfortable headroom), avoiding extraneous token compute budget.
+  - Implemented `keepalive_ping()` in `brain.py` and wired a 4-minute background heartbeat loop (`_ollama_keepalive_loop`) in FastAPI (`api/main.py` lifespan) to automatically ping Ollama during idle periods, guaranteeing instant sub-second TTFA response times even when sessions are spaced far apart.
+- **Headphone VAD Pause Tolerance & Continuation Sensitivity Tuning (Oct 2026)**:
+  - Resolved issue where candidate answers prematurely cut off and jumped to "Processing your answer..." while speaking with headphones before completing sentences.
+  - Root Cause: Unlike laptop speakers which create room reverberation, headphones isolate acoustic playback so room audio drops to near-zero (`RMS < 0.002`) immediately upon brief pauses. The previous `1200ms` pause tolerance coupled with an overly aggressive `_continue_rms_gate` lower bound (`0.010`) caused brief natural pauses (~1.0s) and quiet trailing words to instantly trip the silence counter.
+  - Raised baseline web `pause_tolerance_ms` from `1200ms` to `1800ms` (56 frames * 32ms = 1.79s) in `session_state.py` and `listener.py`, providing comfortable conversational breathing room for technical explanations.
+  - Lowered `_continue_gate_computed` floor from `0.010` to `0.003` (`min(max(ambient_floor * 1.15, 0.003), 0.020)`), allowing soft speech and trailing syllables on quiet headset mics to maintain speech state.
+  - Relaxed continuation VAD condition to `speech_prob > 0.15 or rms > _continue_rms_gate` (from 0.20), preventing syllable dips from prematurely accumulating silence frames.
+- **Web Audio VAD Gate Sensitivity & Ceiling Protection (Oct 2026)**:
+  - Capped `_start_gate_computed` and adaptive `new_start_gate` ceiling at `0.035` in `listener.py`, preventing transient acoustic bursts or background noise during calibration from locking the speech start gate at unreachable thresholds (e.g., `0.0600`).
+  - Added confident VAD trigger path (`speech_prob >= 0.50 and rms >= max(ambient_floor * 1.1, 0.003)`), ensuring candidate speech on quiet browser microphones / laptop mics is recognized and processed immediately.
 - **Multi-Hardware Audio & Voice Engine Optimization (Aug 2026)**:
   - Enhanced `listener.py` to always open audio input streams at the physical device's native rate (e.g. 44.1kHz / 48kHz) and perform real-time downsampling, resolving MME driver silent-channel saturation.
   - Dynamically scaled Faster-Whisper CPU threads to available cores (`os.cpu_count() - 2`, up to 8 threads), cutting STT processing latency.

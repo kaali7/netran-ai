@@ -45,6 +45,44 @@ except ImportError:
 
 MODEL_NAME = OLLAMA_MODEL
 
+
+def is_ollama_alive(timeout: float = 1.0) -> bool:
+    """Checks if the local Ollama daemon is reachable on 127.0.0.1:11434."""
+    import urllib.request
+    try:
+        req = urllib.request.Request("http://127.0.0.1:11434/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def ensure_ollama_running() -> bool:
+    """Verifies that the Ollama local daemon is responding. If offline, attempts to spawn 'ollama serve'."""
+    if is_ollama_alive(timeout=0.8):
+        return True
+
+    import subprocess
+    print("[Brain] Ollama is not responding at http://127.0.0.1:11434. Attempting to start 'ollama serve' in background...", flush=True)
+    try:
+        creation_flags = 0x08000000 if os.name == "nt" else 0  # CREATE_NO_WINDOW on Windows
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=creation_flags
+        )
+        for _ in range(12):
+            time.sleep(0.5)
+            if is_ollama_alive(timeout=0.8):
+                print("[Brain] Ollama server successfully started and responding.", flush=True)
+                return True
+    except Exception as err:
+        print(f"[Brain] Could not automatically launch Ollama daemon: {err}", flush=True)
+
+    return False
+
+
 TONE_SPEED_MAP: dict[str, float] = {
     "empathetic": 0.92,
     "encouraging": 0.92,
@@ -191,11 +229,14 @@ def stream_llm_response(
     full_messages = [sys_msg] + conversation_history
 
     options = {
-        "num_predict": 380,        # Refined headroom to prevent truncation mid-sentence
+        "num_predict": 200,        # Eva speaks 15-25 words max (~30 tokens); 200 is safe headroom
         "temperature": 0.65,       # Tuned for consistent CTA formatting & closing punctuation
         "top_p": 0.85,             # High-probability token selection for grammatical endings
         "repeat_penalty": 1.15,    # Prevent "Great, let's move on..." loops
     }
+
+    # Ensure Ollama daemon is active before chat streaming
+    ensure_ollama_running()
 
     for attempt in range(max_retries):
         try:
@@ -203,6 +244,7 @@ def stream_llm_response(
                 model=MODEL_NAME,
                 messages=full_messages,
                 stream=True,
+                keep_alive="30m",  # Keep model hot in VRAM — prevents 24s cold reload between sessions
                 options=options
             )
 
@@ -355,15 +397,38 @@ def preload(custom_system_prompt: str | None = None):
     """Preloads the Ollama LLM engine into memory to ensure instant first response."""
     print("Pre-heating Ollama LLM engine...", flush=True)
     try:
-        # stream_llm_response() returns a tuple ("", speak_text), NOT a generator.
-        # Calling it directly (with no speaker_player) warms up the Ollama model without
-        # dispatching any audio or modifying conversation state.
+        ensure_ollama_running()
         stream_llm_response(
             [{"role": "user", "content": "."}],
             custom_system_prompt=custom_system_prompt
         )
-    except Exception:
-        pass
+        print("[Brain] Ollama LLM engine warmed up successfully.", flush=True)
+    except Exception as e:
+        print(f"[Brain Preload Warning] Could not warm up Ollama engine: {e}", flush=True)
+
+
+def keepalive_ping() -> bool:
+    """
+    Sends a minimal no-op request to Ollama to refresh keep_alive timer and prevent
+    model eviction from VRAM. Called by the FastAPI background heartbeat task every
+    4 minutes to ensure TTFA stays low across long idle gaps between interviews.
+    Returns True if ping was acknowledged, False on failure.
+    """
+    try:
+        if not is_ollama_alive(timeout=1.5):
+            print("[Brain Heartbeat] Ollama offline — skipping keepalive ping.", flush=True)
+            return False
+        ollama.chat(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "."}],
+            stream=False,
+            keep_alive="30m",
+            options={"num_predict": 1},
+        )
+        return True
+    except Exception as e:
+        print(f"[Brain Heartbeat] Keepalive ping failed: {e}", flush=True)
+        return False
 
 if __name__ == "__main__":
     print("Testing Brain Module & TextSanitizer...")

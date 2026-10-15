@@ -5,6 +5,7 @@ Initializes database, CORS, request telemetry, and mounts routers.
 
 import sys
 import time
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -22,6 +23,25 @@ from api.schemas import HealthResponse
 from api.routers import auth, ingest, setup, questions, voice, reports, template, analytics, history, notifications
 
 
+async def _ollama_keepalive_loop():
+    """
+    Background heartbeat: pings Ollama every 4 minutes to keep the LLM model
+    loaded in VRAM. Prevents 24-second cold-reload latency spikes (TTFA ~33s)
+    caused by Ollama's default 5-minute keep_alive eviction policy.
+    This loop runs for the lifetime of the FastAPI process.
+    """
+    HEARTBEAT_INTERVAL_SEC = 240  # 4 minutes — safely under the 30m keep_alive window
+    await asyncio.sleep(HEARTBEAT_INTERVAL_SEC)  # First ping after 4 min, not on startup
+    while True:
+        try:
+            from model.voice_to_voice_model.model.brain import keepalive_ping
+            ok = keepalive_ping()
+            print(f"[Heartbeat] Ollama keepalive ping: {'OK' if ok else 'FAILED'}", flush=True)
+        except Exception as e:
+            print(f"[Heartbeat] Keepalive error: {e}", flush=True)
+        await asyncio.sleep(HEARTBEAT_INTERVAL_SEC)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle events handler (startup & shutdown)."""
@@ -35,9 +55,26 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         import logging
         logging.warning(f"Could not preload Kokoro TTS model: {e}")
-        
+
+    # Preload Ollama LLM Model (Stage 3 Brain) so first turn does not cold-start
+    try:
+        from model.voice_to_voice_model.model.brain import preload as preload_brain
+        preload_brain()
+    except Exception as e:
+        import logging
+        logging.warning(f"Could not preload Ollama brain model: {e}")
+
+    # Launch periodic Ollama keepalive heartbeat to prevent VRAM eviction
+    heartbeat_task = asyncio.create_task(_ollama_keepalive_loop())
+
     yield
-    # Shutdown logic (if any)
+
+    # Shutdown: cancel heartbeat cleanly
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(
