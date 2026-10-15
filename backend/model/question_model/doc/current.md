@@ -21,12 +21,12 @@ The **Adaptive Contextual & Behavioral Intelligence Engine (Stage 2)** transform
 
 | File Name | Purpose & Functionality |
 | --- | --- |
-| `config.py` | Configuration loader (`Stage2Config`) loading `GEMINI_API_KEY` and `GEMINI_MODEL` (`gemini-3.6-flash`). |
+| `config.py` | Configuration loader (`Stage2Config`) loading `GROQ_API_KEY`, `GROQ_EVALUATION_MODEL` (`openai/gpt-oss-120b`), `GEMINI_API_KEY`, and `GEMINI_MODEL` (`gemini-3.6-flash`). |
 | `prompts.py` | Centralized system prompt repository containing `SYSTEM_PROMPT_INSTRUCTIONS_TEMPLATE`, `STAGE2_FULL_PROMPT_TEMPLATE`, and `FALLBACK_SYSTEM_PROMPT_TEMPLATE`. |
-| `schemas.py` | Pydantic v2 schemas (`SkillMatch`, `SkillGap`, `ResumeAnalysis`, `AnswerRubric`, `QuestionItem`, `InterviewerBehavior`, `Stage2Output`). |
+| `schemas.py` | Pydantic v2 schemas (`SkillMatch`, `SkillGap`, `ResumeAnalysis`, `AnswerRubric`, `QuestionItem`, `InterviewerBehavior`, `Stage2Output`) with flexible input sanitization for LLM variance. |
 | `prompt_builder.py` | Class-based `Stage2PromptBuilder` with `extract_job_context` parsing nested Stage 1 outputs and legacy flat JDs. |
 | `cache.py` | Class-based SQLite hashing subsystem (`Stage2Cache`) caching Stage 2 outputs by SHA-256 hash with schema validation error recovery. |
-| `pipeline.py` | Master Stage 2 orchestrator pipeline (`Stage2Pipeline`) executing resume parsing, cache check, Gemini prompt generation, and 3-artifact saving. |
+| `pipeline.py` | Master Stage 2 orchestrator pipeline (`Stage2Pipeline`) executing resume parsing, cache check, Groq primary (with Gemini fallback) generation, and 3-artifact saving. |
 | `resume_parser.py` | Multimodal `ResumeParser` supporting `.pdf` (`pypdf`), `.docx` (`python-docx`), `.txt`, and `.json` files. |
 | `question_generator.py` | Backward-compatibility alias wrapping `pipeline.py`. |
 | `front.py` | Kivy Desktop GUI Client displaying Resume Analysis Matrix, Question Cards with Rubrics & Branching badges, System Prompt, and Session History Modal. |

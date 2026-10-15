@@ -93,6 +93,8 @@ def run_stage1_and_stage2(
         from model.research_model.model.config import Stage1Config
 
         s1_config = Stage1Config(
+            groq_api_key=getattr(settings, "GROQ_API_KEY", ""),
+            groq_model=getattr(settings, "GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b"),
             gemini_api_key=settings.GEMINI_API_KEY,
             gemini_model=settings.GEMINI_MODEL,
             tavily_api_key=settings.TAVILY_API_KEY,
@@ -140,6 +142,8 @@ def run_stage1_and_stage2(
         from model.question_model.model.config import Stage2Config
 
         s2_config = Stage2Config(
+            groq_api_key=getattr(settings, "GROQ_API_KEY", ""),
+            groq_model=getattr(settings, "GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b"),
             gemini_api_key=settings.GEMINI_API_KEY,
             gemini_model=settings.GEMINI_MODEL,
         )
@@ -229,7 +233,10 @@ def run_stage4(session_id: str):
 
         s4_config = Stage4Config(
             gemini_api_key=settings.GEMINI_API_KEY,
+            gemini_api_keys=getattr(settings, "GEMINI_API_KEYS", []),
             gemini_model=settings.GEMINI_MODEL,
+            groq_api_key=getattr(settings, "GROQ_API_KEY", ""),
+            groq_model=getattr(settings, "GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b"),
         )
         s4_pipeline = Stage4Pipeline(config=s4_config)
 

@@ -31,6 +31,8 @@ for stage_path in [str(MODEL_DIR), str(RESEARCH_MODEL_DIR), str(VOICE_MODEL_DIR)
     if stage_path not in sys.path:
         sys.path.insert(0, stage_path)
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")

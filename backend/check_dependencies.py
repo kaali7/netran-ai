@@ -56,10 +56,13 @@ def check_env():
         print("[OK] .env file found.")
         with open(".env", "r") as f:
             content = f.read()
-            if "GEMINI_API_KEY" in content:
-                print("[OK] GEMINI_API_KEY found in .env.")
+            if "GROQ_API_KEY" in content:
+                print("[OK] GROQ_API_KEY found in .env.")
             else:
-                print("[WARNING] GEMINI_API_KEY is missing in .env.")
+                print("[WARNING] GROQ_API_KEY is missing in .env.")
+
+            if "GEMINI_API_KEY" in content:
+                print("[INFO] GEMINI_API_KEY found in .env (optional fallback).")
                 
             if "TAVILY_API_KEY" in content:
                 print("[OK] TAVILY_API_KEY found in .env.")

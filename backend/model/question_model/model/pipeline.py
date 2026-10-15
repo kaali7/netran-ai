@@ -169,13 +169,21 @@ class Stage2Pipeline:
                 self.save_artifacts(output_dir, session_id, effective_seniority, cached_output)
             return cached_output
 
+        groq_api_key = os.getenv("GROQ_API_KEY", "")
+        groq_model = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
+
         api_key = self.config.gemini_api_key
         model = self.config.gemini_model or "gemini-3.6-flash"
 
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY is not configured.")
+        if not api_key and not groq_api_key:
+            raise ValueError("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured.")
 
-        client = genai.Client(api_key=api_key)
+        client = None
+        if api_key:
+            try:
+                client = genai.Client(api_key=api_key)
+            except Exception as e:
+                logger.warning(f"Could not initialize Gemini client: {e}")
 
         planner_prompt = PLANNER_PROMPT_TEMPLATE.format(
             resume_text=resume_text,
@@ -191,65 +199,117 @@ class Stage2Pipeline:
             stage1_rubric_json=job_context["rubric_json"]
         )
 
-        logger.info("Executing dual Gemini 3.6 Flash calls (Planner & Analyst) in parallel...")
+        logger.info("Executing dual Planner & Analyst generation calls in parallel...")
 
         def _call_planner() -> PlannerOutput | None:
-            last_err = None
-            for attempt in range(1, 4):
+            # 1. Primary: Groq API
+            if groq_api_key:
                 try:
-                    res = client.models.generate_content(
-                        model=model,
-                        contents=planner_prompt,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema=PlannerOutput,
-                            temperature=0.2,
-                        )
+                    from groq import Groq
+                    g_client = Groq(api_key=groq_api_key)
+                    resp = g_client.chat.completions.create(
+                        model=groq_model,
+                        messages=[
+                            {"role": "system", "content": "You are an expert interview question planner. Return strictly valid JSON conforming to the PlannerOutput schema."},
+                            {"role": "user", "content": planner_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.2,
+                        max_tokens=4096,
                     )
-                    if res and res.text:
-                        return PlannerOutput.model_validate_json(res.text)
-                except Exception as e:
-                    last_err = e
-                    logger.warning(f"Planner Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
-                    if attempt < 3:
-                        time.sleep(3 * attempt)
-            logger.warning(f"Planner call failed after 3 attempts: {last_err}")
+                    content = resp.choices[0].message.content
+                    if content:
+                        return PlannerOutput.model_validate_json(content)
+                except Exception as ge:
+                    logger.warning(f"Planner Groq call failed: {ge}. Trying Gemini...")
+
+            # 2. Fallback: Google Gemini API
+            if client:
+                last_err = None
+                for attempt in range(1, 4):
+                    try:
+                        res = client.models.generate_content(
+                            model=model,
+                            contents=planner_prompt,
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                response_schema=PlannerOutput,
+                                temperature=0.2,
+                            )
+                        )
+                        if res and res.text:
+                            return PlannerOutput.model_validate_json(res.text)
+                    except Exception as e:
+                        last_err = e
+                        logger.warning(f"Planner Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
+                        if attempt < 3:
+                            time.sleep(3 * attempt)
+                logger.warning(f"Planner Gemini call failed after 3 attempts: {last_err}")
             return None
 
         def _call_analyst() -> ResumeAnalysis | None:
-            last_err = None
-            for attempt in range(1, 4):
+            # 1. Primary: Groq API
+            if groq_api_key:
                 try:
-                    res = client.models.generate_content(
-                        model=model,
-                        contents=analyst_prompt,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema=ResumeAnalysis,
-                            temperature=0.2,
-                        )
+                    from groq import Groq
+                    g_client = Groq(api_key=groq_api_key)
+                    resp = g_client.chat.completions.create(
+                        model=groq_model,
+                        messages=[
+                            {"role": "system", "content": "You are an expert resume and technical gap analyst. Return strictly valid JSON conforming to the ResumeAnalysis schema."},
+                            {"role": "user", "content": analyst_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.2,
+                        max_tokens=4096,
                     )
-                    if res and res.text:
-                        return ResumeAnalysis.model_validate_json(res.text)
-                except Exception as e:
-                    last_err = e
-                    logger.warning(f"Analyst Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
-                    if attempt < 3:
-                        time.sleep(3 * attempt)
-            logger.warning(f"Analyst call failed after 3 attempts: {last_err}")
+                    content = resp.choices[0].message.content
+                    if content:
+                        return ResumeAnalysis.model_validate_json(content)
+                except Exception as ge:
+                    logger.warning(f"Analyst Groq call failed: {ge}. Trying Gemini...")
+
+            # 2. Fallback: Google Gemini API
+            if client:
+                last_err = None
+                for attempt in range(1, 4):
+                    try:
+                        res = client.models.generate_content(
+                            model=model,
+                            contents=analyst_prompt,
+                            config=types.GenerateContentConfig(
+                                response_mime_type="application/json",
+                                response_schema=ResumeAnalysis,
+                                temperature=0.2,
+                            )
+                        )
+                        if res and res.text:
+                            return ResumeAnalysis.model_validate_json(res.text)
+                    except Exception as e:
+                        last_err = e
+                        logger.warning(f"Analyst Gemini API attempt {attempt}/3 error: {str(e)[:120]}")
+                        if attempt < 3:
+                            time.sleep(3 * attempt)
+                logger.warning(f"Analyst Gemini call failed after 3 attempts: {last_err}")
             return None
 
         planner_res: PlannerOutput | None = None
         analyst_res: ResumeAnalysis | None = None
 
         try:
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                future_planner = executor.submit(_call_planner)
-                future_analyst = executor.submit(_call_analyst)
-                planner_res = future_planner.result()
-                analyst_res = future_analyst.result()
+            if groq_api_key:
+                # Groq free tier enforces strict concurrent burst limits; sequential calls run in <2s safely
+                planner_res = _call_planner()
+                time.sleep(1.0)
+                analyst_res = _call_analyst()
+            else:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    future_planner = executor.submit(_call_planner)
+                    future_analyst = executor.submit(_call_analyst)
+                    planner_res = future_planner.result()
+                    analyst_res = future_analyst.result()
         except Exception as e:
-            logger.warning(f"Parallel execution exception ({e}). Utilizing fallback generator.")
+            logger.warning(f"Dual execution exception ({e}). Utilizing fallback generator.")
 
         fallback_obj = self.generate_fallback_output(
             session_id=session_id,

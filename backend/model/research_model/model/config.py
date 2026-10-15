@@ -65,6 +65,8 @@ TRUSTED_DOMAINS_DEFAULT: list[str] = sorted(list(set(
 @dataclass
 class Stage1Config:
     """Stage 1 configuration data class."""
+    groq_api_key: str = field(default_factory=lambda: os.getenv("GROQ_API_KEY", ""))
+    groq_model: str = field(default_factory=lambda: os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b"))
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
     tavily_api_key: str = field(default_factory=lambda: os.getenv("TAVILY_API_KEY", ""))
@@ -78,6 +80,8 @@ class Stage1Config:
 
 
 # Backward compatibility module-level exports
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")

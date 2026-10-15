@@ -80,40 +80,62 @@ Job Description Text:
 
 def _call_gemini(prompt: str) -> dict:
     """
-    Send a structured extraction prompt to Gemini and return parsed JSON.
-
-    Raises:
-        HTTPException(503): If Gemini API key is missing or API call fails.
-        HTTPException(422): If Gemini response cannot be parsed as valid JSON.
+    Send a structured extraction prompt to Groq (primary) or Gemini (fallback) and return parsed JSON.
     """
-    if not settings.GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Gemini API key is not configured. Set GEMINI_API_KEY in backend/.env",
-        )
+    raw_json = None
 
-    try:
-        from google import genai
-        from google.genai import types
+    # 1. Primary: Groq API
+    if getattr(settings, "GROQ_API_KEY", None):
+        try:
+            from groq import Groq
+            client = Groq(api_key=settings.GROQ_API_KEY)
+            model = getattr(settings, "GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are an expert data extraction system. Return strictly valid JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+            )
+            raw_json = resp.choices[0].message.content
+        except Exception as groq_exc:
+            if not settings.GEMINI_API_KEY:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"Groq extraction failed: {groq_exc}",
+                ) from groq_exc
 
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.1,      # Low temperature for structured extraction
-                max_output_tokens=4096,
-            ),
-        )
-        raw_json = response.text.strip()
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Gemini API call failed: {exc}",
-        ) from exc
+    # 2. Fallback: Google Gemini API
+    if not raw_json:
+        if not settings.GEMINI_API_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Neither GROQ_API_KEY nor GEMINI_API_KEY is configured in backend/.env",
+            )
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                    max_output_tokens=4096,
+                ),
+            )
+            raw_json = response.text.strip()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Extraction API call failed: {exc}",
+            ) from exc
 
     # Parse and validate JSON response
     try:

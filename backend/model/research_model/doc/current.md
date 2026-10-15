@@ -45,8 +45,9 @@ The Netran AI Stage 1 Research Model is a **Market & Role Intelligence Engine** 
 ```
 
 ### 1. Configuration & Environment Loader ([config.py](file:///c:/kali/product/netran%20ai/backend/model/research_model/model/config.py))
-* **Environment Management**: Utilizes `python-dotenv` to load environment configurations from `backend/model/.env`.
-* **API Credentials**: Manages `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.6-flash`), and `TAVILY_API_KEY`.
+* **Environment Management**: Utilizes `python-dotenv` to load environment configurations from `backend/.env`.
+* **API Credentials**: Manages `GROQ_API_KEY`, `GROQ_EVALUATION_MODEL` (`openai/gpt-oss-120b`), `GEMINI_API_KEY`, `GEMINI_MODEL` (`gemini-3.6-flash`), and `TAVILY_API_KEY`.
+* **Reasoning Engine**: Uses Groq `openai/gpt-oss-120b` for sub-second rubric synthesis and market intel processing, with Gemini as fallback.
 * **Categorized Vector Search Domains (`TRUSTED_DOMAINS_BY_VECTOR`)**:
   - **`technical`**: `leetcode.com`, `github.com`, `geeksforgeeks.org`, `stackoverflow.com`, `teamblind.com`, `careercup.com`, `tryexponent.com`, `bytebytego.com`, `educative.io`, `dev.to`, `medium.com`
   - **`market_salary`**: `levels.fyi`, `ambitionbox.com`, `wellfound.com`, `glassdoor.com`, `linkedin.com`, `reddit.com`

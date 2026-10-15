@@ -6,7 +6,7 @@ Description: Enriched Pydantic v2 schemas for Stage 2 Adaptive Contextual & Beha
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class SkillMatch(BaseModel):
@@ -21,6 +21,15 @@ class SkillGap(BaseModel):
     missing_skill: str = Field(description="Technical requirement from JD/Rubric missing or weak on resume.")
     jd_importance: Literal["Critical", "Secondary"] = Field(description="Importance level of the missing skill for this role.")
     probing_strategy: str = Field(description="Strategic question approach to verify foundational understanding.")
+
+    @field_validator("jd_importance", mode="before")
+    @classmethod
+    def normalize_importance(cls, v: Any) -> str:
+        if isinstance(v, str):
+            if v.strip().lower() in ["critical", "must-have", "important", "high", "primary"]:
+                return "Critical"
+            return "Secondary"
+        return "Critical"
 
 
 class PersonalTraitsAndHobbies(BaseModel):
@@ -64,6 +73,32 @@ class ExtractedSkillMatch(BaseModel):
         default="Must-Have", description="JD requirement level."
     )
 
+    @field_validator("proficiency_tier", mode="before")
+    @classmethod
+    def normalize_tier(cls, v: Any) -> str:
+        if isinstance(v, str):
+            vl = v.strip().lower()
+            if "master" in vl or "expert" in vl:
+                return "Production Master"
+            if "adv" in vl or "senior" in vl:
+                return "Advanced"
+            if "found" in vl or "basic" in vl or "beginner" in vl:
+                return "Foundational"
+            return "Intermediate"
+        return "Intermediate"
+
+    @field_validator("jd_requirement_level", mode="before")
+    @classmethod
+    def normalize_req(cls, v: Any) -> str:
+        if isinstance(v, str):
+            vl = v.strip().lower()
+            if "must" in vl or "critical" in vl:
+                return "Must-Have"
+            if "nice" in vl or "optional" in vl:
+                return "Nice-to-Have"
+            return "Important"
+        return "Must-Have"
+
 
 class WorkHistoryEntry(BaseModel):
     company_name: str = Field(description="Company Name.")
@@ -72,6 +107,25 @@ class WorkHistoryEntry(BaseModel):
     impact_level: Literal["High", "Medium", "Low"] = Field(default="High", description="Impact level.")
     key_responsibilities: str = Field(description="Summary of key responsibilities.")
     verifiable_outcomes: list[str] = Field(default_factory=list, description="Quantifiable outcomes.")
+
+    @field_validator("key_responsibilities", mode="before")
+    @classmethod
+    def normalize_responsibilities(cls, v: Any) -> str:
+        if isinstance(v, list):
+            return "\n".join(str(item) for item in v)
+        return str(v) if v is not None else ""
+
+    @field_validator("impact_level", mode="before")
+    @classmethod
+    def normalize_impact(cls, v: Any) -> str:
+        if isinstance(v, str):
+            vl = v.strip().lower()
+            if "high" in vl:
+                return "High"
+            if "low" in vl:
+                return "Low"
+            return "Medium"
+        return "High"
 
 
 class DetailedProjectAnalysis(BaseModel):
@@ -82,6 +136,38 @@ class DetailedProjectAnalysis(BaseModel):
     quantifiable_scale: str = Field(default="Production scale", description="Scale/traffic metrics.")
     suggested_interview_probes: list[str] = Field(default_factory=list, description="Probing questions.")
 
+    @field_validator("tech_stack_used", mode="before")
+    @classmethod
+    def normalize_tech_stack(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [x.strip() for x in v.split(",") if x.strip()]
+        if isinstance(v, list):
+            res = []
+            for item in v:
+                if isinstance(item, str):
+                    res.append(item)
+                elif isinstance(item, list):
+                    res.extend(str(x) for x in item)
+            return res
+        return []
+
+    @field_validator("suggested_interview_probes", mode="before")
+    @classmethod
+    def normalize_probes(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [v.strip()]
+        if isinstance(v, list):
+            return [str(x) for x in v]
+        return []
+
+    @field_validator("relevance_score", mode="before")
+    @classmethod
+    def normalize_relevance(cls, v: Any) -> int:
+        try:
+            return int(v)
+        except Exception:
+            return 8
+
 
 class RedFlagItem(BaseModel):
     flag_type: Literal["Claim Verification", "Infrastructure Depth", "Employment Gap", "General Warning"] = Field(
@@ -89,6 +175,20 @@ class RedFlagItem(BaseModel):
     )
     description: str = Field(description="Specific concern regarding a claim or lack of detail.")
     probe_question: str = Field(description="Direct challenge question to verify authenticity.")
+
+    @field_validator("flag_type", mode="before")
+    @classmethod
+    def normalize_flag_type(cls, v: Any) -> str:
+        if isinstance(v, str):
+            vl = v.strip().lower()
+            if "claim" in vl or "verif" in vl:
+                return "Claim Verification"
+            if "infra" in vl or "depth" in vl:
+                return "Infrastructure Depth"
+            if "gap" in vl:
+                return "Employment Gap"
+            return "General Warning"
+        return "General Warning"
 
 
 class ExperienceGapsAndRedFlags(BaseModel):
@@ -219,9 +319,53 @@ class ResumeAnalysis(BaseModel):
 
 
 class AnswerRubric(BaseModel):
-    poor_answer_indicators: list[str] = Field(description="Indicators of a superficial, weak, or incorrect answer.")
-    good_answer_indicators: list[str] = Field(description="Indicators of a solid, production-grade candidate response.")
-    bar_raiser_indicators: list[str] = Field(description="Indicators of an exceptional, senior/staff level answer.")
+    poor_answer_indicators: list[str] = Field(default_factory=list, description="Indicators of a superficial, weak, or incorrect answer.")
+    good_answer_indicators: list[str] = Field(default_factory=list, description="Indicators of a solid, production-grade candidate response.")
+    bar_raiser_indicators: list[str] = Field(default_factory=list, description="Indicators of an exceptional, senior/staff level answer.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_rubric(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return {
+                "poor_answer_indicators": ["Superficial or vague answer with no concrete examples"],
+                "good_answer_indicators": ["Clear technical explanation with direct relevance"],
+                "bar_raiser_indicators": ["Discusses edge cases, architecture trade-offs, and metrics"],
+            }
+
+        def _flatten_to_strings(val: Any) -> list[str]:
+            if isinstance(val, str):
+                return [val]
+            if isinstance(val, list):
+                res: list[str] = []
+                for item in val:
+                    if isinstance(item, str):
+                        res.append(item)
+                    elif isinstance(item, list):
+                        res.extend(_flatten_to_strings(item))
+                    elif isinstance(item, dict):
+                        res.append(str(item))
+                return res
+            if isinstance(val, dict):
+                res = []
+                for v in val.values():
+                    res.extend(_flatten_to_strings(v))
+                return res
+            return [str(val)] if val is not None else []
+
+        cleaned: dict[str, list[str]] = {}
+        for field, default_val in [
+            ("poor_answer_indicators", ["Superficial or vague answer lacking depth"]),
+            ("good_answer_indicators", ["Solid technical understanding with concrete examples"]),
+            ("bar_raiser_indicators", ["Proactively addresses failure modes, trade-offs, and scale"]),
+        ]:
+            val = data.get(field)
+            if val is not None:
+                flattened = _flatten_to_strings(val)
+                cleaned[field] = flattened if flattened else default_val
+            else:
+                cleaned[field] = default_val
+        return cleaned
 
 
 class QuestionItem(BaseModel):
@@ -239,14 +383,41 @@ class QuestionItem(BaseModel):
     followup_if_strong: str = Field(description="Advanced follow-up question if candidate gives a bar-raiser response.")
     followup_if_weak: str = Field(description="Simplifying diagnostic follow-up question if candidate struggles.")
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def normalize_id(cls, v: Any) -> int:
+        try:
+            return int(v)
+        except Exception:
+            return 1
+
+    @field_validator("difficulty", mode="before")
+    @classmethod
+    def normalize_difficulty(cls, v: Any) -> str:
+        if isinstance(v, str):
+            vl = v.strip().lower()
+            if "junior" in vl or "easy" in vl or "entry" in vl:
+                return "Junior"
+            if "staff" in vl or "principal" in vl:
+                return "Staff"
+            if "lead" in vl:
+                return "Lead"
+            if "senior" in vl or "hard" in vl or "adv" in vl:
+                return "Senior"
+            return "Mid"
+        return "Mid"
+
 
 class InterviewerBehavior(BaseModel):
-    session_id: str = Field(description="Unique session identifier.")
+    session_id: str = Field(default="sess_default", description="Unique session identifier.")
     persona: str = Field(default="Eva - Senior Technical Interviewer", description="Interviewer persona name.")
     target_company: str = Field(default="Target Company", description="Target company name.")
     candidate_name: str = Field(default="Candidate", description="Candidate name.")
     target_role: str = Field(default="Target Role", description="Target role title.")
-    interviewer_system_prompt: str = Field(description="Token-calibrated system prompt for Stage 3 Ollama Qwen2.5.")
+    interviewer_system_prompt: str = Field(
+        default="You are Eva, a senior technical interviewer. Keep spoken turns concise, conversational, and under 25 words.",
+        description="Token-calibrated system prompt for Stage 3 Ollama Qwen2.5."
+    )
     behavior_rules: list[str] = Field(default_factory=list, description="Low-latency voice interaction rules.")
     whisper_domain_vocabulary: str = Field(
         default="",
@@ -255,8 +426,11 @@ class InterviewerBehavior(BaseModel):
 
 
 class PlannerOutput(BaseModel):
-    interview_questions: list[QuestionItem] = Field(description="Ordered array of 12-15 multi-phase interview questions.")
-    interviewer_behavior: InterviewerBehavior = Field(description="Interviewer persona settings and runtime system prompt.")
+    interview_questions: list[QuestionItem] = Field(default_factory=list, description="Ordered array of 12-15 multi-phase interview questions.")
+    interviewer_behavior: InterviewerBehavior = Field(
+        default_factory=InterviewerBehavior,
+        description="Interviewer persona settings and runtime system prompt."
+    )
 
 
 class Stage2Output(BaseModel):

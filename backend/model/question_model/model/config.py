@@ -21,6 +21,8 @@ else:
 @dataclass
 class Stage2Config:
     """Stage 2 configuration data class."""
+    groq_api_key: str = field(default_factory=lambda: os.getenv("GROQ_API_KEY", ""))
+    groq_model: str = field(default_factory=lambda: os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b"))
     gemini_api_key: str = field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
     gemini_model: str = field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-3.6-flash"))
 
@@ -30,10 +32,12 @@ class Stage2Config:
         return cls()
 
 # Backward compatibility module-level exports
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-if not GEMINI_API_KEY:
-    logger.warning("GEMINI_API_KEY is not set. API calls will fail.")
+if not GROQ_API_KEY and not GEMINI_API_KEY:
+    logger.warning("Neither GROQ_API_KEY nor GEMINI_API_KEY is set. LLM calls will fail.")

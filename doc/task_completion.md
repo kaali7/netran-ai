@@ -52,6 +52,12 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
 - **Cross-Origin Resource Sharing (CORS) & LAN Support (Aug 2026)**:
   - Configured `CORSMiddleware` in `api/main.py` with `allow_origin_regex` to support seamless cross-origin requests from any LAN IP (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`), localhost ports (`5173`, `5174`, `3000`), and configurable `API_CORS_ORIGINS`.
   - Added full credentials support (`allow_credentials=True`) for authorization tokens and cookie handshakes across mobile and local network testing.
+- **Stage 4 Multi-Key Parallel Evaluation & Failover Engine (Oct 2026)**:
+  - Enabled multi-API key discovery (`get_gemini_api_keys()`) across `GEMINI_API_KEY1` through `GEMINI_API_KEY10`, `GEMINI_API_KEYS`, and `GEMINI_API_KEY` in `backend/.env`.
+  - Re-architected `Stage4Pipeline._evaluate_turns` in `backend/model/reports_model/model/pipeline.py` using `concurrent.futures.ThreadPoolExecutor` to evaluate session turns in parallel across all configured API keys (5 simultaneous workers).
+  - Implemented automatic 429 RateLimit/Quota key rotation (`_rotate_key` in `gemini_evaluator.py`) to seamlessly switch clients on rate limits without failing or stalling the pipeline.
+  - Reduced turn pacing delays from 7s to 0.5s per worker, accelerating full multimodal report generation from ~180s down to ~20–30s (6x–9x speedup).
+  - Thread-safely synchronized progressive `turn_cache.json` updates and status callbacks with `threading.Lock`, with deterministic turn ordering for final report synthesis.
 - **Ollama Local LLM Brain Daemon Resilience & Auto-Start (Oct 2026)**:
   - Fixed issue where Eva repeatedly apologized ("I apologize, let's move forward to the next question.") and skipped questions after turn processing: resolved root cause where Ollama daemon was offline (`127.0.0.1:11434`), causing LLM chat retries to exhaust after ~7.6s and hit the fallback apology.
   - Implemented `is_ollama_alive()` and `ensure_ollama_running()` in `brain.py` to automatically detect offline daemon and launch `ollama serve` in the background with zero terminal popups (`CREATE_NO_WINDOW`).
@@ -84,6 +90,21 @@ This document tracks completed features, pending roadmap tasks, and known bugs f
   - **VAD Energy Gating & Intent Refinement**: Enforced minimum RMS energy gate (`max(_start_rms_gate * 0.70, 0.006)`) on strong VAD paths in `listener.py` to prevent phantom speech triggers from ambient room murmurs, and refined `stop_pattern` in `question_manager.py` to prevent casual words from prematurely concluding interviews.
   - **Comprehensive Master & Frontend READMEs**: Authored full visual documentation for root project (`README.md`) and frontend (`frontend/README.md`), integrating demonstration video (`doc/img/demo_video.mp4`), visual screenshot galleries (`dashboard`, `interview room`, `multimodal evaluation`, `report scorecard`, `analytics`, `history`), and pre-download instructions for all speaking/listening neural models (`Kokoro-82M`, `Faster-Whisper`, `Silero VAD`, `Qwen 2.5 3B`, `SpeechBrain ECAPA-TDNN`).
   - **Academic Blackbook Code Cards & Screenshots (DESIGN.md White Theme)**: Generated 8 high-resolution 2x Retina code snippet cards in `doc/img_screenshort/` styled strictly to Serene Learning white theme tokens (`DESIGN.md`). Automatically embedded all 8 listing images with academic figure captions directly into Chapter 5 of `doc/clg_document/NETRAN AI Blackbook (2).docx`. Backup saved to `NETRAN AI Blackbook (2)_backup.docx`.
+- **Stage 4 Post-Session Evaluation Upgrade (Groq + Wav2Vec2 Emotion Model) (Oct 2026)**:
+  - Installed `groq` (v1.7.0) in `.venv` and updated `backend/requirements.txt`.
+  - Configured `GROQ_API_KEY` and `GROQ_EVALUATION_MODEL="openai/gpt-oss-120b"` in `backend/.env` and `api/config.py`, verified sub-500ms LLM response times.
+  - Downloaded and verified recommended Speech Emotion Recognition (SER) model [`superb/wav2vec2-base-superb-er`](https://huggingface.co/superb/wav2vec2-base-superb-er) (~360MB) to local HuggingFace cache with labels `{0: 'neu', 1: 'hap', 2: 'ang', 3: 'sad'}` for CPU-based acoustic delivery scoring with zero VRAM contention on the 6GB RTX 4050.
+  - Built `audio_metrics.py` for deterministic pure-Python speech delivery telemetry (WPM, pause count, silence duration, filler density).
+  - Built `emotion_service.py` for local Wav2Vec2 acoustic emotion and confidence classification.
+  - Built `answer_evaluator.py` implementing high-speed Groq technical answer intelligence with local Ollama fallback and combine executive synthesis.
+  - Re-architected `pipeline.py` to eliminate slow Gemini audio uploads, cutting full session evaluation from >5 minutes (stalled) down to ~20 seconds on cold run and ~3–5 seconds on warm runs. Tested live on real session `4c4f877d-6850-4b35-8ffa-933bb64b2fee`, generating complete `report.json` and `evaluation_summary.md`.
+- **Global Backend Groq Migration (Ingestion, Stage 1, Stage 2, Stage 4) (Oct 2026)**:
+  - Replaced Gemini API key with Groq API key (`GROQ_API_KEY` and `GROQ_EVALUATION_MODEL="openai/gpt-oss-120b"`) as the primary engine everywhere across the backend to permanently eliminate Gemini free-tier 429 quota exhaustion (20 req/day limit).
+  - **Document Ingestion** (`backend/api/services/gemini_extractor.py`): Prioritizes Groq JSON mode for resume parsing and JD extraction (<1s execution).
+  - **Stage 1 Research Engine** (`backend/model/research_model`): Synthesizes market intelligence rubrics, technical pillars, and HR lenses via Groq in `gemini_client.py`.
+  - **Stage 2 Contextual Question Engine** (`backend/model/question_model`): Generates 15-question branching trees and Eva system prompt via Groq in `pipeline.py` sequentially to prevent free-tier concurrency burst limits. Added resilient Pydantic normalizers in `schemas.py` for `AnswerRubric`, `QuestionItem`, `WorkHistoryEntry`, `RedFlagItem`, and `SkillGap`.
+  - **Stage 4 Post-Session Evaluation** (`backend/model/reports_model`): Powered by Groq answer intelligence in `answer_evaluator.py` alongside deterministic audio metrics and local Wav2Vec2 SER.
+  - Preserved Gemini and local Ollama as graceful offline fallbacks so the system never crashes if a provider is unreachable.
 
 ---
 

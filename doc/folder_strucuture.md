@@ -161,11 +161,14 @@ backend/
     │   │   └── output/        # Generated report sessions ( sess_<timestamp>/ -> report.json & evaluation_summary.md )
     │   └── model/
     │       ├── audio_slicer.py # Non-destructive WAV slicing utility (turn_XX.wav)
+    │       ├── audio_metrics.py # Deterministic vocal delivery analytics (WPM, pause count, silence, fillers)
+    │       ├── emotion_service.py # Local CPU Speech Emotion Recognition (superb/wav2vec2-base-superb-er)
+    │       ├── answer_evaluator.py # High-speed Groq + Ollama answer intelligence & combine synthesis
     │       ├── config.py      # Stage 4 configuration loader (Stage4Config)
     │       ├── front.py       # Kivy Desktop GUI test client for Stage 4
-    │       ├── gemini_evaluator.py # 3-branch Gemini multimodal evaluation engine
+    │       ├── gemini_evaluator.py # Legacy Gemini multimodal evaluation engine (fallback)
     │       ├── pipeline.py    # Stage 4 master orchestrator pipeline (Stage4Pipeline)
-    │       ├── prompts.py     # Centralized Stage 4 system prompts (AUDIO_SYSTEM_PROMPT, TECHNICAL_SYSTEM_PROMPT, COMBINE_SYSTEM_PROMPT)
+    │       ├── prompts.py     # Centralized Stage 4 system prompts
     │       ├── report_builder.py # Backward compatibility alias for pipeline.py
     │       ├── report_schema.py # Backward compatibility alias for schemas.py
     │       ├── schemas.py     # Pydantic schemas (CandidateReportPayload, TurnAnalysis, TurnTelemetry, BehavioralFlag, CandidateFeedback, PillarScore)

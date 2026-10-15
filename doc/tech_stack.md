@@ -66,7 +66,10 @@ This document defines the complete technology stack powering **Netran AI**, an a
   * **Ingestion**: Converts unstructured text into typed schemas (`CandidateProfile` & `ParsedJD`).
   * **Stage 1 (Research)**: Synthesizes web intelligence into structured rubrics (`InterviewRubric`).
   * **Stage 2 (Question Tree)**: Builds 15-question trees and Eva interviewer behavior prompts.
-  * **Stage 4 (Evaluation)**: 3-branch multimodal evaluation (Audio, Technical, Combined).
+* **Stage 4 Post-Session Evaluation Intelligence**: **Groq API (`openai/gpt-oss-120b`) + Local Wav2Vec2 SER**
+  * **Answer Intelligence**: Ultra-fast Groq LLM scoring technical depth, reasoning, and missing concepts against Stage 1/2 rubrics with local Ollama fallback.
+  * **Speech Emotion Recognition (SER)**: Local `superb/wav2vec2-base-superb-er` executing on CPU (0 MB VRAM overhead) for vocal confidence and emotion state classification.
+  * **Audio Metrics**: Pure-Python deterministic engine calculating speaking rate (WPM), speech coverage ratio, silence duration, and pause frequencies directly from timestamps.
 
 * **Local Neural Brain (Offline LLM Engine)**: **Ollama + Qwen 2.5 (3B)**
   * Low-latency response generation during live interviews, steered by `interviewer_behavior.json`.

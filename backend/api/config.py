@@ -24,9 +24,16 @@ class Settings:
     API_V1_STR: str = "/api/v1"
 
     # AI Model Keys
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY1", "")
+    GEMINI_API_KEYS: list[str] = [
+        os.getenv(f"GEMINI_API_KEY{i}", "").strip().strip('"\'')
+        for i in range(1, 11)
+        if os.getenv(f"GEMINI_API_KEY{i}", "").strip().strip('"\'')
+    ] or ([os.getenv("GEMINI_API_KEY", "").strip().strip('"\'')] if os.getenv("GEMINI_API_KEY") else [])
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_EVALUATION_MODEL: str = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
 
     # Security & Auth
     JWT_SECRET_KEY: str = os.getenv(

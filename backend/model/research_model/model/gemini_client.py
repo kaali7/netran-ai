@@ -38,14 +38,40 @@ class GeminiClient:
         return text
 
     def call(self, prompt: str, json_mode: bool = True, temperature: float = 0.2) -> str:
-        """Calls Gemini API via Interactions API with fallback to REST endpoint."""
+        """Calls Groq API (primary) with fallback to Gemini Interactions API / REST endpoint."""
+        import os
+
+        # ── Primary: Groq API ──────────────────────────────────────────────────
+        groq_api_key = os.getenv("GROQ_API_KEY", "")
+        groq_model = os.getenv("GROQ_EVALUATION_MODEL", "openai/gpt-oss-120b")
+        if groq_api_key:
+            try:
+                from groq import Groq
+                client = Groq(api_key=groq_api_key)
+                kwargs = {
+                    "model": groq_model,
+                    "messages": [
+                        {"role": "system", "content": "You are an expert technical intelligence research system. Output valid JSON when required."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": temperature,
+                }
+                if json_mode:
+                    kwargs["response_format"] = {"type": "json_object"}
+                resp = client.chat.completions.create(**kwargs)
+                content = resp.choices[0].message.content
+                if content:
+                    return self.strip_fences(content.strip())
+            except Exception as groq_err:
+                logger.warning(f"[ResearchModel] Groq call failed: {groq_err}. Falling back to Gemini...")
+
         api_key = self.config.gemini_api_key
         model = self.config.gemini_model or "gemini-3.6-flash"
 
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY is not configured.")
+        if not api_key and not groq_api_key:
+            raise ValueError("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured.")
 
-        # ── Primary: google-genai Interactions API ──────────────────────────────
+        # ── Fallback 1: google-genai Interactions API ───────────────────────────
         try:
             from google import genai
             client = genai.Client(api_key=api_key)
